@@ -1,0 +1,28 @@
+name: Bug report
+description: Report an installation, resolution, or CLI defect without including secrets.
+title: "[Bug]: "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: OS, target host version, and scope
+      description: Use sanitized paths; never include credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction and expected/actual behavior
+      description: Prefer a benign fixture under temporary directories.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized diagnostics

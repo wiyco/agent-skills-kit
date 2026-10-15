@@ -1,0 +1,36 @@
+name: Target support proposal
+description: Propose an evidence-backed Agent Skills host or variant.
+title: "[Target]: "
+body:
+  - type: input
+    id: product
+    attributes:
+      label: Product, variant, and version
+      description: Distinguish CLI, IDE, cloud, fork, and renamed products.
+    validations:
+      required: true
+  - type: textarea
+    id: official_sources
+    attributes:
+      label: Official documentation
+      description: URL, section, access date, and exact rules supported. A third-party installer is not authority.
+    validations:
+      required: true
+  - type: textarea
+    id: paths
+    attributes:
+      label: Scopes, paths, overrides, and platforms
+      description: Separate preferred write destinations from all readable discovery paths. Mark unknowns explicitly.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation and test evidence
+      description: Distinguish documentation review, resolver tests, and actual host discovery.
+    validations:
+      required: true
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Limitations and open questions

@@ -1,0 +1,30 @@
+# Rust build output
+/target/
+**/*.rs.bk
+
+# Local secrets and bootstrap state
+.env
+.env.*
+!.env.example
+.bootstrap-state/
+.bootstrap-lock
+
+# macOS metadata and archive artifacts
+.DS_Store
+._*
+.AppleDouble/
+.Spotlight-V100/
+.Trashes/
+.fseventsd/
+__MACOSX/
+
+# Windows metadata
+Thumbs.db
+Desktop.ini
+
+# Temporary editor files
+*.swp
+*.swo
+*~
+
+# Commit Cargo.lock for the workspace; never add a Cargo.lock ignore rule.

@@ -1,0 +1,748 @@
+{
+  "schema_version": 1,
+  "plan_id": "agent-skills-kit-2026-10-16-v1",
+  "planned_on": "2026-10-16",
+  "defaults": {
+    "owner": "wiyco",
+    "repository": "agent-skills-kit",
+    "project_title": "Agent Skills Kit - Roadmap",
+    "description": "A library-first Rust toolkit for evidence-backed Agent Skills installation across AI coding tools."
+  },
+  "project": {
+    "fields": [
+      {
+        "name": "Workflow",
+        "type": "SINGLE_SELECT",
+        "options": [
+          "Backlog",
+          "Ready",
+          "In Progress",
+          "In Review",
+          "Blocked",
+          "Done"
+        ]
+      },
+      {
+        "name": "Priority",
+        "type": "SINGLE_SELECT",
+        "options": [
+          "P0",
+          "P1",
+          "P2"
+        ]
+      },
+      {
+        "name": "Area",
+        "type": "SINGLE_SELECT",
+        "options": [
+          "api",
+          "ci",
+          "cli",
+          "installer",
+          "oss",
+          "registry",
+          "release",
+          "research",
+          "resolver",
+          "security",
+          "sources",
+          "testing",
+          "tooling",
+          "validation"
+        ]
+      },
+      {
+        "name": "Size",
+        "type": "SINGLE_SELECT",
+        "options": [
+          "S",
+          "M",
+          "L"
+        ]
+      },
+      {
+        "name": "Plan ID",
+        "type": "TEXT"
+      },
+      {
+        "name": "Dependencies",
+        "type": "TEXT"
+      }
+    ]
+  },
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "M0 - Foundation",
+      "description": "Reproducible local development, contributor conventions, native CI, and a reviewed threat model. No public release."
+    },
+    {
+      "id": "M1",
+      "title": "M1 - Library MVP",
+      "description": "A reusable Rust library with three evidence-backed core targets, read-only planning, safe copy execution, tests, and consumer examples."
+    },
+    {
+      "id": "M2",
+      "title": "M2 - CLI MVP",
+      "description": "A thin non-interactive CLI and an optional interactive selection flow, both using the library."
+    },
+    {
+      "id": "M3",
+      "title": "M3 - Verified catalog expansion",
+      "description": "Parallel research and tested adapters for additional hosts. Candidate count is not a support claim or a release gate."
+    },
+    {
+      "id": "M4",
+      "title": "M4 - OSS and release readiness",
+      "description": "Security checks, packaging rehearsals, distribution plans, and explicit human approval before visibility or publishing changes."
+    },
+    {
+      "id": "M5",
+      "title": "M5 - Post-MVP",
+      "description": "Explicitly deferred: symbolic links, remote acquisition, and managed updates/uninstall. Do not implement as incidental MVP scope."
+    }
+  ],
+  "labels": [
+    {
+      "name": "area:api",
+      "color": "1D76DB",
+      "description": "Work related to api."
+    },
+    {
+      "name": "area:ci",
+      "color": "1D76DB",
+      "description": "Work related to ci."
+    },
+    {
+      "name": "area:cli",
+      "color": "1D76DB",
+      "description": "Work related to cli."
+    },
+    {
+      "name": "area:installer",
+      "color": "1D76DB",
+      "description": "Work related to installer."
+    },
+    {
+      "name": "area:oss",
+      "color": "1D76DB",
+      "description": "Work related to oss."
+    },
+    {
+      "name": "area:registry",
+      "color": "1D76DB",
+      "description": "Work related to registry."
+    },
+    {
+      "name": "area:release",
+      "color": "1D76DB",
+      "description": "Work related to release."
+    },
+    {
+      "name": "area:research",
+      "color": "1D76DB",
+      "description": "Work related to research."
+    },
+    {
+      "name": "area:resolver",
+      "color": "1D76DB",
+      "description": "Work related to resolver."
+    },
+    {
+      "name": "area:security",
+      "color": "1D76DB",
+      "description": "Work related to security."
+    },
+    {
+      "name": "area:sources",
+      "color": "1D76DB",
+      "description": "Work related to sources."
+    },
+    {
+      "name": "area:testing",
+      "color": "1D76DB",
+      "description": "Work related to testing."
+    },
+    {
+      "name": "area:tooling",
+      "color": "1D76DB",
+      "description": "Work related to tooling."
+    },
+    {
+      "name": "area:validation",
+      "color": "1D76DB",
+      "description": "Work related to validation."
+    },
+    {
+      "name": "priority:p0",
+      "color": "B60205",
+      "description": "Required for the corresponding milestone or release safety gate."
+    },
+    {
+      "name": "priority:p1",
+      "color": "D93F0B",
+      "description": "Important planned work; catalog expansion can proceed in parallel."
+    },
+    {
+      "name": "priority:p2",
+      "color": "FBCA04",
+      "description": "Explicitly deferred beyond the MVP."
+    },
+    {
+      "name": "type:feature",
+      "color": "0E8A16",
+      "description": "Implementation or behavior change."
+    },
+    {
+      "name": "type:research",
+      "color": "5319E7",
+      "description": "Evidence collection and reviewed support decisions."
+    },
+    {
+      "name": "type:maintenance",
+      "color": "C2E0C6",
+      "description": "Tooling, governance, security, or release maintenance."
+    },
+    {
+      "name": "blocked",
+      "color": "E99695",
+      "description": "Cannot proceed; see blockers in the issue body."
+    }
+  ],
+  "issues": [
+    {
+      "id": "ASK-001",
+      "title": "ASK-001: Bootstrap the Cargo workspace and proto-compatible toolchain",
+      "milestone": "M0",
+      "area": "tooling",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [],
+      "labels": [
+        "area:tooling",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-001.md"
+    },
+    {
+      "id": "ASK-002",
+      "title": "ASK-002: Finalize project naming, licensing, and contributor conventions",
+      "milestone": "M0",
+      "area": "oss",
+      "priority": "P0",
+      "size": "S",
+      "depends_on": [],
+      "labels": [
+        "area:oss",
+        "priority:p0",
+        "type:maintenance"
+      ],
+      "body_file": "planning/issues/ASK-002.md"
+    },
+    {
+      "id": "ASK-003",
+      "title": "ASK-003: Establish native OS CI and a measured MSRV policy",
+      "milestone": "M0",
+      "area": "ci",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-001"
+      ],
+      "labels": [
+        "area:ci",
+        "priority:p0",
+        "type:maintenance"
+      ],
+      "body_file": "planning/issues/ASK-003.md"
+    },
+    {
+      "id": "ASK-004",
+      "title": "ASK-004: Specify a versioned target catalog and evidence model",
+      "milestone": "M1",
+      "area": "registry",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-001"
+      ],
+      "labels": [
+        "area:registry",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-004.md"
+    },
+    {
+      "id": "ASK-005",
+      "title": "ASK-005: Implement deterministic scope and environment resolution",
+      "milestone": "M1",
+      "area": "resolver",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-004"
+      ],
+      "labels": [
+        "area:resolver",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-005.md"
+    },
+    {
+      "id": "ASK-006",
+      "title": "ASK-006: Verify and implement Codex, Claude Code, and OpenCode targets",
+      "milestone": "M1",
+      "area": "registry",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-005",
+        "ASK-008"
+      ],
+      "labels": [
+        "area:registry",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-006.md"
+    },
+    {
+      "id": "ASK-007",
+      "title": "ASK-007: Implement skill validation and bounded source inventory",
+      "milestone": "M1",
+      "area": "validation",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-001",
+        "ASK-008"
+      ],
+      "labels": [
+        "area:validation",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-007.md"
+    },
+    {
+      "id": "ASK-008",
+      "title": "ASK-008: Define the filesystem threat model and copy safety contract",
+      "milestone": "M0",
+      "area": "security",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [],
+      "labels": [
+        "area:security",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-008.md"
+    },
+    {
+      "id": "ASK-009",
+      "title": "ASK-009: Implement read-only install plans and destination deduplication",
+      "milestone": "M1",
+      "area": "installer",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-005",
+        "ASK-006",
+        "ASK-007",
+        "ASK-008"
+      ],
+      "labels": [
+        "area:installer",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-009.md"
+    },
+    {
+      "id": "ASK-010",
+      "title": "ASK-010: Implement staged copy execution with no-clobber defaults",
+      "milestone": "M1",
+      "area": "installer",
+      "priority": "P0",
+      "size": "L",
+      "depends_on": [
+        "ASK-009",
+        "ASK-008"
+      ],
+      "labels": [
+        "area:installer",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-010.md"
+    },
+    {
+      "id": "ASK-011",
+      "title": "ASK-011: Add idempotency, installation receipts, and recovery diagnostics",
+      "milestone": "M1",
+      "area": "installer",
+      "priority": "P1",
+      "size": "M",
+      "depends_on": [
+        "ASK-010"
+      ],
+      "labels": [
+        "area:installer",
+        "priority:p1",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-011.md"
+    },
+    {
+      "id": "ASK-012",
+      "title": "ASK-012: Build native filesystem and security regression coverage",
+      "milestone": "M1",
+      "area": "testing",
+      "priority": "P0",
+      "size": "L",
+      "depends_on": [
+        "ASK-003",
+        "ASK-010",
+        "ASK-011"
+      ],
+      "labels": [
+        "area:testing",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-012.md"
+    },
+    {
+      "id": "ASK-013",
+      "title": "ASK-013: Stabilize the reusable API and add external consumer examples",
+      "milestone": "M1",
+      "area": "api",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-006",
+        "ASK-009",
+        "ASK-010",
+        "ASK-011",
+        "ASK-012"
+      ],
+      "labels": [
+        "area:api",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-013.md"
+    },
+    {
+      "id": "ASK-014",
+      "title": "ASK-014: Implement the non-interactive CLI using the library",
+      "milestone": "M2",
+      "area": "cli",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-013"
+      ],
+      "labels": [
+        "area:cli",
+        "priority:p0",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-014.md"
+    },
+    {
+      "id": "ASK-015",
+      "title": "ASK-015: Add interactive target and scope selection",
+      "milestone": "M2",
+      "area": "cli",
+      "priority": "P1",
+      "size": "M",
+      "depends_on": [
+        "ASK-014"
+      ],
+      "labels": [
+        "area:cli",
+        "priority:p1",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-015.md"
+    },
+    {
+      "id": "ASK-016",
+      "title": "ASK-016: Verify Cursor, Gemini CLI, and GitHub Copilot variants",
+      "milestone": "M3",
+      "area": "registry",
+      "priority": "P1",
+      "size": "M",
+      "depends_on": [
+        "ASK-004",
+        "ASK-005",
+        "ASK-006"
+      ],
+      "labels": [
+        "area:registry",
+        "priority:p1",
+        "type:research"
+      ],
+      "body_file": "planning/issues/ASK-016.md"
+    },
+    {
+      "id": "ASK-017",
+      "title": "ASK-017: Verify Cline, Roo Code, and Kilo Code variants",
+      "milestone": "M3",
+      "area": "registry",
+      "priority": "P1",
+      "size": "M",
+      "depends_on": [
+        "ASK-004",
+        "ASK-005",
+        "ASK-006"
+      ],
+      "labels": [
+        "area:registry",
+        "priority:p1",
+        "type:research"
+      ],
+      "body_file": "planning/issues/ASK-017.md"
+    },
+    {
+      "id": "ASK-018",
+      "title": "ASK-018: Verify Junie, Factory Droid, Kimi Code, and Qwen Code",
+      "milestone": "M3",
+      "area": "registry",
+      "priority": "P1",
+      "size": "M",
+      "depends_on": [
+        "ASK-004",
+        "ASK-005",
+        "ASK-006"
+      ],
+      "labels": [
+        "area:registry",
+        "priority:p1",
+        "type:research"
+      ],
+      "body_file": "planning/issues/ASK-018.md"
+    },
+    {
+      "id": "ASK-019",
+      "title": "ASK-019: Verify Mistral Vibe, Amp, Pi, and Crush",
+      "milestone": "M3",
+      "area": "registry",
+      "priority": "P1",
+      "size": "M",
+      "depends_on": [
+        "ASK-004",
+        "ASK-005",
+        "ASK-006"
+      ],
+      "labels": [
+        "area:registry",
+        "priority:p1",
+        "type:research"
+      ],
+      "body_file": "planning/issues/ASK-019.md"
+    },
+    {
+      "id": "ASK-020",
+      "title": "ASK-020: Verify workspace-based hosts and renamed product variants",
+      "milestone": "M3",
+      "area": "registry",
+      "priority": "P1",
+      "size": "L",
+      "depends_on": [
+        "ASK-004",
+        "ASK-005",
+        "ASK-006"
+      ],
+      "labels": [
+        "area:registry",
+        "priority:p1",
+        "type:research"
+      ],
+      "body_file": "planning/issues/ASK-020.md"
+    },
+    {
+      "id": "ASK-021",
+      "title": "ASK-021: Add ongoing host discovery and catalog drift review",
+      "milestone": "M3",
+      "area": "research",
+      "priority": "P1",
+      "size": "M",
+      "depends_on": [
+        "ASK-004",
+        "ASK-006"
+      ],
+      "labels": [
+        "area:research",
+        "priority:p1",
+        "type:research"
+      ],
+      "body_file": "planning/issues/ASK-021.md"
+    },
+    {
+      "id": "ASK-022",
+      "title": "ASK-022: Add opt-in real-host discovery smoke tests",
+      "milestone": "M3",
+      "area": "testing",
+      "priority": "P1",
+      "size": "M",
+      "depends_on": [
+        "ASK-012",
+        "ASK-014"
+      ],
+      "labels": [
+        "area:testing",
+        "priority:p1",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-022.md"
+    },
+    {
+      "id": "ASK-023",
+      "title": "ASK-023: Add dependency, license, and CI supply-chain checks",
+      "milestone": "M4",
+      "area": "security",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-002",
+        "ASK-003"
+      ],
+      "labels": [
+        "area:security",
+        "priority:p0",
+        "type:maintenance"
+      ],
+      "body_file": "planning/issues/ASK-023.md"
+    },
+    {
+      "id": "ASK-024",
+      "title": "ASK-024: Rehearse the library release and document publishing controls",
+      "milestone": "M4",
+      "area": "release",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-002",
+        "ASK-003",
+        "ASK-013",
+        "ASK-023"
+      ],
+      "labels": [
+        "area:release",
+        "priority:p0",
+        "type:maintenance"
+      ],
+      "body_file": "planning/issues/ASK-024.md"
+    },
+    {
+      "id": "ASK-025",
+      "title": "ASK-025: Prepare CLI binary distribution and install documentation",
+      "milestone": "M4",
+      "area": "release",
+      "priority": "P1",
+      "size": "M",
+      "depends_on": [
+        "ASK-014",
+        "ASK-015",
+        "ASK-023",
+        "ASK-024"
+      ],
+      "labels": [
+        "area:release",
+        "priority:p1",
+        "type:maintenance"
+      ],
+      "body_file": "planning/issues/ASK-025.md"
+    },
+    {
+      "id": "ASK-026",
+      "title": "ASK-026: Complete the OSS visibility and first-release approval gate",
+      "milestone": "M4",
+      "area": "oss",
+      "priority": "P0",
+      "size": "M",
+      "depends_on": [
+        "ASK-002",
+        "ASK-012",
+        "ASK-013",
+        "ASK-014",
+        "ASK-015",
+        "ASK-021",
+        "ASK-022",
+        "ASK-023",
+        "ASK-024",
+        "ASK-025"
+      ],
+      "labels": [
+        "area:oss",
+        "priority:p0",
+        "type:maintenance"
+      ],
+      "body_file": "planning/issues/ASK-026.md"
+    },
+    {
+      "id": "ASK-027",
+      "title": "ASK-027: Design opt-in symbolic-link installation",
+      "milestone": "M5",
+      "area": "installer",
+      "priority": "P2",
+      "size": "M",
+      "depends_on": [
+        "ASK-012",
+        "ASK-013",
+        "ASK-022"
+      ],
+      "labels": [
+        "area:installer",
+        "priority:p2",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-027.md"
+    },
+    {
+      "id": "ASK-028",
+      "title": "ASK-028: Design a separate remote skill acquisition layer",
+      "milestone": "M5",
+      "area": "sources",
+      "priority": "P2",
+      "size": "L",
+      "depends_on": [
+        "ASK-008",
+        "ASK-012",
+        "ASK-013",
+        "ASK-023"
+      ],
+      "labels": [
+        "area:sources",
+        "priority:p2",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-028.md"
+    },
+    {
+      "id": "ASK-029",
+      "title": "ASK-029: Design managed upgrades and safe uninstall",
+      "milestone": "M5",
+      "area": "installer",
+      "priority": "P2",
+      "size": "L",
+      "depends_on": [
+        "ASK-011",
+        "ASK-012",
+        "ASK-013"
+      ],
+      "labels": [
+        "area:installer",
+        "priority:p2",
+        "type:feature"
+      ],
+      "body_file": "planning/issues/ASK-029.md"
+    }
+  ]
+}
