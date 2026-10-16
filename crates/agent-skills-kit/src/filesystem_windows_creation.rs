@@ -226,9 +226,12 @@ mod tests {
         };
         assert!((1..=65536).contains(&length));
         // SAFETY: API-reported length includes the NUL; conversion excludes it.
-        let text =
-            String::from_utf16(unsafe { std::slice::from_raw_parts(text, length as usize - 1) })
-                .unwrap();
+        let units = unsafe { std::slice::from_raw_parts(text, length as usize) };
+        let end = units
+            .iter()
+            .position(|unit| *unit == 0)
+            .expect("terminated SDK string");
+        let text = String::from_utf16(&units[..end]).unwrap();
         drop(owned);
         (text, control & SE_DACL_PROTECTED != 0)
     }
@@ -340,82 +343,151 @@ mod tests {
             native::stamp(&parent).unwrap().volume
         );
     }
+    // Fixture-only comparison for simple allow ACEs. Duplicate grants and the
+    // INHERITED/auto-inheritance provenance flags do not change these permissions.
+    // Unknown ACE types/flags fail; this is not a general Windows ACL evaluator.
+    fn allow_policy(file: &File) -> std::collections::BTreeMap<(Vec<u8>, u8), u32> {
+        use windows_sys::Win32::Security::{GetLengthSid, INHERIT_ONLY_ACE};
+        let bytes = super::super::descriptor(file).unwrap();
+        let mut aligned = vec![0u64; bytes.len().div_ceil(8)];
+        let mut acl = ptr::null_mut();
+        let mut present = 0;
+        let mut defaulted = 0;
+        let mut result = std::collections::BTreeMap::new();
+        // SAFETY: bounded SDK descriptor copied to sufficiently large aligned
+        // storage. SDK-returned ACL/ACE/SID pointers remain live in that storage.
+        unsafe {
+            ptr::copy_nonoverlapping(bytes.as_ptr(), aligned.as_mut_ptr().cast(), bytes.len());
+            assert_ne!(
+                GetSecurityDescriptorDacl(
+                    aligned.as_mut_ptr().cast(),
+                    &mut present,
+                    &mut acl,
+                    &mut defaulted
+                ),
+                0
+            );
+            assert_ne!(present, 0);
+            assert!(!acl.is_null());
+            for index in 0..u32::from((*acl).AceCount) {
+                let mut raw = ptr::null_mut();
+                assert_ne!(GetAce(acl, index, &mut raw), 0);
+                assert!(!raw.is_null());
+                let ace = raw.cast::<ACCESS_ALLOWED_ACE>();
+                assert_eq!((*ace).Header.AceType, 0);
+                assert!((*ace).Header.AceSize as usize >= size_of::<ACCESS_ALLOWED_ACE>());
+                let flags = u32::from((*ace).Header.AceFlags);
+                assert_eq!(
+                    flags
+                        & !(OBJECT_INHERIT_ACE
+                            | CONTAINER_INHERIT_ACE
+                            | INHERITED_ACE
+                            | INHERIT_ONLY_ACE),
+                    0
+                );
+                let sid = ptr::addr_of!((*ace).SidStart).cast_mut().cast();
+                let length = GetLengthSid(sid) as usize;
+                assert!((8..=68).contains(&length));
+                let sid = std::slice::from_raw_parts(sid.cast::<u8>(), length).to_vec();
+                for (role, active) in [
+                    (0, flags & INHERIT_ONLY_ACE == 0),
+                    (1, flags & OBJECT_INHERIT_ACE != 0),
+                    (2, flags & CONTAINER_INHERIT_ACE != 0),
+                ] {
+                    if active {
+                        *result.entry((sid.clone(), role)).or_insert(0) |= (*ace).Mask;
+                    }
+                }
+            }
+        }
+        result
+    }
     #[test]
     fn committed_payload_inherits_the_real_destination_like_native_creation() {
         use std::io::Write;
-        let root = Root::new();
-        let anchor = native::open_root(&root.0).unwrap();
-        let token = Token::effective().unwrap();
-        let sid = token.user_sid().unwrap();
-        let parent_descriptor = Descriptor::from_sddl(&format!(
-            "O:{sid}D:P(A;OICI;FA;;;{sid})(A;OICI;FR;;;WD)(A;OICI;FA;;;CO)"
-        ))
-        .unwrap();
-        let parent = native::create_with_security(
-            &anchor,
-            OsStr::new("destination parent"),
-            Kind::Directory,
-            &parent_descriptor,
-        )
-        .unwrap();
-        let baseline = native::child(
-            &parent,
-            OsStr::new("native baseline"),
-            Kind::Directory,
-            true,
-        )
-        .unwrap();
-        let baseline_child =
-            native::child(&baseline, OsStr::new("resource"), Kind::File, true).unwrap();
-        let expected_root = dacl(&baseline);
-        let expected_child = dacl(&baseline_child);
-        assert!(expected_root.0.contains(";;;WD)"));
-        let parent_security = super::super::descriptor(&parent).unwrap();
-        let stage_descriptor = Descriptor::private_for(&token).unwrap();
-        let stage = native::create_with_security(
-            &parent,
-            OsStr::new("stage"),
-            Kind::Directory,
-            &stage_descriptor,
-        )
-        .unwrap();
-        let payload_descriptor = Descriptor::private_payload(&token).unwrap();
-        let payload = native::create_with_security(
-            &stage,
-            OsStr::new("payload"),
-            Kind::Directory,
-            &payload_descriptor,
-        )
-        .unwrap();
-        let mut child = native::child(&payload, OsStr::new("resource"), Kind::File, true).unwrap();
-        child.write_all(b"inert original bytes").unwrap();
-        assert_eq!(
-            dacl(&payload),
-            dacl(&stage),
-            "every staged object must remain private despite traversal bypass privileges"
-        );
-        assert_user_only(&child, &sid, false, false);
-        drop(child);
-        native::rename_exclusive(&payload, &parent, OsStr::new("installed")).unwrap();
-        assert_eq!(
-            dacl(&payload),
-            dacl(&stage),
-            "rename must not be assumed to establish destination inheritance"
-        );
-        finalize_inheritance(&payload, &parent, &token).unwrap();
-        assert_eq!(dacl(&payload), expected_root);
-        let child = native::child(&payload, OsStr::new("resource"), Kind::File, false).unwrap();
-        assert_eq!(
-            dacl(&child),
-            expected_child,
-            "real inherited grants must propagate through the complete payload"
-        );
-        assert_eq!(parent_security, super::super::descriptor(&parent).unwrap());
-        assert_eq!(
-            fs::read(root.0.join("destination parent/installed/resource")).unwrap(),
-            b"inert original bytes"
-        );
+        for inherit_user in [true, false] {
+            let root = Root::new();
+            let anchor = native::open_root(&root.0).unwrap();
+            let token = Token::effective().unwrap();
+            let sid = token.user_sid().unwrap();
+            let user_flags = if inherit_user { "OICI" } else { "" };
+            let parent_descriptor = Descriptor::from_sddl(&format!(
+                "O:{sid}D:P(A;{user_flags};FA;;;{sid})(A;OICI;FR;;;WD)(A;OICI;FA;;;CO)"
+            ))
+            .unwrap();
+            let parent = native::create_with_security(
+                &anchor,
+                OsStr::new("destination parent"),
+                Kind::Directory,
+                &parent_descriptor,
+            )
+            .unwrap();
+            let baseline = native::child(
+                &parent,
+                OsStr::new("native baseline"),
+                Kind::Directory,
+                true,
+            )
+            .unwrap();
+            let baseline_child =
+                native::child(&baseline, OsStr::new("resource"), Kind::File, true).unwrap();
+            let expected_root = allow_policy(&baseline);
+            let expected_child = allow_policy(&baseline_child);
+            assert!(dacl(&baseline).0.contains(";;;WD)"));
+            let parent_security = super::super::descriptor(&parent).unwrap();
+            let stage_descriptor = Descriptor::private_for(&token).unwrap();
+            let stage = native::create_with_security(
+                &parent,
+                OsStr::new("stage"),
+                Kind::Directory,
+                &stage_descriptor,
+            )
+            .unwrap();
+            let payload_descriptor = Descriptor::private_payload(&token).unwrap();
+            let payload = native::create_with_security(
+                &stage,
+                OsStr::new("payload"),
+                Kind::Directory,
+                &payload_descriptor,
+            )
+            .unwrap();
+            let mut child =
+                native::child(&payload, OsStr::new("resource"), Kind::File, true).unwrap();
+            child.write_all(b"inert original bytes").unwrap();
+            assert_eq!(
+                dacl(&payload),
+                dacl(&stage),
+                "every staged object must remain private despite traversal bypass privileges"
+            );
+            assert_user_only(&child, &sid, false, false);
+            drop(child);
+            native::rename_exclusive(&payload, &parent, OsStr::new("installed")).unwrap();
+            assert_eq!(
+                dacl(&payload),
+                dacl(&stage),
+                "rename must not be assumed to establish destination inheritance"
+            );
+            finalize_inheritance(&payload, &parent, &token).unwrap();
+            assert_eq!(
+                allow_policy(&payload),
+                expected_root,
+                "root inheritance, inherit_user={inherit_user}"
+            );
+            assert!(!dacl(&payload).1);
+            let child = native::child(&payload, OsStr::new("resource"), Kind::File, false).unwrap();
+            assert_eq!(
+                allow_policy(&child),
+                expected_child,
+                "real inherited grants must propagate through the complete payload"
+            );
+            assert_eq!(parent_security, super::super::descriptor(&parent).unwrap());
+            assert_eq!(
+                fs::read(root.0.join("destination parent/installed/resource")).unwrap(),
+                b"inert original bytes"
+            );
+        }
     }
+
     #[test]
     fn permission_finalization_failure_retains_the_committed_private_payload() {
         let root = Root::new();
@@ -427,11 +499,11 @@ mod tests {
                 .unwrap();
         // This trusted fixture deliberately holds no WRITE_DAC capability.
         let payload = native::child(&stage, OsStr::new("payload"), Kind::Directory, true).unwrap();
-        let before = dacl(&payload);
         native::rename_exclusive(&payload, &anchor, OsStr::new("committed")).unwrap();
+        let before = allow_policy(&payload);
         let error = finalize_inheritance(&payload, &anchor, &token).unwrap_err();
         assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
-        assert_eq!(before, dacl(&payload));
+        assert_eq!(before, allow_policy(&payload));
         assert!(
             root.0.join("committed").is_dir(),
             "post-commit failure is never rollback authority"
