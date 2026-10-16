@@ -2268,3 +2268,116 @@ fn antigravity_native_copy_scopes_and_attributions() {
         assert!(!legacy.join("SKILL.md").exists());
     }
 }
+
+#[test]
+fn goose_scopes_variants_and_legacy_reader_gaps() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "GOOSE_PATH_ROOT",
+        "GOOSE_CONFIG_DIR",
+        "XDG_CONFIG_HOME",
+        "APPDATA",
+        "CLAUDE_CONFIG_DIR",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "unmodeled profile or config root".into());
+    }
+    for id in ["goose-cli", "goose-desktop"] {
+        let definition = catalog.get(id).unwrap();
+        assert_eq!(definition.product_id, "goose");
+        assert!(definition.aliases.is_empty());
+        assert!(
+            definition
+                .limitations
+                .iter()
+                .any(|text| text.contains("platform-specific config directories"))
+        );
+        for (scope, base, root, expected) in [
+            (
+                Scope::Project,
+                ContextBase::Project,
+                context.project_root.as_ref().unwrap(),
+                vec![".agents/skills", ".goose/skills", ".claude/skills"],
+            ),
+            (
+                Scope::User,
+                ContextBase::Home,
+                context.user_home.as_ref().unwrap(),
+                vec![".agents/skills", ".claude/skills"],
+            ),
+        ] {
+            let result = resolve(&catalog, id, scope, &context).unwrap();
+            assert_eq!(result.preferred_write.path, root.join(".agents/skills"));
+            assert_eq!(result.preferred_write.origin, PathOrigin::Context(base));
+            assert_eq!(result.discovery[0].location, result.preferred_write);
+            assert_eq!(result.discovery.len(), expected.len());
+            for (reader, suffix) in result.discovery.iter().zip(expected) {
+                assert_eq!(reader.location.path, root.join(suffix));
+                assert_eq!(reader.location.origin, PathOrigin::Context(base));
+                assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+                assert_eq!(
+                    reader.location.evidence.source.as_ref().unwrap().url,
+                    "https://goose-docs.ai/docs/guides/context-engineering/using-skills/"
+                );
+                assert!(reader.location.evidence.discovery_tests.is_empty());
+                assert!(!reader.location.evidence.resolver_tests.is_empty());
+            }
+            assert!(
+                result
+                    .warnings
+                    .contains(&ResolutionWarning::HostDiscoveryUntested)
+            );
+            assert!(
+                result
+                    .warnings
+                    .contains(&ResolutionWarning::PlacementNotExclusive)
+            );
+            assert!(
+                !result
+                    .warnings
+                    .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+            );
+        }
+        assert!(matches!(
+            resolve(&catalog, id, Scope::ApplicationWorkspace, &context),
+            Err(ResolveError::UnsupportedScope { .. })
+        ));
+        let mut missing = context.clone();
+        missing.user_home = None;
+        assert!(matches!(
+            resolve(&catalog, id, Scope::User, &missing),
+            Err(ResolveError::MissingContext(ContextBase::Home))
+        ));
+        assert!(resolve(&catalog, id, Scope::Project, &missing).is_ok());
+        missing.project_root = None;
+        assert!(matches!(
+            resolve(&catalog, id, Scope::Project, &missing),
+            Err(ResolveError::MissingContext(ContextBase::Project))
+        ));
+        missing.user_home = Some("relative".into());
+        assert!(matches!(
+            resolve(&catalog, id, Scope::User, &missing),
+            Err(ResolveError::InvalidContext {
+                base: ContextBase::Home,
+                issue: PathIssue::Relative
+            })
+        ));
+    }
+    for id in [
+        "goose",
+        "goose-mobile",
+        "goose-acp",
+        "goose-remote",
+        "goose-gdk",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+}
+
+#[test]
+fn goose_native_shared_copy_and_variant_attribution() {
+    coincident_writes_preserve_variants(["goose-cli", "goose-desktop"], false);
+    coincident_writes_preserve_variants(["codex", "goose-cli"], false);
+}

@@ -25,6 +25,8 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             "gemini-cli",
             "github-copilot-cli",
             "github-copilot-vscode",
+            "goose-cli",
+            "goose-desktop",
             "junie-cli",
             "kilo-code-cli",
             "kilo-code-vscode",

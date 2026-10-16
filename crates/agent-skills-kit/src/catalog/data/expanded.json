@@ -5362,6 +5362,520 @@
         "Getting Started, Choose your surface / Download and install / Start a project (https://antigravity.google/docs/getting-started/; reviewed 2026-10-16) identifies App v2.5+, agy CLI v1.2+, standalone IDE and native macOS/Linux/Windows availability. Those are surface applicability, not proven minimum skills versions. Native CI does not validate installed hosts, Windows desktop/ARM, distro versions or Googlebook OS.",
         "The host allows omitted name with folder fallback; the installer retains stricter portable required name/folder validation. No additional reserved local name, duplicate activation priority or minimum skills version is established. No host, credentials, model API or embedded skill instructions were run."
       ]
+    },
+    {
+      "id": "goose-cli",
+      "aliases": [],
+      "product_id": "goose",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                "accessed": "2026-10-16",
+                "applicability": "Current AAIF Goose cli with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                    "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current AAIF Goose cli with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                    "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".goose",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                    "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current AAIF Goose cli with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                    "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                    "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current AAIF Goose cli with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                    "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "The recommended shared .agents placement is the native write choice. Compatibility readers and enumeration order do not establish duplicate priority or ancestor traversal."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                "accessed": "2026-10-16",
+                "applicability": "Current AAIF Goose cli with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                    "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current AAIF Goose cli with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                    "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                    "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current AAIF Goose cli with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                    "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "The recommended shared .agents placement is the native write choice. Compatibility readers and enumeration order do not establish duplicate priority or ancestor traversal."
+          ]
+        }
+      ],
+      "limitations": [
+        "The old https://block.github.io/goose/ landing page redirects to https://goose-docs.ai/. Official April 7 2026 announcement https://goose-docs.ai/blog/2026/04/07/goose-moves-to-aaif/ establishes the AAIF documentation/repository move; reviewed 2026-10-16. Installer catalogs and implementation code are not path authority.",
+        "Agent Skills documents a default-enabled Skills platform extension. Install goose, Shared Configuration Settings (https://goose-docs.ai/docs/getting-started/installation/; reviewed 2026-10-16) explicitly shares core/extension configuration between CLI and Desktop. They remain distinct canonical variants; no mobile, remote, ACP or GDK parity is inferred.",
+        "Project means the explicit caller project root named by Skill Locations; it is not an application-workspace or automatic Git/CWD search. User means explicit home. No brand/executable alias silently selects a surface.",
+        "Compatibility project .goose/skills and .claude/skills, plus user ~/.claude/skills, are documented readers. The additional phrase platform-specific config directories gives no concrete skills suffix per OS. Those readers remain unverified, not guessed from config.yaml or renamed after AAIF migration.",
+        "Configuration Files and Environment Variables (https://goose-docs.ai/docs/guides/config-files/; https://goose-docs.ai/docs/guides/environment-variables/; reviewed 2026-10-16) document config/data/state and GOOSE_PATH_ROOT, not a replacement for the recommended .agents skill roots. GOOSE_PATH_ROOT, GOOSE_CONFIG_DIR and XDG_CONFIG_HOME are not modeled as skills-root overrides; alternate-profile effective discovery remains untested.",
+        "Install goose documents native macOS/Linux/Windows CLI and Desktop, including native Windows PowerShell and separate WSL alternatives. Library CI is native Windows Server x64/NTFS, not installed hosts, Desktop/ARM/distro versions, WSL or sandboxed package validation.",
+        "Plugin-managed ~/.agents/plugins stores, bundled skills, providers, credentials and extension enablement/configuration are outside copy writes. The built-in web-search skill is not silently treated as a reserved local name or permission to execute commands.",
+        "Generic portable metadata/folder matching and strict no-link copying remain required. No additional reserved local name, duplicate activation precedence or minimum skills version is established. No installed host, real skill store, credential, model request or embedded skill instructions were used."
+      ]
+    },
+    {
+      "id": "goose-desktop",
+      "aliases": [],
+      "product_id": "goose",
+      "variant": "desktop",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                "accessed": "2026-10-16",
+                "applicability": "Current AAIF Goose desktop with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                    "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current AAIF Goose desktop with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                    "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".goose",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                    "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current AAIF Goose desktop with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                    "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                    "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current AAIF Goose desktop with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                    "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "The recommended shared .agents placement is the native write choice. Compatibility readers and enumeration order do not establish duplicate priority or ancestor traversal."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                "accessed": "2026-10-16",
+                "applicability": "Current AAIF Goose desktop with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                    "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current AAIF Goose desktop with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                    "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://goose-docs.ai/docs/guides/context-engineering/using-skills/",
+                    "section": "Agent Skills introduction; Skill Locations; Creating a Skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current AAIF Goose desktop with default-enabled Skills platform extension; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::goose_scopes_variants_and_legacy_reader_gaps",
+                    "expanded_targets::goose_native_shared_copy_and_variant_attribution"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Additional platform-specific config readers are documented without concrete skills paths and remain unenumerated. Native placement is not proof of effective host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "The recommended shared .agents placement is the native write choice. Compatibility readers and enumeration order do not establish duplicate priority or ancestor traversal."
+          ]
+        }
+      ],
+      "limitations": [
+        "The old https://block.github.io/goose/ landing page redirects to https://goose-docs.ai/. Official April 7 2026 announcement https://goose-docs.ai/blog/2026/04/07/goose-moves-to-aaif/ establishes the AAIF documentation/repository move; reviewed 2026-10-16. Installer catalogs and implementation code are not path authority.",
+        "Agent Skills documents a default-enabled Skills platform extension. Install goose, Shared Configuration Settings (https://goose-docs.ai/docs/getting-started/installation/; reviewed 2026-10-16) explicitly shares core/extension configuration between CLI and Desktop. They remain distinct canonical variants; no mobile, remote, ACP or GDK parity is inferred.",
+        "Project means the explicit caller project root named by Skill Locations; it is not an application-workspace or automatic Git/CWD search. User means explicit home. No brand/executable alias silently selects a surface.",
+        "Compatibility project .goose/skills and .claude/skills, plus user ~/.claude/skills, are documented readers. The additional phrase platform-specific config directories gives no concrete skills suffix per OS. Those readers remain unverified, not guessed from config.yaml or renamed after AAIF migration.",
+        "Configuration Files and Environment Variables (https://goose-docs.ai/docs/guides/config-files/; https://goose-docs.ai/docs/guides/environment-variables/; reviewed 2026-10-16) document config/data/state and GOOSE_PATH_ROOT, not a replacement for the recommended .agents skill roots. GOOSE_PATH_ROOT, GOOSE_CONFIG_DIR and XDG_CONFIG_HOME are not modeled as skills-root overrides; alternate-profile effective discovery remains untested.",
+        "Install goose documents native macOS/Linux/Windows CLI and Desktop, including native Windows PowerShell and separate WSL alternatives. Library CI is native Windows Server x64/NTFS, not installed hosts, Desktop/ARM/distro versions, WSL or sandboxed package validation.",
+        "Plugin-managed ~/.agents/plugins stores, bundled skills, providers, credentials and extension enablement/configuration are outside copy writes. The built-in web-search skill is not silently treated as a reserved local name or permission to execute commands.",
+        "Generic portable metadata/folder matching and strict no-link copying remain required. No additional reserved local name, duplicate activation precedence or minimum skills version is established. No installed host, real skill store, credential, model request or embedded skill instructions were used."
+      ]
     }
   ]
 }
