@@ -1,0 +1,28 @@
+name: Conventional PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  conventional-pr-title:
+    name: conventional-pr-title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          node <<'NODE'
+          const title = process.env.PR_TITLE || '';
+          const conventional = /^(?:feat|fix|docs|test|refactor|chore|ci|build|perf|style|revert)(?:\([a-z][a-z0-9-]*\))?!?: .+$/;
+          if (title.length > 100 || !conventional.test(title) || title.endsWith('.')) {
+            console.error('PR title must be a Conventional Commit subject (max 100 chars, no trailing period).');
+            console.error('Example: feat(resolver): resolve documented project paths');
+            process.exit(1);
+          }
+          NODE
