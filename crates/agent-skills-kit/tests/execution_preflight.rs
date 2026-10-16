@@ -291,11 +291,27 @@ fn native_copy_creates_exact_payload_and_repeat_is_unchanged() {
     )
     .unwrap();
     fs::create_dir(fixture.source.join("empty")).unwrap();
-    fs::set_permissions(
-        fixture.source.join("resource"),
-        fs::Permissions::from_mode(0o750),
+    let source_file = fs::File::open(fixture.source.join("resource")).unwrap();
+    rustix::fs::fsetxattr(
+        &source_file,
+        "user.ask-copy-test",
+        b"must-not-copy",
+        rustix::fs::XattrFlags::empty(),
     )
     .unwrap();
+    fs::set_permissions(
+        fixture.source.join("resource"),
+        fs::Permissions::from_mode(0o4750),
+    )
+    .unwrap();
+    assert_ne!(
+        fs::metadata(fixture.source.join("resource"))
+            .unwrap()
+            .mode()
+            & 0o4000,
+        0,
+        "copy fixture requires real setuid bits; use the scoped unsandboxed suite"
+    );
     let plan = fixture.plan();
     let report = apply_plan(&plan, ApplyOptions::default());
     assert!(report.is_successful(), "{report:#?}");
@@ -312,6 +328,14 @@ fn native_copy_creates_exact_payload_and_repeat_is_unchanged() {
             & 0o7777,
         0o750
     );
+    let output = fs::File::open(fixture.destination().join("resource")).unwrap();
+    let mut attribute = [0u8; 64];
+    let missing =
+        rustix::fs::fgetxattr(&output, "user.ask-copy-test", &mut attribute[..]).unwrap_err();
+    #[cfg(target_os = "linux")]
+    assert_eq!(missing, rustix::io::Errno::NODATA);
+    #[cfg(target_os = "macos")]
+    assert_eq!(missing, rustix::io::Errno::NOATTR);
     assert!(
         fs::read_dir(fixture.destination().parent().unwrap())
             .unwrap()
