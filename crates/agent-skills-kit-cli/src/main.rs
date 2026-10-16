@@ -1,5 +1,6 @@
 //! Thin terminal consumer of the reusable library. Skill data is never executed.
 mod args;
+mod installation;
 mod planning;
 use agent_skills_kit::{
     catalog::Catalog,
@@ -21,14 +22,15 @@ Usage:
   agent-skills-kit targets show <id> [--json]
   agent-skills-kit validate <source> [--json]
   agent-skills-kit plan <source> --target <id>... --scope <user|project> [context] [--json]
+  agent-skills-kit install <source> --target <id>... --scope <user|project> [context] [--yes] [--dry-run] [--json]
   agent-skills-kit --help
   agent-skills-kit --version
 
-Read-only commands never prompt or execute skill content.
+Commands never execute skill content. Non-interactive install never prompts.
 Use -- before a positional path beginning with a dash.
 Selecting a host means placement, not exclusive visibility to that host.
 Context: --user-home <path> for user scope; --project-root <path> for project scope.
-No HOME or host overrides are inferred. Installation is still under development.
+No HOME or host overrides are inferred. Install requires --yes; --dry-run never writes.
 ";
 struct Output {
     exit_code: u8,
@@ -85,6 +87,7 @@ fn absolute(path: std::path::PathBuf) -> Result<std::path::PathBuf, Failure> {
 fn execute(command: Command) -> Result<Output, Failure> {
     match command {
         Command::Plan(options) => planning::execute(options),
+        Command::Install { plan, yes, dry_run } => installation::execute(plan, yes, dry_run),
         Command::Help => Ok(Output {
             exit_code: 0,
             command: "help",
@@ -164,7 +167,7 @@ fn run(args: &[OsString], stdout: &mut impl Write, stderr: &mut impl Write) -> i
                     stdout,
                     "{}",
                     json_line(
-                        json!({"schema_version": 1, "command": output.command, "status": if output.exit_code == 0 { "ok" } else { "blocked" }, "data": output.data})
+                        json!({"schema_version": 1, "command": output.command, "status": match output.exit_code { 0 => "ok", 3 => "approval_required", 4 => "failed", _ => "blocked" }, "data": output.data})
                     )
                 )?;
             } else {

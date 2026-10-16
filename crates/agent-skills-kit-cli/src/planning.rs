@@ -95,10 +95,8 @@ pub(crate) fn view(plan: &InstallPlan) -> Result<Value, Failure> {
         "targets": targets, "destinations": destinations, "intended_writes": writes, "inspected_bytes": plan.inspected_bytes()}),
     )
 }
-pub(crate) fn execute(options: PlanArgs) -> Result<Output, Failure> {
-    let plan = build(&options)?;
-    let mut human =
-        String::from("Read-only plan; no destinations written. Placement is not exclusive.\n");
+pub(crate) fn describe(plan: &InstallPlan) -> String {
+    let mut human = String::from("Plan placement is not exclusive.\n");
     for target in plan.targets() {
         for message in target.warnings() {
             human.push_str(&format!("{}: {}\n", target.id(), warning(message)));
@@ -114,6 +112,14 @@ pub(crate) fn execute(options: PlanArgs) -> Result<Output, Failure> {
             human.push_str(&format!("  {problem:?}\n"));
         }
     }
+    human
+}
+pub(crate) fn execute(options: PlanArgs) -> Result<Output, Failure> {
+    let plan = build(&options)?;
+    let human = format!(
+        "Read-only plan; no destinations written.\n{}",
+        describe(&plan)
+    );
     Ok(Output {
         command: "plan",
         exit_code: if plan.is_applicable() { 0 } else { 2 },
