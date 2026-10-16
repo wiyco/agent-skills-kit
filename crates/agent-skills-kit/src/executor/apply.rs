@@ -162,9 +162,18 @@ pub fn apply_plan(plan: &InstallPlan, options: ApplyOptions) -> InstallReport {
         });
         return report;
     }
+    if !preflight(plan, options, &mut report) {
+        return report;
+    }
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    native::apply(plan, options, &mut report);
+    report
+}
+
+fn preflight(plan: &InstallPlan, options: ApplyOptions, report: &mut InstallReport) -> bool {
     if let Err(error) = verify_plan(plan, options.verification) {
         report.preflight_error = Some(error);
-        return report;
+        return false;
     }
     let bytes = plan
         .intended_writes()
@@ -177,11 +186,9 @@ pub fn apply_plan(plan: &InstallPlan, options: ApplyOptions) -> InstallReport {
             path: None,
             kind: super::VerificationErrorKind::Limit("copy bytes"),
         });
-        return report;
+        return false;
     }
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
-    native::apply(plan, options, &mut report);
-    report
+    true
 }
 
 fn initial_report(plan: &InstallPlan) -> InstallReport {
@@ -213,3 +220,7 @@ fn initial_report(plan: &InstallPlan) -> InstallReport {
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 #[path = "apply_unix.rs"]
 mod native;
+
+#[cfg(all(windows, test))]
+#[path = "apply_windows.rs"]
+mod windows_candidate;
