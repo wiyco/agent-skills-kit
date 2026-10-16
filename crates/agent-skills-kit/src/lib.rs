@@ -34,4 +34,4 @@ pub mod validation;
 
 /// Describes the development CLI capability without claiming host discovery.
 pub const STATUS: &str =
-    "Agent Skills Kit development build: CLI commands are not implemented yet.";
+    "Agent Skills Kit development build; see agent-skills-kit --help for current commands.";
