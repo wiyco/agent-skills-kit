@@ -98,7 +98,7 @@ impl Default for MetadataLimits {
     }
 }
 impl MetadataLimits {
-    fn validate(self) -> Result<(), Diagnostic> {
+    pub(super) fn validate(self) -> Result<(), Diagnostic> {
         if self.max_document_bytes == 0
             || self.max_document_bytes > 16 * 1024 * 1024
             || self.max_frontmatter_bytes == 0
