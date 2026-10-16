@@ -1720,3 +1720,138 @@ fn amp_native_windows_plan_is_rejected_without_writes() {
         assert!(!context.project_root.as_ref().unwrap().exists());
     }
 }
+
+#[test]
+fn crush_native_and_alternate_copy() {
+    native_writes_with_override("crush-cli", None);
+    native_writes_with_override("crush-cli", Some("XDG_CONFIG_HOME"));
+}
+
+#[test]
+fn crush_xdg_native_and_reader_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "CRUSH_SKILLS_DIR",
+        "CRUSH_GLOBAL_CONFIG",
+        "CRUSH_GLOBAL_DATA",
+        "LOCALAPPDATA",
+        "CLAUDE_CONFIG_DIR",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "additional or unverified root".into());
+    }
+    let target = catalog.get("crush-cli").unwrap();
+    assert_eq!(target.product_id, "crush");
+    assert_eq!(target.variant, "cli");
+    assert!(
+        target
+            .limitations
+            .iter()
+            .any(|gap| gap.contains("Windows-only LOCALAPPDATA"))
+    );
+    for (scope, root, folders) in [
+        (
+            Scope::User,
+            context.user_home.as_ref().unwrap(),
+            [".config/agents", ".config/crush", ".agents", ".claude"],
+        ),
+        (
+            Scope::Project,
+            context.project_root.as_ref().unwrap(),
+            [".agents", ".crush", ".claude", ".cursor"],
+        ),
+    ] {
+        let result = resolve(&catalog, "crush-cli", scope, &context).unwrap();
+        assert_eq!(
+            result.preferred_write.path,
+            root.join(folders[1]).join("skills")
+        );
+        assert_eq!(result.discovery.len(), folders.len());
+        assert_eq!(result.discovery[1].location, result.preferred_write);
+        for (reader, folder) in result.discovery.iter().zip(folders) {
+            assert_eq!(reader.location.path, root.join(folder).join("skills"));
+            assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+            assert_eq!(
+                reader.location.evidence.source.as_ref().unwrap().url,
+                "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills"
+            );
+            assert!(reader.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            !result
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    let project = resolve(&catalog, "crush-cli", Scope::Project, &context).unwrap();
+    let home = context.user_home.clone().unwrap();
+    let alternate = home.join("alternate XDG 日本語");
+    context
+        .overrides
+        .insert("XDG_CONFIG_HOME".into(), alternate.clone().into_os_string());
+    let user = resolve(&catalog, "crush-cli", Scope::User, &context).unwrap();
+    assert_eq!(user.preferred_write.path, alternate.join("crush/skills"));
+    assert_eq!(
+        user.preferred_write.origin,
+        PathOrigin::Override("XDG_CONFIG_HOME".into())
+    );
+    assert_eq!(user.discovery[1].location, user.preferred_write);
+    for (reader, path) in user.discovery.iter().zip([
+        alternate.join("agents/skills"),
+        alternate.join("crush/skills"),
+        home.join(".agents/skills"),
+        home.join(".claude/skills"),
+    ]) {
+        assert_eq!(reader.location.path, path);
+    }
+    let mut no_home = context.clone();
+    no_home.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "crush-cli", Scope::User, &no_home),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    for value in ["", "relative", "~/.config"] {
+        context
+            .overrides
+            .insert("XDG_CONFIG_HOME".into(), value.into());
+        assert!(matches!(
+            resolve(&catalog, "crush-cli", Scope::User, &context),
+            Err(ResolveError::InvalidOverride { .. })
+        ));
+        assert_eq!(
+            project,
+            resolve(&catalog, "crush-cli", Scope::Project, &context).unwrap()
+        );
+    }
+    context.overrides.remove(&OsString::from("XDG_CONFIG_HOME"));
+    context.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "crush-cli", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "crush-cli", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+    assert!(matches!(
+        resolve(&catalog, "crush-cli", Scope::ApplicationWorkspace, &context),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    for id in [
+        "crush",
+        "crush-ide",
+        "crush-cloud",
+        "crush-android",
+        "crush-bsd",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+}
