@@ -34,6 +34,7 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             "kiro-cli",
             "kiro-ide",
             "mistral-vibe-cli",
+            "openclaw-local",
             "opencode",
             "pi-cli",
             "qwen-code-cli",

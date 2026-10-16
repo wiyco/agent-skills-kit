@@ -2381,3 +2381,326 @@ fn goose_native_shared_copy_and_variant_attribution() {
     coincident_writes_preserve_variants(["goose-cli", "goose-desktop"], false);
     coincident_writes_preserve_variants(["codex", "goose-cli"], false);
 }
+
+#[test]
+fn openclaw_workspace_default_state_and_override_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    context.application_workspace =
+        Some(std::env::temp_dir().join("ask-openclaw workspace 日本語"));
+    let home = context.user_home.clone().unwrap();
+    let workspace = context.application_workspace.clone().unwrap();
+    for (scope, expected, readers) in [
+        (
+            Scope::User,
+            home.join(".agents/skills"),
+            vec![home.join(".agents/skills"), home.join(".openclaw/skills")],
+        ),
+        (
+            Scope::ApplicationWorkspace,
+            workspace.join("skills"),
+            vec![workspace.join("skills"), workspace.join(".agents/skills")],
+        ),
+    ] {
+        let result = resolve(&catalog, "openclaw-local", scope, &context).unwrap();
+        assert_eq!(result.preferred_write.path, expected);
+        assert_eq!(result.discovery[0].location, result.preferred_write);
+        assert_eq!(result.discovery.len(), readers.len());
+        for (reader, expected) in result.discovery.iter().zip(readers) {
+            assert_eq!(reader.location.path, expected);
+            assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+            assert_eq!(
+                reader.location.evidence.source.as_ref().unwrap().url,
+                "https://docs.openclaw.ai/tools/skills"
+            );
+            assert!(reader.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            !result
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    assert_eq!(
+        catalog.get("openclaw-local").unwrap().variant,
+        "local-gateway"
+    );
+    for variable in ["OPENCLAW_STATE_DIR", "OPENCLAW_HOME"] {
+        let default = if variable == "OPENCLAW_HOME" {
+            home.clone()
+        } else {
+            home.join(".openclaw")
+        };
+        context.overrides.insert(variable.into(), default.into());
+        assert!(resolve(&catalog, "openclaw-local", Scope::User, &context).is_ok());
+        for value in [
+            home.join("alternate"),
+            home.with_file_name("HOME SPACE"),
+            home.join(".openclaw-other"),
+        ] {
+            context.overrides.insert(variable.into(), value.into());
+            assert!(
+                matches!(resolve(&catalog, "openclaw-local", Scope::User, &context), Err(ResolveError::InvalidOverride { variable: found, issue: PathIssue::HostOverridePolicy }) if found == variable)
+            );
+            assert_eq!(
+                resolve(
+                    &catalog,
+                    "openclaw-local",
+                    Scope::ApplicationWorkspace,
+                    &context
+                )
+                .unwrap()
+                .preferred_write
+                .path,
+                workspace.join("skills")
+            );
+        }
+        for value in ["", "relative", "~/profile", "bad\0path"] {
+            context.overrides.insert(variable.into(), value.into());
+            assert!(matches!(
+                resolve(&catalog, "openclaw-local", Scope::User, &context),
+                Err(ResolveError::InvalidOverride { .. })
+            ));
+        }
+        context
+            .overrides
+            .insert(variable.into(), home.join("../other").into());
+        assert!(matches!(
+            resolve(&catalog, "openclaw-local", Scope::User, &context),
+            Err(ResolveError::InvalidOverride {
+                issue: PathIssue::ParentComponent,
+                ..
+            })
+        ));
+        context.overrides.clear();
+    }
+    for profile in ["team", "default", ""] {
+        context
+            .overrides
+            .insert("OPENCLAW_PROFILE".into(), profile.into());
+        assert!(
+            matches!(resolve(&catalog, "openclaw-local", Scope::User, &context), Err(ResolveError::InvalidOverride { variable, issue: PathIssue::HostOverridePolicy }) if variable == "OPENCLAW_PROFILE")
+        );
+        assert!(
+            resolve(
+                &catalog,
+                "openclaw-local",
+                Scope::ApplicationWorkspace,
+                &context
+            )
+            .is_ok()
+        );
+    }
+    context.overrides.clear();
+    for variable in [
+        "OPENCLAW_WORKSPACE_DIR",
+        "OPENCLAW_CONFIG_PATH",
+        "CODEX_HOME",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "unmodeled configuration input".into());
+    }
+    context.user_home = None;
+    assert!(
+        resolve(
+            &catalog,
+            "openclaw-local",
+            Scope::ApplicationWorkspace,
+            &context
+        )
+        .is_ok()
+    );
+    assert!(matches!(
+        resolve(&catalog, "openclaw-local", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.application_workspace = None;
+    assert!(matches!(
+        resolve(
+            &catalog,
+            "openclaw-local",
+            Scope::ApplicationWorkspace,
+            &context
+        ),
+        Err(ResolveError::MissingContext(
+            ContextBase::ApplicationWorkspace
+        ))
+    ));
+    assert!(matches!(
+        resolve(&catalog, "openclaw-local", Scope::Project, &context),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.application_workspace = Some("relative".into());
+    assert!(matches!(
+        resolve(
+            &catalog,
+            "openclaw-local",
+            Scope::ApplicationWorkspace,
+            &context
+        ),
+        Err(ResolveError::InvalidContext {
+            base: ContextBase::ApplicationWorkspace,
+            issue: PathIssue::Relative
+        })
+    ));
+    for id in [
+        "openclaw",
+        "openclaw-cloud",
+        "openclaw-hub",
+        "openclaw-node",
+        "clawdbot",
+        "moltbot",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+}
+
+#[test]
+fn openclaw_native_copy_and_refused_state_preservation() {
+    let catalog = Catalog::bundled().unwrap();
+    for scope in [Scope::User, Scope::ApplicationWorkspace] {
+        let fixture = Fixture::new();
+        let source = fixture.0.join("source/sample");
+        fs::create_dir_all(source.join("empty")).unwrap();
+        fs::write(
+            source.join("SKILL.md"),
+            b"---\nname: sample\ndescription: Original inert OpenClaw fixture\n---\nData only.\n",
+        )
+        .unwrap();
+        fs::write(source.join("resource café.txt"), b"inert original bytes").unwrap();
+        let home = fixture.0.join("home 日本語");
+        let workspace = fixture.0.join("workspace space");
+        fs::create_dir(&home).unwrap();
+        fs::create_dir(&workspace).unwrap();
+        let reader = if scope == Scope::User {
+            home.join(".openclaw/skills/sample")
+        } else {
+            workspace.join(".agents/skills/sample")
+        };
+        fs::create_dir_all(&reader).unwrap();
+        fs::write(reader.join("sentinel"), b"reader preserved").unwrap();
+        let mut context = InstallContext::new(native_platform().unwrap());
+        context.user_home = Some(home.clone());
+        context.application_workspace = Some(workspace.clone());
+        context
+            .overrides
+            .insert("OPENCLAW_HOME".into(), home.clone().into());
+        context
+            .overrides
+            .insert("OPENCLAW_STATE_DIR".into(), home.join(".openclaw").into());
+        let targets = if scope == Scope::User {
+            vec!["codex", "openclaw-local"]
+        } else {
+            vec!["openclaw-local"]
+        };
+        let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        let preview = || {
+            plan_install(
+                &catalog,
+                InstallRequest {
+                    skills: &sources,
+                    target_ids: &targets,
+                    scope,
+                    context: &context,
+                    limits: PlanLimits::default(),
+                },
+            )
+            .unwrap()
+        };
+        let plan = preview();
+        assert!(plan.is_applicable(), "{plan:?}");
+        assert_eq!(plan.destinations().len(), 1);
+        assert_eq!(plan.destinations()[0].attributions().len(), targets.len());
+        let destination = plan.destinations()[0].path().unwrap();
+        let expected = if scope == Scope::User {
+            home.canonicalize().unwrap().join(".agents/skills/sample")
+        } else {
+            workspace.canonicalize().unwrap().join("skills/sample")
+        };
+        assert_eq!(destination, expected);
+        assert!(!destination.exists());
+        let report = apply_plan(&plan, ApplyOptions::default());
+        assert!(report.is_successful(), "{report:?}");
+        assert_eq!(report.outcomes[0].status, OutcomeStatus::Created);
+        for name in ["SKILL.md", "resource café.txt"] {
+            assert_eq!(
+                fs::read(destination.join(name)).unwrap(),
+                fs::read(source.join(name)).unwrap()
+            );
+        }
+        assert!(destination.join("empty").is_dir());
+        let repeated = apply_plan(&preview(), ApplyOptions::default());
+        assert!(repeated.is_successful(), "{repeated:?}");
+        assert_eq!(repeated.outcomes[0].status, OutcomeStatus::Unchanged);
+        fs::write(
+            destination.join("resource café.txt"),
+            b"preserve manual edit",
+        )
+        .unwrap();
+        let conflict = preview();
+        assert!(!conflict.is_applicable());
+        assert!(!apply_plan(&conflict, ApplyOptions::default()).is_successful());
+        assert_eq!(
+            fs::read(destination.join("resource café.txt")).unwrap(),
+            b"preserve manual edit"
+        );
+        assert_eq!(
+            fs::read(reader.join("sentinel")).unwrap(),
+            b"reader preserved"
+        );
+        assert!(!reader.join("SKILL.md").exists());
+    }
+    for variable in ["OPENCLAW_STATE_DIR", "OPENCLAW_HOME", "OPENCLAW_PROFILE"] {
+        let fixture = Fixture::new();
+        let source = fixture.0.join("source/sample");
+        fs::create_dir_all(&source).unwrap();
+        let bytes =
+            b"---\nname: sample\ndescription: Original inert refusal fixture\n---\nData only.\n";
+        fs::write(source.join("SKILL.md"), bytes).unwrap();
+        let home = fixture.0.join("home");
+        fs::create_dir(&home).unwrap();
+        fs::write(home.join("sentinel"), b"preserve").unwrap();
+        let mut context = InstallContext::new(native_platform().unwrap());
+        context.user_home = Some(home.clone());
+        context.overrides.insert(
+            variable.into(),
+            if variable == "OPENCLAW_PROFILE" {
+                "team".into()
+            } else {
+                fixture.0.join("alternate").into()
+            },
+        );
+        let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        let plan = plan_install(
+            &catalog,
+            InstallRequest {
+                skills: &sources,
+                target_ids: &["openclaw-local"],
+                scope: Scope::User,
+                context: &context,
+                limits: PlanLimits::default(),
+            },
+        )
+        .unwrap();
+        assert!(!plan.is_applicable());
+        assert!(matches!(
+            plan.targets()[0].resolution(),
+            Err(ResolveError::InvalidOverride {
+                issue: PathIssue::HostOverridePolicy,
+                ..
+            })
+        ));
+        assert!(!apply_plan(&plan, ApplyOptions::default()).is_successful());
+        assert!(!home.join(".agents").exists());
+        assert!(!home.join(".openclaw").exists());
+        assert!(!fixture.0.join("alternate").exists());
+        assert_eq!(fs::read(home.join("sentinel")).unwrap(), b"preserve");
+        assert_eq!(fs::read(source.join("SKILL.md")).unwrap(), bytes);
+    }
+}
