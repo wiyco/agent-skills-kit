@@ -1,0 +1,25 @@
+# Read-only destination observations and planning
+
+The initial `planner` API exposes `observe_destination(trusted_root, relative_path)` as a bounded native namespace observation. It is the first layer of ASK-009, not a complete install preview or write authorization. Multi-skill classification, source revalidation, physical destination deduplication, overlap/case-collision checks and target attribution follow in the dependent planner layer.
+
+## Trust and absence
+
+The caller explicitly chooses the root and must control its ancestor namespace under the [accepted threat model](threat-model.md). A missing root is permitted: the observation retains its closest existing ancestor and records missing components in order, without creating them. `trusted_anchor()` exposes that actual choice; `destination()` is the canonical anchor plus selected component labels. A canonical-looking string is not a containment proof, and descendant labels may alias on case/normalization-insensitive filesystems. Later planning must use opened identities as well as component boundaries.
+
+Root parent traversal/NUL/relative paths are rejected. Strip dot/trailing separators before final-root no-follow opening. Root final aliases and all untrusted descendant symlinks, special files and regular files are refused. Ancestor aliases inside the explicitly trusted root selection can be canonicalized and are checked against the retained identity. The relative path is interpreted one component at a time, with the same portable resource-name and local-filesystem eligibility policies as source inventory. Empty relative paths observe the root itself. No payload file is opened or read, and Windows returns unsupported before filesystem access.
+
+An absent component is accepted only from the native not-found result. Permission, type, I/O and unsupported-filesystem failures never turn into guessed absence. Existing directory lookups are preconditions: the opened handle must match the observed type/identity/mode/link/length before it is retained. Directory handles anchor all descendant lookup/open operations. A deterministic lookup/open swap test replaces a directory with an outside-pointing link and verifies refusal without touching the outside sentinel.
+
+## Preconditions and limits
+
+`DestinationSnapshot` is immutable and retains every opened directory. Its inspection methods expose requested/canonical labels, existing identity stamps, missing components and presence (`Missing` or `ExistingDirectory`). It has no public constructor for fabricated handles/preconditions. `is_current()` reopens the trusted anchor and rechecks selected bindings, directory identities/modes, and the first missing component. Unrelated additions or changes inside the final directory do not imply a namespace conflict. Final payload comparison and content revalidation belong to the next layer.
+
+Revalidation is a read observation, not an atomic namespace lock. It cannot prove absence until a later write, replace the native no-clobber commit, authorize adoption of a newly created parent, or protect against the threat model's excluded hostile reparent/mount/kernel cases. An executor must revalidate relevant preconditions immediately and retain operation ownership. No locks, temporary files, receipts, mkdir, chmod, cleanup or environment mutations occur here.
+
+Fixed budgets are 32 KiB of root bytes, 8 KiB of relative native path bytes, 64 relative components and 64 missing root components. Only the selected path is traversed; directory contents are not enumerated. These bounds limit retained handles/path work and are distinct from source-inventory budgets or kernel I/O timeouts. Namespace errors contain an exact path and typed reason/operation/OS code. Treat diagnostic labels as untrusted text when rendering.
+
+## Sources and verification
+
+Reviewed primitive sources and dependency versions remain those in [native inventory review](validation.md#native-reader-source-and-dependency-review-2026-10-16): Linux/Apple open/openat/statfs documentation, exact rustix directory/stat/open wrappers, installed macOS SDK flags, and the shared portable-name policy. Source inventory and destination observations now share one internal native helper module; this extraction changes no public inventory record layout or parser behavior. No dependency, host path or host override is added.
+
+Original temporary-root tests exercise missing parents/root, existing identities, read-only before/after trees, explicit absence, selected replacement and permission changes, tolerated unrelated changes, Unicode/native path identity, root/descendant aliases and non-directories, traversal and fixed budgets. All existing source inventory/parser/adapter regressions also apply. Linux/macOS require native success evidence; Windows tests demonstrate refusal, not installation support. Actual host loading, unsupported filesystem candidates, destination payload comparison, case/normalization collisions, overlap, execution and cleanup are not established by this layer.
