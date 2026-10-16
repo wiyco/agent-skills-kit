@@ -32,6 +32,14 @@ pub(super) fn validate(
         variable: variable.clone(),
         issue: PathIssue::HostOverridePolicy,
     };
+    // Verbatim prefixes have equivalent ordinary spellings but different lexical
+    // components. Do not let that ambiguity bypass the home/ancestor comparison.
+    #[cfg(windows)]
+    if [root, home.as_path()].into_iter().any(|path| {
+        matches!(path.components().next(), Some(Component::Prefix(prefix)) if prefix.kind().is_verbatim())
+    }) {
+        return Err(rejected());
+    }
     // Kiro V3 ignores roots, home itself and its ancestors. Refuse instead of
     // silently falling back. Unicode/case folding is deliberately conservative,
     // not a claim to reproduce native collation or canonicalize filesystem links.

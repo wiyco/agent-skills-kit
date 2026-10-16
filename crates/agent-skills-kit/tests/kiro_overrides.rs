@@ -147,3 +147,20 @@ fn other_drive_root_is_also_ignored_by_host() {
         .insert("KIRO_HOME".into(), std::path::PathBuf::from("Z:\\").into());
     rejected(&context);
 }
+
+#[cfg(windows)]
+#[test]
+fn verbatim_aliases_cannot_bypass_home_comparison() {
+    let mut context = context();
+    let home = context.user_home.clone().unwrap();
+    let verbatim = std::path::PathBuf::from(format!(r"\\?\{}", home.display()));
+    context
+        .overrides
+        .insert("KIRO_HOME".into(), verbatim.clone().into());
+    rejected(&context);
+    context.user_home = Some(verbatim);
+    context
+        .overrides
+        .insert("KIRO_HOME".into(), home.join("profile").into());
+    rejected(&context);
+}
