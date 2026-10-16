@@ -3525,6 +3525,212 @@
         "Quickstart, Install Pi (https://pi.dev/docs/latest/quickstart), and Run Pi on Windows, Choose native Windows or WSL (https://pi.dev/docs/latest/windows), reviewed 2026-10-16, identify macOS/Linux and native Windows with Git Bash. No installer, shell prerequisite or model was run. Android, SDK, IDE, Durable and remote variants remain excluded/unverified.",
         "Successful native library copying is not real-host discovery, invocation or minimum-version validation. Skill payloads and supporting scripts are never executed."
       ]
+    },
+    {
+      "id": "mistral-vibe-cli",
+      "aliases": [],
+      "product_id": "mistral-vibe",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".vibe",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.mistral.ai/vibe/code/cli/skills",
+                "section": "Skill locations",
+                "accessed": "2026-10-16",
+                "applicability": "Current Mistral Vibe Code CLI; rolling documentation, minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::mistral_vibe_scopes_override_and_reader_boundaries",
+                "expanded_targets::mistral_vibe_native_and_alternate_copy"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Explicit caller roots only. No active trust, filters, configuration or host discovery evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".vibe",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.mistral.ai/vibe/code/cli/skills",
+                    "section": "Skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Mistral Vibe Code CLI; rolling documentation, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::mistral_vibe_scopes_override_and_reader_boundaries",
+                    "expanded_targets::mistral_vibe_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller roots only. No active trust, filters, configuration or host discovery evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.mistral.ai/vibe/code/cli/skills",
+                    "section": "Skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Mistral Vibe Code CLI; rolling documentation, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::mistral_vibe_scopes_override_and_reader_boundaries",
+                    "expanded_targets::mistral_vibe_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller roots only. No active trust, filters, configuration or host discovery evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Default/native override roots only; custom paths and effective enable/disable/trust are not enumerated or changed."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "environment",
+                "variable": "VIBE_HOME",
+                "fallback": {
+                  "base": "home",
+                  "components": [
+                    ".vibe"
+                  ]
+                }
+              },
+              "components": [
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.mistral.ai/vibe/code/cli/configuration",
+                "section": "Vibe home directory",
+                "accessed": "2026-10-16",
+                "applicability": "Current Mistral Vibe Code CLI; rolling documentation, minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::mistral_vibe_scopes_override_and_reader_boundaries",
+                "expanded_targets::mistral_vibe_native_and_alternate_copy"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Explicit caller roots only. No active trust, filters, configuration or host discovery evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "environment",
+                    "variable": "VIBE_HOME",
+                    "fallback": {
+                      "base": "home",
+                      "components": [
+                        ".vibe"
+                      ]
+                    }
+                  },
+                  "components": [
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.mistral.ai/vibe/code/cli/configuration",
+                    "section": "Vibe home directory",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Mistral Vibe Code CLI; rolling documentation, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::mistral_vibe_scopes_override_and_reader_boundaries",
+                    "expanded_targets::mistral_vibe_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller roots only. No active trust, filters, configuration or host discovery evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Default/native override roots only; custom paths and effective enable/disable/trust are not enumerated or changed."
+          ]
+        }
+      ],
+      "limitations": [
+        "The current Vibe Code CLI is distinct from Vibe Work, legacy Chat, VS Code, Web and ACP/other IDE integrations. No path parity or alias is inferred from shared branding or slash-picker descriptions.",
+        "Configuration, Vibe home directory explicitly relocates user skills with VIBE_HOME. This installer uses absent-only home/.vibe fallback and requires absolute override values; empty, relative and tilde inputs are typed errors, not claimed host behavior.",
+        "Skills, Skill locations documents a project .agents reader but no user .agents reader. Native project/user .vibe writes remain separate from compatibility discovery. Custom skill_paths are additional, not an implicit preferred-write replacement.",
+        "Project discovery requires a trusted working directory. The installer does not grant trust or change remembered/temporary trust, host filters, admin configuration, tool permissions or auto-update settings.",
+        "The documented source-group order is custom paths, project paths, then user paths. Same-group duplicate precedence, ancestor/recursive discovery bounds, additional reserved local skill names and minimum skills version remain unverified.",
+        "Install and setup, Install the CLI (https://docs.mistral.ai/vibe/code/cli/install-setup), reviewed 2026-10-16, documents macOS/Linux and a Windows PowerShell tab. Its Windows tab was reviewed from the page data without executing commands. No host or prerequisites were installed or launched.",
+        "General portable validation and strict no-link copying remain required. Host allowed-tools metadata is not installer sandboxing. Actual host activation, discovery and invocation remain untested; scripts and hooks are never executed."
+      ]
     }
   ]
 }
