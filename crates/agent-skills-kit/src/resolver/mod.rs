@@ -3,6 +3,7 @@
 //! Resolution does not establish filesystem containment or installation safety.
 //! Planning/execution must validate actual roots, identities and no-follow access.
 
+mod host_policy;
 mod native;
 
 use std::{
@@ -116,7 +117,7 @@ pub struct ResolvedDestination {
     pub warnings: Vec<ResolutionWarning>,
 }
 
-/// Why a supplied root or override cannot be used as a native absolute path.
+/// Why a supplied root or override cannot be used by the resolver.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum PathIssue {
@@ -132,6 +133,8 @@ pub enum PathIssue {
     InvalidComponent,
     /// Device/opaque verbatim namespaces are not filesystem roots for this API.
     DeviceNamespace,
+    /// A bundled host's override policy rejects this root or ambiguous spelling.
+    HostOverridePolicy,
 }
 
 /// Typed resolution failure; none of these errors creates filesystem state.
@@ -242,6 +245,7 @@ pub fn resolve(
         .as_ref()
         .ok_or(ResolveError::NoWriteLocation)?;
     let preferred_write = resolve_rule(preferred, context)?;
+    host_policy::validate(definition, scope, context, &preferred_write.origin)?;
     let mut warnings = BTreeSet::from([ResolutionWarning::PlacementNotExclusive]);
     for limitation in definition.limitations.iter().chain(&placement.limitations) {
         warnings.insert(ResolutionWarning::DocumentedLimitation(limitation.clone()));

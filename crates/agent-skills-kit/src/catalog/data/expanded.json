@@ -4554,6 +4554,191 @@
         "Installation, System requirements (https://kiro.dev/docs/getting-started/installation/; updated 2026-10-05, reviewed 2026-10-16) explicitly lists IDE macOS, Windows 10/11 and Linux. Native library Windows Server NTFS tests are not installed IDE, Windows desktop/ARM or distro-version validation.",
         "General portable metadata/folder matching and strict no-link copying remain required. No additional reserved local name or minimum skills version is established. No host, import/upload, credentials, models or skill scripts were run."
       ]
+    },
+    {
+      "id": "kiro-cli",
+      "aliases": [],
+      "product_id": "kiro",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".kiro",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://kiro.dev/docs/skills/",
+                "section": "What are skills? capability table; Skill scope",
+                "accessed": "2026-10-16",
+                "applicability": "Current Kiro CLI V3; 2.31.0+ expanded KIRO_HOME configuration; rolling docs, minimum ordinary skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "kiro_overrides::cli_override_constraints_and_ide_boundaries",
+                "expanded_targets::kiro_cli_native_copy_and_variant_deduplication",
+                "expanded_targets::kiro_cli_ignored_root_plan_is_rejected_without_writes"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Skills and Configuration scopes, File paths (https://kiro.dev/docs/skills/; https://kiro.dev/docs/configuration/; reviewed 2026-10-16) establish the skills suffix/default; CLI 2.31.0 notes (https://kiro.dev/changelog/cli/2-31/) extend KIRO_HOME across V3 configuration.",
+                "No host/configuration/discovery evaluated. Present overrides require explicit home and conservative lexical policy checks; root/home/ancestor or ambiguous Unicode values fail rather than silently fall back."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".kiro",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kiro.dev/docs/skills/",
+                    "section": "What are skills? capability table; Skill scope",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Kiro CLI V3; 2.31.0+ expanded KIRO_HOME configuration; rolling docs, minimum ordinary skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "kiro_overrides::cli_override_constraints_and_ide_boundaries",
+                    "expanded_targets::kiro_cli_native_copy_and_variant_deduplication",
+                    "expanded_targets::kiro_cli_ignored_root_plan_is_rejected_without_writes"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Skills and Configuration scopes, File paths (https://kiro.dev/docs/skills/; https://kiro.dev/docs/configuration/; reviewed 2026-10-16) establish the skills suffix/default; CLI 2.31.0 notes (https://kiro.dev/changelog/cli/2-31/) extend KIRO_HOME across V3 configuration.",
+                    "No host/configuration/discovery evaluated. Present overrides require explicit home and conservative lexical policy checks; root/home/ancestor or ambiguous Unicode values fail rather than silently fall back."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Only explicit local default/guarded override roots; no cloud/configured resource stores or effective precedence modeled."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "environment",
+                "variable": "KIRO_HOME",
+                "fallback": {
+                  "base": "home",
+                  "components": [
+                    ".kiro"
+                  ]
+                }
+              },
+              "components": [
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://kiro.dev/docs/reference/settings/",
+                "section": "Environment variables",
+                "accessed": "2026-10-16",
+                "applicability": "Current Kiro CLI V3; 2.31.0+ expanded KIRO_HOME configuration; rolling docs, minimum ordinary skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "kiro_overrides::cli_override_constraints_and_ide_boundaries",
+                "expanded_targets::kiro_cli_native_copy_and_variant_deduplication",
+                "expanded_targets::kiro_cli_ignored_root_plan_is_rejected_without_writes"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Skills and Configuration scopes, File paths (https://kiro.dev/docs/skills/; https://kiro.dev/docs/configuration/; reviewed 2026-10-16) establish the skills suffix/default; CLI 2.31.0 notes (https://kiro.dev/changelog/cli/2-31/) extend KIRO_HOME across V3 configuration.",
+                "No host/configuration/discovery evaluated. Present overrides require explicit home and conservative lexical policy checks; root/home/ancestor or ambiguous Unicode values fail rather than silently fall back."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "environment",
+                    "variable": "KIRO_HOME",
+                    "fallback": {
+                      "base": "home",
+                      "components": [
+                        ".kiro"
+                      ]
+                    }
+                  },
+                  "components": [
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kiro.dev/docs/reference/settings/",
+                    "section": "Environment variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Kiro CLI V3; 2.31.0+ expanded KIRO_HOME configuration; rolling docs, minimum ordinary skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "kiro_overrides::cli_override_constraints_and_ide_boundaries",
+                    "expanded_targets::kiro_cli_native_copy_and_variant_deduplication",
+                    "expanded_targets::kiro_cli_ignored_root_plan_is_rejected_without_writes"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Skills and Configuration scopes, File paths (https://kiro.dev/docs/skills/; https://kiro.dev/docs/configuration/; reviewed 2026-10-16) establish the skills suffix/default; CLI 2.31.0 notes (https://kiro.dev/changelog/cli/2-31/) extend KIRO_HOME across V3 configuration.",
+                    "No host/configuration/discovery evaluated. Present overrides require explicit home and conservative lexical policy checks; root/home/ancestor or ambiguous Unicode values fail rather than silently fall back."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Only explicit local default/guarded override roots; no cloud/configured resource stores or effective precedence modeled."
+          ]
+        }
+      ],
+      "limitations": [
+        "The Skills capability table explicitly establishes CLI local project/global roots independently of IDE. Current V3 configuration is the applicability; Classic/V2, Web/Mobile/Crew/ACP and cloud/managed variants are separate unverified/excluded capabilities.",
+        "Canonical Settings, Environment variables documents KIRO_HOME for V3 global configuration. CLI 2.31.0 release notes dated 2026-10-13 extend it across V3 configuration/state; Skills and Configuration scopes establish global skills under that directory. No IDE override is inferred.",
+        "Kiro falls back for filesystem roots, home itself/ancestors and relative KIRO_HOME. This installer instead returns typed InvalidOverride errors and never silently changes an explicitly requested root. Empty/relative/tilde/unsafe native syntax remains rejected by generic resolution.",
+        "A present KIRO_HOME requires explicit user home for the exclusion check. Unicode normalization/case folding conservatively rejects home-prefix aliases even on case-sensitive filesystems; non-Unicode override/home components are refused when this check is required. This is stricter installer policy, not native filesystem collation or canonicalization. Default opaque native contexts retain generic behavior.",
+        "Pure lexical checks do not inspect filesystem links, aliases or the actual host home; caller-provided roots must represent the intended environment. No host activation guarantee or fallback through undocumented aliases is claimed.",
+        "Project .kiro/skills remains independent of KIRO_HOME. No XDG_CONFIG_HOME, KIRO_CONFIG_DIR or agents/Claude compatibility reader is inferred. Default CLI/IDE native destinations coincide and preserve both attributions; a valid CLI override changes only its user placement.",
+        "Skills says workspace duplicates take priority; Configuration says all skills scopes merge. Effective duplicate activation needs clarification/host verification. Custom resources/globs, import/upload, cloud configuration, trust and settings are not evaluated or changed.",
+        "Installation, System requirements (https://kiro.dev/docs/getting-started/installation/; updated 2026-10-05, reviewed 2026-10-16) documents CLI macOS/Linux and native Windows 11 PowerShell. Native Windows Server NTFS tests prove library behavior, not installed host/desktop/ARM/distro validation.",
+        "General portable metadata/folder matching and strict no-link copying remain required. No additional reserved local name or minimum ordinary skills version is established. No host, credentials, model requests, imports or skill scripts were run."
+      ]
     }
   ]
 }
