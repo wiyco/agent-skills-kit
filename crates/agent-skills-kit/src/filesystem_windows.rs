@@ -17,7 +17,8 @@ use windows_sys::{
         Foundation::OBJECT_ATTRIBUTES,
         Storage::FileSystem::{
             FILE_CREATE, FILE_DIRECTORY_FILE, FILE_NON_DIRECTORY_FILE, FILE_OPEN,
-            FILE_OPEN_REPARSE_POINT, FILE_SYNCHRONOUS_IO_NONALERT, NtCreateFile,
+            FILE_OPEN_REPARSE_POINT, FILE_RENAME_INFORMATION, FILE_SYNCHRONOUS_IO_NONALERT,
+            FileRenameInformation, NtCreateFile, NtSetInformationFile,
         },
     },
     Win32::{
@@ -246,14 +247,14 @@ pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::
     if source.volume != stamp(parent)?.volume {
         return Err(unsupported("cross-volume commit"));
     }
-    let bytes = (offset_of!(FILE_RENAME_INFO, FileName) + wide.len() * 2)
-        .max(size_of::<FILE_RENAME_INFO>());
+    let bytes = (offset_of!(FILE_RENAME_INFORMATION, FileName) + wide.len() * 2)
+        .max(size_of::<FILE_RENAME_INFORMATION>());
     // u64 storage supplies SDK alignment on the validated 64-bit Windows targets.
     let mut storage = vec![0u64; bytes.div_ceil(size_of::<u64>())];
     // SAFETY: zeroed aligned storage is large enough for the SDK header + name.
     // ReplaceIfExists remains FALSE. The parent and source handles stay live.
     unsafe {
-        let info = storage.as_mut_ptr().cast::<FILE_RENAME_INFO>();
+        let info = storage.as_mut_ptr().cast::<FILE_RENAME_INFORMATION>();
         (*info).RootDirectory = parent.as_raw_handle();
         (*info).FileNameLength = (wide.len() * 2) as u32;
         ptr::copy_nonoverlapping(
@@ -261,14 +262,18 @@ pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::
             ptr::addr_of_mut!((*info).FileName).cast::<u16>(),
             wide.len(),
         );
-        if SetFileInformationByHandle(
+        let mut completion = Default::default();
+        let status = NtSetInformationFile(
             file.as_raw_handle(),
-            FileRenameInfo,
+            &mut completion,
             info.cast(),
             bytes as u32,
-        ) == 0
-        {
-            return Err(io::Error::last_os_error());
+            FileRenameInformation,
+        );
+        if status < 0 {
+            return Err(io::Error::from_raw_os_error(
+                RtlNtStatusToDosError(status) as i32
+            ));
         }
     }
     Ok(())
