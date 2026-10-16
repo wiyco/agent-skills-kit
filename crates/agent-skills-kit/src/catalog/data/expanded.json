@@ -2818,6 +2818,294 @@
         "Only canonical directory-form skills with general-spec metadata are installed. The host optional-description convenience does not weaken validation. No additional reserved local name or minimum skills version is established.",
         "Skill location provides macOS/Linux and Windows home examples. Native copying does not prove host discovery, activation, trust or a validated installed version."
       ]
+    },
+    {
+      "id": "factory-droid-cli",
+      "aliases": [],
+      "product_id": "factory-droid",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".factory",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.factory.com/harness/skills",
+                "section": "Where skills live; Resolution precedence",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Factory Droid CLI local harness, ordinary project/personal scopes; minimum skills version and actual host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::factory_droid_native_and_both_compatibility_roots",
+                "expanded_targets::factory_reader_alias_does_not_rewrite_native_installation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Exact descriptors identify selected roots only; recursive and deeper folder-specific discovery is not enumerated. Copying does not prove the effective skill."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".factory",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.factory.com/harness/skills",
+                    "section": "Where skills live; Resolution precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Factory Droid CLI local harness, ordinary project/personal scopes; minimum skills version and actual host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::factory_droid_native_and_both_compatibility_roots",
+                    "expanded_targets::factory_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Exact descriptors identify selected roots only; recursive and deeper folder-specific discovery is not enumerated. Copying does not prove the effective skill."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.factory.com/harness/skills",
+                    "section": "Where skills live; Resolution precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Factory Droid CLI local harness, ordinary project/personal scopes; minimum skills version and actual host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::factory_droid_native_and_both_compatibility_roots",
+                    "expanded_targets::factory_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Exact descriptors identify selected roots only; recursive and deeper folder-specific discovery is not enumerated. Copying does not prove the effective skill."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agent",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.factory.com/harness/skills",
+                    "section": "Where skills live; Resolution precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Factory Droid CLI local harness, ordinary project/personal scopes; minimum skills version and actual host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::factory_droid_native_and_both_compatibility_roots",
+                    "expanded_targets::factory_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Exact descriptors identify selected roots only; recursive and deeper folder-specific discovery is not enumerated. Copying does not prove the effective skill."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Default ordinary local roots only; duplicate-name buckets and host configuration affect actual discovery. Reader order is source presentation, not same-bucket precedence."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".factory",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.factory.com/harness/skills",
+                "section": "Where skills live; Resolution precedence",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Factory Droid CLI local harness, ordinary project/personal scopes; minimum skills version and actual host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::factory_droid_native_and_both_compatibility_roots",
+                "expanded_targets::factory_reader_alias_does_not_rewrite_native_installation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Exact descriptors identify selected roots only; recursive and deeper folder-specific discovery is not enumerated. Copying does not prove the effective skill."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".factory",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.factory.com/harness/skills",
+                    "section": "Where skills live; Resolution precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Factory Droid CLI local harness, ordinary project/personal scopes; minimum skills version and actual host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::factory_droid_native_and_both_compatibility_roots",
+                    "expanded_targets::factory_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Exact descriptors identify selected roots only; recursive and deeper folder-specific discovery is not enumerated. Copying does not prove the effective skill."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.factory.com/harness/skills",
+                    "section": "Where skills live; Resolution precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Factory Droid CLI local harness, ordinary project/personal scopes; minimum skills version and actual host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::factory_droid_native_and_both_compatibility_roots",
+                    "expanded_targets::factory_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Exact descriptors identify selected roots only; recursive and deeper folder-specific discovery is not enumerated. Copying does not prove the effective skill."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agent",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.factory.com/harness/skills",
+                    "section": "Where skills live; Resolution precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Factory Droid CLI local harness, ordinary project/personal scopes; minimum skills version and actual host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::factory_droid_native_and_both_compatibility_roots",
+                    "expanded_targets::factory_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Exact descriptors identify selected roots only; recursive and deeper folder-specific discovery is not enumerated. Copying does not prove the effective skill."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Default ordinary local roots only; duplicate-name buckets and host configuration affect actual discovery. Reader order is source presentation, not same-bucket precedence."
+          ]
+        }
+      ],
+      "limitations": [
+        "Native writes remain .factory/skills; documented .agents and singular .agent compatibility roots are readers, not replacements for native placement.",
+        "The host searches recursively and discovers deeper folder-specific skills after inspecting that area. This resolver describes explicit selected roots only, without recursive or nested-root enumeration.",
+        "Within one source bucket duplicate sanitized names are invalid host configuration. Multiple copied placements in readable roots may collide; copy success never establishes valid host discovery or which skill is effective.",
+        "Ordinary project/folder skills precede personal, plugin and built-in sources according to the source table. Mission, automation, organization and command-line settings can change precedence; those stores are excluded.",
+        "Host disabledSkills ledgers, enabled/user-invocable/frontmatter and custom slash-command collisions are not evaluated or modified. allowed-tools metadata is not a sandbox and no skill is invoked.",
+        "No additional reserved local name, skills relocation override or minimum skills version is established by the reviewed Skills, Settings and CLI Reference sections. Unverified environment roots are not interpreted.",
+        "Droid CLI Reference, Installation (https://docs.factory.com/droid-cli/cli-reference), and Settings, Where settings live (https://docs.factory.com/droid-cli/settings), reviewed 2026-10-16, identify CLI Linux/macOS/Windows candidates and Windows user home. No installer or host was run.",
+        "Factory App, IDE integrations, SDK, cloud/remote, mission, automation, plugin and managed variants are separate unverified/excluded capabilities. Selecting placement is not exclusive visibility or host activation."
+      ]
     }
   ]
 }

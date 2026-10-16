@@ -996,3 +996,99 @@ fn junie_cli_default_roots_and_ide_configuration_gaps() {
         Err(ResolveError::MissingContext(ContextBase::Project))
     ));
 }
+
+#[test]
+fn factory_reader_alias_does_not_rewrite_native_installation() {
+    native_writes_remain_distinct("factory-droid-cli");
+}
+#[test]
+fn factory_droid_native_and_both_compatibility_roots() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "FACTORY_HOME",
+        "FACTORY_CONFIG_DIR",
+        "XDG_CONFIG_HOME",
+        "CLINE_DIR",
+        "CLAUDE_CONFIG_DIR",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "unverified relocation".into());
+    }
+    let target = catalog.get("factory-droid-cli").unwrap();
+    assert_eq!(target.product_id, "factory-droid");
+    assert_eq!(target.variant, "cli");
+    assert!(
+        target
+            .limitations
+            .iter()
+            .any(|gap| gap.contains("duplicate sanitized names"))
+    );
+    for (scope, root) in [
+        (Scope::User, context.user_home.as_ref().unwrap()),
+        (Scope::Project, context.project_root.as_ref().unwrap()),
+    ] {
+        let result = resolve(&catalog, "factory-droid-cli", scope, &context).unwrap();
+        assert_eq!(result.preferred_write.path, root.join(".factory/skills"));
+        assert_eq!(result.discovery.len(), 3);
+        assert_eq!(result.discovery[0].location, result.preferred_write);
+        for (reader, folder) in result
+            .discovery
+            .iter()
+            .zip([".factory", ".agents", ".agent"])
+        {
+            assert_eq!(reader.location.path, root.join(folder).join("skills"));
+            assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+            assert_eq!(
+                reader.location.evidence.source.as_ref().unwrap().url,
+                "https://docs.factory.com/harness/skills"
+            );
+            assert!(reader.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::PlacementNotExclusive)
+        );
+        assert!(
+            !result
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    for id in [
+        "factory",
+        "droid",
+        "factory-app",
+        "factory-ide",
+        "factory-cloud",
+        "factory-mission",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+    assert!(matches!(
+        resolve(
+            &catalog,
+            "factory-droid-cli",
+            Scope::ApplicationWorkspace,
+            &context
+        ),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "factory-droid-cli", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "factory-droid-cli", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+}
