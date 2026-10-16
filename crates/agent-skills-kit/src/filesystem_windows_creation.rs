@@ -139,6 +139,9 @@ impl Descriptor {
     pub(crate) fn private_payload(token: &Token) -> io::Result<Self> {
         Self::from_sddl(&format!("D:P(A;OICI;FA;;;{})", token.user_sid()?))
     }
+    pub(crate) fn private_file(token: &Token) -> io::Result<Self> {
+        Self::from_sddl(&format!("D:P(A;;FA;;;{})", token.user_sid()?))
+    }
 }
 impl Drop for Descriptor {
     fn drop(&mut self) {
@@ -451,16 +454,23 @@ mod tests {
                 &payload_descriptor,
             )
             .unwrap();
-            let mut child =
-                native::child(&payload, OsStr::new("resource"), Kind::File, true).unwrap();
+            let file_descriptor = Descriptor::private_file(&token).unwrap();
+            let mut child = native::create_payload_entry(
+                &payload,
+                OsStr::new("resource"),
+                Kind::File,
+                &file_descriptor,
+            )
+            .unwrap();
             child.write_all(b"inert original bytes").unwrap();
             assert_eq!(
                 dacl(&payload),
                 dacl(&stage),
                 "every staged object must remain private despite traversal bypass privileges"
             );
-            assert_user_only(&child, &sid, false, false);
-            drop(child);
+            assert!(dacl(&child).1);
+            assert!(!dacl(&child).0.contains(";;;WD)"));
+            let child_private = allow_policy(&child);
             native::rename_exclusive(&payload, &parent, OsStr::new("installed")).unwrap();
             assert_eq!(
                 dacl(&payload),
@@ -474,7 +484,12 @@ mod tests {
                 "root inheritance, inherit_user={inherit_user}"
             );
             assert!(!dacl(&payload).1);
-            let child = native::child(&payload, OsStr::new("resource"), Kind::File, false).unwrap();
+            assert_eq!(
+                allow_policy(&child),
+                child_private,
+                "root update must not recursively modify descendants"
+            );
+            finalize_inheritance(&child, &payload, &token).unwrap();
             assert_eq!(
                 allow_policy(&child),
                 expected_child,
@@ -531,13 +546,14 @@ mod tests {
 }
 
 /// Apply real destination inheritance only after native commit. This can fail or
-/// partially propagate; callers must report a committed payload, never delete it.
+/// leave a partially finalized tree; callers must report a committed payload,
+/// never delete it. Each inventoried object requires its own bounded update.
 pub(crate) fn finalize_inheritance(file: &File, parent: &File, token: &Token) -> io::Result<()> {
     use windows_sys::Win32::{
         Security::{
-            Authorization::SetSecurityInfo, CreatePrivateObjectSecurityEx,
-            DestroyPrivateObjectSecurity, GENERIC_MAPPING, GetSecurityDescriptorDacl,
-            SEF_DACL_AUTO_INHERIT, UNPROTECTED_DACL_SECURITY_INFORMATION,
+            CreatePrivateObjectSecurityEx, DestroyPrivateObjectSecurity, GENERIC_MAPPING,
+            GetSecurityDescriptorDacl, SEF_DACL_AUTO_INHERIT,
+            UNPROTECTED_DACL_SECURITY_INFORMATION,
         },
         Storage::FileSystem::{
             FILE_ALL_ACCESS, FILE_GENERIC_EXECUTE, FILE_GENERIC_READ, FILE_GENERIC_WRITE,
@@ -565,6 +581,9 @@ pub(crate) fn finalize_inheritance(file: &File, parent: &File, token: &Token) ->
         GenericAll: FILE_ALL_ACCESS,
     };
     let mut result = ptr::null_mut();
+    let is_directory = i32::from(
+        crate::filesystem_windows::stamp(file)?.kind == crate::filesystem_windows::Kind::Directory,
+    );
     // SAFETY: SDK-produced bounded parent descriptor, aligned copy, live query
     // token and exact file rights mapping. No source/creator descriptor or owner/
     // privilege bypass flags; the result has its documented distinct destructor.
@@ -574,7 +593,7 @@ pub(crate) fn finalize_inheritance(file: &File, parent: &File, token: &Token) ->
             ptr::null_mut(),
             &mut result,
             ptr::null(),
-            1,
+            is_directory,
             SEF_DACL_AUTO_INHERIT,
             token.0,
             &mapping,
@@ -610,23 +629,22 @@ pub(crate) fn finalize_inheritance(file: &File, parent: &File, token: &Token) ->
             "null destination DACL is not supported",
         ));
     }
-    // SAFETY: live committed operation-owned handle with WRITE_DAC and live SDK
-    // DACL. Real final parent inheritance is applied by the OS and propagated;
-    // ownership/group/SACL are not copied or changed. This never acts on a source.
-    let result = unsafe {
-        SetSecurityInfo(
+    // SAFETY: live committed operation-owned handle with WRITE_DAC and bounded
+    // SDK self-relative descriptor. This updates exactly the held object, without
+    // a recursive user-space namespace walk or source metadata. Each inventoried
+    // child must be finalized separately through its own retained handle.
+    let status = unsafe {
+        windows_sys::Wdk::Storage::FileSystem::NtSetSecurityObject(
             file.as_raw_handle(),
-            SE_FILE_OBJECT,
             DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION,
-            ptr::null_mut(),
-            ptr::null_mut(),
-            acl,
-            ptr::null_mut(),
+            inherited.0,
         )
     };
-    if result == 0 {
-        Ok(())
+    if status < 0 {
+        Err(io::Error::from_raw_os_error(unsafe {
+            windows_sys::Win32::Foundation::RtlNtStatusToDosError(status)
+        } as i32))
     } else {
-        Err(io::Error::from_raw_os_error(result as i32))
+        Ok(())
     }
 }

@@ -233,7 +233,7 @@ pub(crate) fn open_root(path: &Path) -> io::Result<File> {
 
 /// Single-component lookup/create relative to a retained parent; no path fallback.
 pub(crate) fn child(parent: &File, name: &OsStr, kind: Kind, create: bool) -> io::Result<File> {
-    child_impl(parent, name, kind, create, ptr::null_mut())
+    child_impl(parent, name, kind, create, ptr::null_mut(), false)
 }
 
 #[cfg(test)]
@@ -243,7 +243,19 @@ pub(crate) fn create_with_security(
     kind: Kind,
     descriptor: &security::creation::Descriptor,
 ) -> io::Result<File> {
-    child_impl(parent, name, kind, true, descriptor.as_ptr())
+    child_impl(parent, name, kind, true, descriptor.as_ptr(), false)
+}
+
+/// Private payload descendants may share deletion while their own handles anchor
+/// security finalization across the directory rename. The root remains held.
+#[cfg(test)]
+pub(crate) fn create_payload_entry(
+    parent: &File,
+    name: &OsStr,
+    kind: Kind,
+    descriptor: &security::creation::Descriptor,
+) -> io::Result<File> {
+    child_impl(parent, name, kind, true, descriptor.as_ptr(), true)
 }
 
 fn child_impl(
@@ -252,6 +264,7 @@ fn child_impl(
     kind: Kind,
     create: bool,
     descriptor: windows_sys::Win32::Security::PSECURITY_DESCRIPTOR,
+    share_delete: bool,
 ) -> io::Result<File> {
     if stamp(parent)?.kind != Kind::Directory {
         return Err(invalid("directory parent required"));
@@ -296,7 +309,7 @@ fn child_impl(
             &mut status,
             ptr::null(),
             FILE_ATTRIBUTE_NORMAL,
-            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | if share_delete { FILE_SHARE_DELETE } else { 0 },
             if create { FILE_CREATE } else { FILE_OPEN },
             options,
             ptr::null(),
