@@ -39,6 +39,15 @@ Planning has no writes. Execution does not follow untrusted descendants outside 
 
 Use deterministic hooks for races/fault injection rather than timing-only sleeps. Use property tests where they improve confidence in naming, rule parsing, containment, and stable ordering. Record seeds for failures.
 
+## Reproducible seeded properties
+
+`cargo test -p agent-skills-kit --test properties --locked -- --nocapture` runs original bounded generators with seeds `0x1`, `0x5eed`, `0xc0decafe` and `0x123456789abcdef0`. A failure prints `PROPERTY COUNTEREXAMPLE` with the seed/case before resuming the original assertion, so rerunning the exact named test reproduces the same generated input. These are sampled invariants, not exhaustive proofs or cryptographic randomness; no new testing dependency or mutable process-global configuration is required.
+
+- `seeded_skill_name_properties_reject_unsafe_mutations`: 64 cases per seed, constructive Unicode/lowercase names and unsafe traversal/separator/stream/case/delimiter/control mutations, parsed only as inert metadata.
+- `seeded_native_rule_properties_preserve_lexical_containment_and_explicit_overrides`: 64 cases per seed using original synthetic catalog data, native absolute roots, aliases, explicit override/fallback choices and rejected unsafe components. No actual host path rule or filesystem operation is introduced.
+- `seeded_receipt_properties_round_trip_native_units_and_outcome_states`: 64 cases per seed across preview/outcome combinations, ordinary modes, variable entries and non-Unicode native units; stable JSON round trips and unknown-version refusal. Synthetic digests describe codec data, not real file contents. Windows exercises its own native string family.
+- `native::seeded_planning_properties_are_read_only_and_permutation_invariant`: 16 cases per seed on Linux/macOS, two owned source fixtures, shuffled/duplicate core target selections and source order, explicit user/project contexts with spaces/Unicode, identical semantic plans and unchanged before/after byte/mode trees. Windows installation planning remains unsupported under ADR 0006; its native resolver/codec properties are separate from successful copy coverage.
+
 Map relevant layer tests to [threat scenarios TM-01 through TM-22](threat-model.md#attack-and-failure-scenarios-for-ask-012). A documentation scenario is not an executed test. Backend support cannot be advertised until native evidence covers its promised conditions; unsupported-case rejection is separate from successful installation coverage.
 
 ## Reporting
