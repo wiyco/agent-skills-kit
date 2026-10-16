@@ -739,3 +739,92 @@ fn windows_two_installs_race_at_native_commit_with_exactly_one_winner() {
     );
     assert!(stages(&fixture.root).is_empty());
 }
+
+#[test]
+fn windows_committed_permission_failure_honors_both_batch_stop_policies() {
+    for stop in [true, false] {
+        let fixture = Fixture::new();
+        let plan = fixture.plan(&["codex", "claude-code", "opencode"], Scope::User);
+        let mut reached = false;
+        let report = apply(
+            &plan,
+            ApplyOptions {
+                stop_on_failure: stop,
+                ..ApplyOptions::default()
+            },
+            &mut |phase, path| {
+                if phase == Phase::BeforePermissions && path.ends_with(".claude/skills/sample") {
+                    reached = true;
+                    return Err(io::Error::from_raw_os_error(5));
+                }
+                Ok(())
+            },
+        );
+        assert!(reached);
+        assert!(!report.is_successful());
+        let row = |target: &str| {
+            report
+                .outcomes
+                .iter()
+                .find(|row| {
+                    row.attributions
+                        .iter()
+                        .any(|attribution| attribution.target_id == target)
+                })
+                .unwrap()
+        };
+        assert_eq!(row("codex").status, OutcomeStatus::Created);
+        assert!(
+            matches!(
+                row("claude-code").status,
+                OutcomeStatus::CommittedWithPermissionFailure(_)
+            ),
+            "{report:?}"
+        );
+        assert!(row("claude-code").status.payload_was_committed());
+        assert_eq!(
+            row("opencode").status,
+            if stop {
+                OutcomeStatus::NotAttempted
+            } else {
+                OutcomeStatus::Created
+            }
+        );
+        let committed = row("claude-code").path.as_ref().unwrap();
+        assert_eq!(
+            fs::read(committed.join("SKILL.md")).unwrap(),
+            fs::read(fixture.source.join("SKILL.md")).unwrap()
+        );
+        assert!(fixture_dacl(committed).starts_with("D:P"));
+        assert!(report.cleanup_errors.is_empty(), "{report:?}");
+        assert!(stages(&fixture.root).is_empty());
+    }
+}
+#[test]
+fn windows_read_only_stage_fault_preserves_source_and_cleans_recorded_objects() {
+    let fixture = Fixture::new();
+    let resource = fixture.source.join("reference café.txt");
+    let permissions = fs::metadata(&resource).unwrap().permissions();
+    let mut readonly = permissions.clone();
+    readonly.set_readonly(true);
+    fs::set_permissions(&resource, readonly).unwrap();
+    let plan = fixture.plan(&["codex"], Scope::User);
+    let mut reached = false;
+    let report = apply(&plan, ApplyOptions::default(), &mut |phase, _| {
+        if phase == Phase::AfterStage {
+            reached = true;
+            return Err(io::Error::from_raw_os_error(1117));
+        }
+        Ok(())
+    });
+    assert!(reached);
+    assert!(
+        matches!(report.outcomes[0].status, OutcomeStatus::Failed(_)),
+        "{report:?}"
+    );
+    assert!(!plan.destinations()[0].path().unwrap().exists());
+    assert!(stages(&fixture.root).is_empty(), "{report:?}");
+    assert_eq!(fs::read(&resource).unwrap(), b"original resource bytes");
+    assert!(fs::metadata(&resource).unwrap().permissions().readonly());
+    fs::set_permissions(&resource, permissions).unwrap();
+}
