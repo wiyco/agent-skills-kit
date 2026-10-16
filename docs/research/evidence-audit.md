@@ -23,7 +23,7 @@ Canonical product grouping retains CLI/IDE/cloud variants and their scope status
 
 URL groups preserve separate per-rule dates and evidence; one recent rule cannot refresh an older rule that cites the same page. Missing source/URL/section/applicability, unreviewed documentation and malformed recorded test references produce findings. Malformed/non-HTTPS or credential-bearing URLs produce a gap without echoing the offending URL. This is syntax handling, not proof of host ownership or content correctness.
 
-Input is bounded to 2 MiB, 512 target records and 4096 rule references. Invalid shape, schema version, duplicate IDs/aliases/product-variants/JSON keys or invalid command parameters fail with exit 2; a valid report with findings exits 0. Findings are review work, not an automated approval or automatic edit gate. The Rust catalog validator remains authoritative for schema/path safety; the Python audit intentionally does not implement it again.
+Input is bounded to 2 MiB, 512 target records and 4096 rule references. Invalid shape, schema version, duplicate IDs/aliases/product-variants/JSON keys, non-finite JSON numbers or invalid command parameters fail with exit 2; a valid report with findings exits 0. Findings are review work, not an automated approval or automatic edit gate. The Rust catalog validator remains authoritative for schema/path safety; the Python audit intentionally does not implement it again.
 
 ## Verification boundary and next layer
 

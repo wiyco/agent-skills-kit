@@ -146,6 +146,11 @@ class EvidenceAuditTests(unittest.TestCase):
             result = subprocess.run(command, capture_output=True, text=True, check=False)
             self.assertEqual(result.returncode, 2)
             self.assertEqual(result.stdout, "")
+            for constant in ("NaN", "Infinity", "-Infinity"):
+                path.write_text('{"schema_version": 1, "targets": [], "extra": ' + constant + '}', encoding="utf-8")
+                result = subprocess.run(command, capture_output=True, text=True, check=False)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("non-finite", result.stderr)
             path.write_text("[" * 2000 + "]" * 2000, encoding="utf-8")
             result = subprocess.run(command, capture_output=True, text=True, check=False)
             self.assertEqual(result.returncode, 2)

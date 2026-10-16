@@ -34,7 +34,11 @@ def load_catalog(path):
         payload = source.read(MAX_INPUT_BYTES + 1)
     if len(payload) > MAX_INPUT_BYTES:
         raise ValueError("catalog exceeds the 2 MiB audit input limit")
-    return json.loads(payload, object_pairs_hook=unique_object)
+    return json.loads(payload, object_pairs_hook=unique_object, parse_constant=reject_constant)
+
+
+def reject_constant(_value):
+    raise ValueError("non-finite numbers are not valid evidence JSON")
 
 
 def unique_object(pairs):
