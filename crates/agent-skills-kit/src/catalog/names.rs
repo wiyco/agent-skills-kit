@@ -11,6 +11,12 @@ pub enum ReservedSkillName {
 }
 
 impl TargetDefinition {
+    // OpenCode's host-owned skills documentation specifies an ASCII regex;
+    // this narrows the general specification's Unicode name rule.
+    pub(crate) fn requires_ascii_skill_name(&self) -> bool {
+        self.product_id == "opencode" && self.variant == "cli"
+    }
+
     /// Identify a documented reservation for this local CLI product variant.
     ///
     /// Check both the folder and frontmatter name before planning a copy. `None`
