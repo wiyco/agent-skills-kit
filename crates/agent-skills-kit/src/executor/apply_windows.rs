@@ -522,10 +522,7 @@ fn install(
                         kind: io::ErrorKind::AlreadyExists,
                         ..
                     }
-                ) =>
-            {
-                ()
-            }
+                ) => {}
             Err(failure) => return Err(failure),
         }
     }
