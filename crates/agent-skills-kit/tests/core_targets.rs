@@ -341,3 +341,124 @@ fn opencode_context_and_configuration_limits() {
         ));
     }
 }
+
+#[test]
+fn duplicate_selections_keep_native_writes_and_reader_attribution() {
+    let catalog = Catalog::bundled().unwrap();
+    let context = context();
+    for scope in [Scope::Project, Scope::User] {
+        let targets = resolve_targets(
+            &catalog,
+            ["opencode", "codex-cli", "claude-code", "codex", "opencode"],
+            scope,
+            &context,
+        )
+        .unwrap();
+        assert_eq!(
+            targets
+                .iter()
+                .map(|target| target.target_id.as_str())
+                .collect::<Vec<_>>(),
+            ["claude-code", "codex", "opencode"]
+        );
+        assert_eq!(
+            targets,
+            resolve_targets(
+                &catalog,
+                ["codex", "opencode", "claude-code"],
+                scope,
+                &context
+            )
+            .unwrap()
+        );
+        let writes = targets
+            .iter()
+            .map(|target| &target.preferred_write.path)
+            .collect::<std::collections::BTreeSet<_>>();
+        assert_eq!(writes.len(), 3);
+        assert_eq!(
+            targets[2].discovery[1].location.path,
+            targets[0].preferred_write.path
+        );
+        assert_eq!(
+            targets[2].discovery[2].location.path,
+            targets[1].preferred_write.path
+        );
+        assert!(targets.iter().all(|target| {
+            target
+                .warnings
+                .contains(&ResolutionWarning::PlacementNotExclusive)
+        }));
+    }
+}
+
+#[test]
+fn selection_errors_and_empty_inputs_are_explicit() {
+    let catalog = Catalog::bundled().unwrap();
+    let context = context();
+    assert_eq!(
+        resolve_targets(&catalog, [], Scope::Project, &context).unwrap(),
+        []
+    );
+    assert_eq!(
+        resolve_targets(
+            &catalog,
+            ["codex", "unknown", "claude-code"],
+            Scope::Project,
+            &context
+        ),
+        Err(ResolveError::UnknownTarget("unknown".into()))
+    );
+    let empty = InstallContext::new(context.platform);
+    assert_eq!(
+        resolve_targets(&catalog, ["codex-cli", "codex"], Scope::Project, &empty),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    );
+}
+
+#[test]
+fn distinct_target_attribution_is_retained_for_coincident_custom_writes() {
+    let mut document = Catalog::bundled().unwrap().document();
+    let codex_path = document
+        .targets
+        .iter()
+        .find(|target| target.id == "codex")
+        .unwrap()
+        .scopes
+        .iter()
+        .find(|scope| scope.scope == Scope::Project)
+        .unwrap()
+        .preferred_write
+        .as_ref()
+        .unwrap()
+        .clone();
+    let custom = document
+        .targets
+        .iter_mut()
+        .find(|target| target.id == "claude-code")
+        .unwrap();
+    // A synthetic customized rule, not a new host-path claim.
+    custom.id = "synthetic-coincident".into();
+    custom.product_id = "synthetic-coincident".into();
+    custom
+        .scopes
+        .iter_mut()
+        .find(|scope| scope.scope == Scope::Project)
+        .unwrap()
+        .preferred_write = Some(codex_path);
+    let catalog = Catalog::new(document).unwrap();
+    let result = resolve_targets(
+        &catalog,
+        ["synthetic-coincident", "codex-cli", "codex"],
+        Scope::Project,
+        &context(),
+    )
+    .unwrap();
+    assert_eq!(result.len(), 2);
+    assert_eq!(result[0].target_id, "codex");
+    assert_eq!(result[1].target_id, "synthetic-coincident");
+    assert_eq!(
+        result[0].preferred_write.path,
+        result[1].preferred_write.path
+    );
+}
