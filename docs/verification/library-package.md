@@ -25,7 +25,7 @@ To inspect the current package list without compiling or uploading, `cargo packa
 
 The helper clones the exact clean candidate into an owned temporary directory, with no hardlinks and Git global/system configuration, hooks and templates disabled. It selects only the committed development pin, declared MSRV or stable CI toolchain. All Cargo operations are offline/locked and use a fresh temporary target directory. It then:
 
-1. Checks legal-copy identity and required files against cargo package --list.
+1. Checks legal-copy identity and required files against cargo package --list, normalizing native Windows list separators to compare with POSIX archive names. Duplicate normalized list paths are refused; archive path checks remain unchanged.
 2. Runs cargo package with its normal verification enabled, retaining publish=false.
 3. Inspects every actual archive entry before extraction: bounded count/unpacked size, regular files only, canonical contained paths, no links/special entries, duplicate paths, traversal, streams or unexpected hidden files. The only hidden file allowed is generated `.cargo_vcs_info.json`.
 4. Requires exact equality between listed/archived paths, a clean matching VCS revision, and byte-identical packaged runtime assets, README and notices.

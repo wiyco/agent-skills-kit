@@ -20,6 +20,17 @@ def entry(path, kind=tarfile.REGTYPE, size=1):
 
 
 class PackageRehearsalTests(unittest.TestCase):
+    def test_native_windows_list_separators_are_normalized_without_relaxing_archive_paths(self):
+        output = "README.md\r\nsrc\\catalog\\data\\expanded.json\r\n"
+        self.assertEqual(rehearsal.package_listing(output, windows=True),
+                         ["README.md", "src/catalog/data/expanded.json"])
+        self.assertEqual(rehearsal.package_listing(output, windows=False),
+                         ["README.md", "src\\catalog\\data\\expanded.json"])
+        with self.assertRaises(ValueError):
+            rehearsal.package_listing("src\\lib.rs\nsrc/lib.rs\n", windows=True)
+        with self.assertRaises(ValueError):
+            self.inspect([entry(PREFIX + "/src\\lib.rs")])
+
     def inspect(self, members):
         archive = MagicMock()
         archive.getmembers.return_value = members
