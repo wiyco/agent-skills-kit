@@ -130,6 +130,21 @@ impl Receipt {
                 OutcomeStatus::Failed(error) => {
                     (ReceiptStatus::Failed, Some(builder.apply(error)?))
                 }
+                OutcomeStatus::CommittedWithPermissionFailure(error) => {
+                    if planned.action() != PlannedAction::Create {
+                        return Err(ReceiptError::InvalidDocument(
+                            "committed permission failure without create preview",
+                        ));
+                    }
+                    let mut diagnostic = builder.apply(error)?;
+                    // Preserve schema-1's coarse cause/path/OS code, and make the
+                    // committed effect explicit without adding incompatible fields.
+                    // The live report retains the original typed operation/cause.
+                    diagnostic.operation = Some(
+                        "payload committed; destination permission finalization failed".to_owned(),
+                    );
+                    (ReceiptStatus::Failed, Some(diagnostic))
+                }
                 OutcomeStatus::NotAttempted => (ReceiptStatus::NotAttempted, None),
             };
             destinations.push(ReceiptDestination {
