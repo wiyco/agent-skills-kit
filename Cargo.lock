@@ -7,7 +7,7 @@ name = "agent-skills-kit"
 version = "0.1.0"
 
 [[package]]
-name = "skillctl"
+name = "agent-skills-kit-cli"
 version = "0.1.0"
 dependencies = [
  "agent-skills-kit",

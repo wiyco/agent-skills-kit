@@ -1,8 +1,8 @@
-# Agent Skills Kit
+# Agent Skills Kit (Rust)
 
 A **planned, library-first Rust toolkit** for installing local Agent Skills into the documented directories of selected AI coding tools.
 
-**Status:** Cargo workspace bootstrap. The library and CLI skeleton compile, but installation is not implemented and there is no released crate or CLI. The repository is private during development and is intended for a future OSS release. Project, crate, and executable names remain provisional until the naming review.
+**Status:** Cargo workspace bootstrap. The library and CLI skeleton compile, but installation is not implemented and there is no released crate or CLI. The repository is private during development and is intended for a future OSS release. The library is `agent-skills-kit`; the CLI package is `agent-skills-kit-cli`, with executable `agent-skills-kit`.
 
 ## What it will do
 
@@ -28,11 +28,11 @@ The task catalog is in [planning/manifest.json](planning/manifest.json); individ
 
 ```text
 crates/
-  agent-skills-kit/  # reusable library; provisional crate name
-  skillctl/          # thin CLI; provisional executable name
+  agent-skills-kit/  # reusable library
+  agent-skills-kit-cli/          # thin CLI (agent-skills-kit executable)
 ```
 
-Run `cargo check --workspace --locked` and `cargo test --workspace --locked` from the checkout. `cargo run -p skillctl --locked` prints the library bootstrap status. See [local development](docs/development.md) for setup and verification.
+Run `cargo check --workspace --locked` and `cargo test --workspace --locked` from the checkout. `cargo run -p agent-skills-kit-cli --locked` prints the library bootstrap status. See [local development](docs/development.md) for setup and verification.
 
 ## Development direction
 
@@ -44,6 +44,6 @@ Local directory input, project/user scope where documented, copy mode, explicit 
 
 ## License
 
-The proposed license is `MIT OR Apache-2.0`, subject to maintainer approval in ASK-002. No license adoption or public release is claimed by this planning repository.
+Original project material is licensed under [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE), at your option. Third-party material retains its own terms; see [attribution](docs/attribution.md). License adoption does not authorize publication. See [ADR 0005](docs/adr/0005-naming-licensing-and-reuse.md) for naming and licensing decisions.
 
 This project is independent of the agent products it targets and makes no affiliation claim.

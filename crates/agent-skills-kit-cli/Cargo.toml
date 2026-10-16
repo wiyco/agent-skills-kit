@@ -1,10 +1,16 @@
 [package]
-name = "skillctl"
+name = "agent-skills-kit-cli"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 publish.workspace = true
 description = "Thin CLI for Agent Skills Kit (bootstrap)"
+
+[[bin]]
+name = "agent-skills-kit"
+path = "src/main.rs"
+doc = false
 
 [dependencies]
 agent-skills-kit = { path = "../agent-skills-kit" }

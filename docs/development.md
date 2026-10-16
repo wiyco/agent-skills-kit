@@ -45,9 +45,9 @@ cargo test --workspace --all-features --locked
 cargo doc --workspace --no-deps --locked
 ```
 
-The provisional packages are `agent-skills-kit` (library) and `skillctl` (CLI). Run `cargo run -p skillctl --locked` to print the library bootstrap status. Command parsing and installation arrive in later issues; names and licensing remain subject to ASK-002. No external Rust dependencies or feature flags are present. Both packages inherit the measured MSRV from the workspace; the development toolchain remains independently pinned.
+The packages are `agent-skills-kit` (library) and `agent-skills-kit-cli` (CLI, executable `agent-skills-kit`). Run `cargo run -p agent-skills-kit-cli --locked` to print the library bootstrap status. Command parsing and installation arrive in later issues; names and licensing are recorded in ADR 0005. No external Rust dependencies or feature flags are present. Both packages inherit the measured MSRV from the workspace; the development toolchain remains independently pinned.
 
-The original `crates/skillctl/tests/fixtures/bootstrap.stdout` fixture records the bootstrap output. The integration test launches only the compiled CLI and compares its output; it performs no installation, executes no skill content, and makes no writes to agent stores.
+The original `crates/agent-skills-kit-cli/tests/fixtures/bootstrap.stdout` fixture records the bootstrap output. The integration test launches only the compiled CLI and compares its output; it performs no installation, executes no skill content, and makes no writes to agent stores.
 
 See [ASK-001 verification](verification/ask-001.md) for the tested setup and limitations.
 

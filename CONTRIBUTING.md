@@ -22,15 +22,15 @@ Explain consumer impact, error/report compatibility, feature policy, and MSRV ef
 
 ## Dependencies and attribution
 
-Use the smallest justified dependency set. Review maintenance, license, and MSRV implications. Do not copy third-party code or fixtures without appropriate attribution and permitted reuse. Original small fixtures are preferred.
+Use the smallest justified dependency set. Review maintenance, license, and MSRV implications. Follow the [attribution policy](docs/attribution.md) before copying third-party code, catalog data, documentation, or fixtures. Original small fixtures are preferred.
 
 ## Pull requests
 
-Use the PR template, link the actual issue number, and report the exact checks run. Keep secrets, private user paths, conversation details, and unrelated changes out of commits and logs. Do not automatically merge or publish.
+Use the PR template, link the actual issue number, and report the exact checks run. Commit subjects and PR titles use Conventional Commits. Keep secrets, private user paths, conversation details, and unrelated changes out of commits and logs. Routine squash merges require every safeguard in the [autonomous development policy](docs/autonomous-development.md); explicit task-specific approval gates remain binding. Publication requires separate approval.
 
 ## Reporting concerns
 
-Security issues must not be posted as public exploit reports. Follow [SECURITY.md](SECURITY.md). A finalized code of conduct and verified reporting route are tracked by ASK-002 and required before public release.
+Follow the [code of conduct](CODE_OF_CONDUCT.md). Security issues must not be posted as public exploit reports; follow [SECURITY.md](SECURITY.md). Current reporting routes apply only during private development. A confidential public-contributor route and alternate conduct contact remain explicit publication gates.
 
 ## Repository hygiene
 

@@ -2,7 +2,7 @@ use std::process::Command;
 
 #[test]
 fn executable_reports_bootstrap_status() {
-    let output = Command::new(env!("CARGO_BIN_EXE_skillctl"))
+    let output = Command::new(env!("CARGO_BIN_EXE_agent-skills-kit"))
         .output()
         .expect("bootstrap executable should start");
 

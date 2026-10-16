@@ -4,7 +4,7 @@
 
 A caller supplies a local skill directory, selected target IDs, an explicit installation scope, and a context describing the user's environment. The library validates the skill, resolves documented destinations, produces a read-only plan, and applies an approved copy. The CLI is one consumer, not the owner of this behavior.
 
-The initial crate names are placeholders. Start with one library crate and one CLI crate; split out the catalog only if a real API/dependency benefit appears.
+Use one library crate (`agent-skills-kit`) and one CLI crate (`agent-skills-kit-cli`); split out the catalog only if a real API/dependency benefit appears. Naming and licensing decisions are recorded in [ADR 0005](adr/0005-naming-licensing-and-reuse.md).
 
 ```text
 CLI / another Rust application
