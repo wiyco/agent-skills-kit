@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {
+      "id": "example-xdg",
+      "aliases": [],
+      "product_id": "example-xdg",
+      "variant": "synthetic",
+      "limitations": [
+        "Original schema demonstration; not a real host or documented installation path"
+      ],
+      "scopes": [
+        {
+          "scope": "user",
+          "status": "unverified",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "environment",
+                "variable": "XDG_CONFIG_HOME",
+                "fallback": {
+                  "base": "home",
+                  "components": [
+                    ".config"
+                  ]
+                }
+              },
+              "components": [
+                "synthetic-example",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "unverified",
+              "source": null,
+              "resolver_tests": [],
+              "discovery_tests": [],
+              "limitations": [
+                "No host-owned placement evidence; never advertised as supported"
+              ]
+            }
+          },
+          "discovery": [],
+          "limitations": [
+            "Synthetic context example only"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "example-workspace",
+      "aliases": [],
+      "product_id": "example-workspace",
+      "variant": "synthetic",
+      "limitations": [
+        "Original schema demonstration; not a real host or documented installation path"
+      ],
+      "scopes": [
+        {
+          "scope": "application_workspace",
+          "status": "unverified",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "application_workspace"
+              },
+              "components": [
+                "synthetic-example",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "unverified",
+              "source": null,
+              "resolver_tests": [],
+              "discovery_tests": [],
+              "limitations": [
+                "No host-owned placement evidence; never advertised as supported"
+              ]
+            }
+          },
+          "discovery": [],
+          "limitations": [
+            "Synthetic context example only"
+          ]
+        }
+      ]
+    }
+  ]
+}
