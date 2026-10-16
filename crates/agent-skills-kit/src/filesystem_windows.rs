@@ -157,6 +157,26 @@ pub(crate) fn open_root(path: &Path) -> io::Result<File> {
     {
         return Err(invalid("explicit native absolute root required"));
     }
+    if path.as_os_str().encode_wide().count() > 32768 {
+        return Err(invalid("native root exceeds path budget"));
+    }
+    let drive = match path.components().next() {
+        Some(std::path::Component::Prefix(prefix)) => match prefix.kind() {
+            std::path::Prefix::Disk(drive) | std::path::Prefix::VerbatimDisk(drive) => drive,
+            _ => {
+                return Err(unsupported(
+                    "UNC and device namespace roots are not eligible",
+                ));
+            }
+        },
+        _ => return Err(invalid("explicit drive root required")),
+    };
+    let drive_root = [u16::from(drive), 58, 92, 0];
+    // SAFETY: fixed NUL-terminated drive root. Reject mapped network drives before
+    // opening a caller's path; later handle checks still verify local NTFS.
+    if unsafe { GetDriveTypeW(drive_root.as_ptr()) } != DRIVE_FIXED {
+        return Err(unsupported("only fixed local drive roots are eligible"));
+    }
     let file = OpenOptions::new()
         .read(true)
         .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
