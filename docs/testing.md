@@ -39,6 +39,8 @@ Planning has no writes. Execution does not follow untrusted descendants outside 
 
 Use deterministic hooks for races/fault injection rather than timing-only sleeps. Use property tests where they improve confidence in naming, rule parsing, containment, and stable ordering. Record seeds for failures.
 
+Map relevant layer tests to [threat scenarios TM-01 through TM-22](threat-model.md#attack-and-failure-scenarios-for-ask-012). A documentation scenario is not an executed test. Backend support cannot be advertised until native evidence covers its promised conditions; unsupported-case rejection is separate from successful installation coverage.
+
 ## Reporting
 
 PRs state the commands actually run and their results. Report untested platforms, scopes, host versions, and failure modes explicitly. Documentation review, resolver tests, and real-host discovery tests are separate columns in the support matrix.

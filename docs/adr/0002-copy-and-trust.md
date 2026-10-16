@@ -2,6 +2,8 @@
 
 Status: proposed; the concrete platform backend must be reviewed in ASK-008.
 
+The detailed proposed v0.1 contract, implementation gates, and native regression scenarios are in [the threat model](../threat-model.md) and [ADR 0006](0006-native-copy-safety.md). Their maintainer review must be recorded before executor implementation begins.
+
 Plan and apply are separate. Planning can inspect the filesystem but cannot write. Applying revalidates preconditions and uses reviewed staging/no-replace behavior. Conflicting content fails by default; --yes does not bypass that policy.
 
 The MVP rejects untrusted descendant links/reparse points and special files. Cleanup is limited to paths still owned by the current operation. Source/destination overlap is rejected. Privilege-bearing permission bits are not propagated.
