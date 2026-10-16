@@ -1903,6 +1903,458 @@
         "Installing Roo Code explicitly identifies the VS Code extension. CLI, cloud, other editor variants and mode-specific directories remain unverified or excluded; no host is invoked.",
         "Choose a location gives macOS/Linux and Windows home-relative examples. The caller supplies home; no USERPROFILE or global environment is read."
       ]
+    },
+    {
+      "id": "kilo-code-cli",
+      "aliases": [],
+      "product_id": "kilo-code",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".kilo",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://kilo.ai/docs/customize/skills",
+                "section": "Skill Locations; When Skills Are Loaded",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Kilo new-platform cli documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".kilo",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kilo.ai/docs/customize/skills",
+                    "section": "Skill Locations; When Skills Are Loaded",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Kilo new-platform cli documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                    "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kilo.ai/docs/customize/skills",
+                    "section": "Skill Locations; When Skills Are Loaded",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Kilo new-platform cli documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                    "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Explicit project/home roots only; default reader listing is not exhaustive for host-managed configuration and conditional compatibility."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".kilo",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://kilo.ai/docs/customize/skills",
+                "section": "Skill Locations; When Skills Are Loaded",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Kilo new-platform cli documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".kilo",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kilo.ai/docs/customize/skills",
+                    "section": "Skill Locations; When Skills Are Loaded",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Kilo new-platform cli documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                    "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kilo.ai/docs/customize/skills",
+                    "section": "Skill Locations; When Skills Are Loaded",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Kilo new-platform cli documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                    "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Explicit project/home roots only; default reader listing is not exhaustive for host-managed configuration and conditional compatibility."
+          ]
+        }
+      ],
+      "limitations": [
+        "Current Skill Locations documents .kilo/skills, not legacy .kilocode or Roo/Cline paths. CLI and VS Code have separate identities; shared paths are documented, not inherited.",
+        "The default agents reader is shared with other hosts; selecting Kilo placement is not exclusive visibility. Project native skills take precedence over global; compatibility-directory duplicate precedence is not established.",
+        "Claude skills readers require host compatibility settings. Settings, Claude Code migration (https://kilo.ai/docs/getting-started/settings; reviewed 2026-10-16) says global Claude fallback stops after the one-time migration attempt. Conditional Claude paths are not enumerated as default readers.",
+        "skills.paths adds configured readers and skills.urls adds remote acquisition with trust constraints; neither is expanded or modified. No remote fetching, host config migration or enablement is performed.",
+        "CLI Runtime Architecture, Config precedence (https://kilo.ai/docs/contributing/architecture/cli-runtime; reviewed 2026-10-16) names KILO_CONFIG_DIR but does not establish a replacement native skills root. This variable is not interpreted as a skills write override.",
+        "New-platform mode-specific stores are not used. Legacy extension, desktop, JetBrains, cloud and remote variants remain unverified or excluded.",
+        "Name Matching Rule and Common Errors require folder/name agreement, while Skill Not Loading says otherwise. This installer retains stricter general-spec agreement; exact host acceptance remains unverified. No additional reserved local name is established.",
+        "Skill Locations provides Mac/Linux and Windows home examples. Native resolver/copy tests do not establish installed host versions or discovery/activation. Host embedded-shell behavior is not exercised."
+      ]
+    },
+    {
+      "id": "kilo-code-vscode",
+      "aliases": [],
+      "product_id": "kilo-code",
+      "variant": "vscode",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".kilo",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://kilo.ai/docs/customize/skills",
+                "section": "Skill Locations; When Skills Are Loaded",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Kilo new-platform vscode documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".kilo",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kilo.ai/docs/customize/skills",
+                    "section": "Skill Locations; When Skills Are Loaded",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Kilo new-platform vscode documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                    "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kilo.ai/docs/customize/skills",
+                    "section": "Skill Locations; When Skills Are Loaded",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Kilo new-platform vscode documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                    "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Explicit project/home roots only; default reader listing is not exhaustive for host-managed configuration and conditional compatibility."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".kilo",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://kilo.ai/docs/customize/skills",
+                "section": "Skill Locations; When Skills Are Loaded",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Kilo new-platform vscode documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".kilo",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kilo.ai/docs/customize/skills",
+                    "section": "Skill Locations; When Skills Are Loaded",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Kilo new-platform vscode documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                    "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kilo.ai/docs/customize/skills",
+                    "section": "Skill Locations; When Skills Are Loaded",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Kilo new-platform vscode documentation; explicitly describes CLI sessions and VS Code extension connection to CLI server; minimum version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kilo_new_platform_scopes_and_configuration_gaps",
+                    "expanded_targets::kilo_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default native and agents roots only; configured/conditional readers, migration state and real-host discovery are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Explicit project/home roots only; default reader listing is not exhaustive for host-managed configuration and conditional compatibility."
+          ]
+        }
+      ],
+      "limitations": [
+        "Current Skill Locations documents .kilo/skills, not legacy .kilocode or Roo/Cline paths. CLI and VS Code have separate identities; shared paths are documented, not inherited.",
+        "The default agents reader is shared with other hosts; selecting Kilo placement is not exclusive visibility. Project native skills take precedence over global; compatibility-directory duplicate precedence is not established.",
+        "Claude skills readers require host compatibility settings. Settings, Claude Code migration (https://kilo.ai/docs/getting-started/settings; reviewed 2026-10-16) says global Claude fallback stops after the one-time migration attempt. Conditional Claude paths are not enumerated as default readers.",
+        "skills.paths adds configured readers and skills.urls adds remote acquisition with trust constraints; neither is expanded or modified. No remote fetching, host config migration or enablement is performed.",
+        "CLI Runtime Architecture, Config precedence (https://kilo.ai/docs/contributing/architecture/cli-runtime; reviewed 2026-10-16) names KILO_CONFIG_DIR but does not establish a replacement native skills root. This variable is not interpreted as a skills write override.",
+        "New-platform mode-specific stores are not used. Legacy extension, desktop, JetBrains, cloud and remote variants remain unverified or excluded.",
+        "Name Matching Rule and Common Errors require folder/name agreement, while Skill Not Loading says otherwise. This installer retains stricter general-spec agreement; exact host acceptance remains unverified. No additional reserved local name is established.",
+        "Skill Locations provides Mac/Linux and Windows home examples. Native resolver/copy tests do not establish installed host versions or discovery/activation. Host embedded-shell behavior is not exercised."
+      ]
     }
   ]
 }
