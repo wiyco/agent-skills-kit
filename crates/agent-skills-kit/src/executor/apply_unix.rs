@@ -69,6 +69,18 @@ fn metadata(file: &File, path: &Path) -> Result<EntryStamp, ApplyError> {
         .map_err(|observed| io_error(path, "inspect held object", observed))
 }
 fn ensure_no_acl(file: &File, path: &Path) -> Result<(), ApplyError> {
+    #[cfg(target_os = "macos")]
+    if rustix::fs::fstatfs(file)
+        .map_err(|observed| io_error(path, "inspect ownership mount policy", observed))?
+        .f_flags
+        & libc::MNT_IGNORE_OWNERSHIP as u32
+        != 0
+    {
+        return Err(error(
+            path,
+            ApplyErrorKind::Unsupported("filesystem ignores ownership"),
+        ));
+    }
     if permissions::no_acl(file)
         .map_err(|observed| io_error(path, "inspect native ACL", observed))?
     {
@@ -101,6 +113,13 @@ struct Owned {
     identity: Identity,
 }
 impl Owned {
+    fn private_directory_is_current(&self) -> Result<bool, ApplyError> {
+        if !self.still_owned()? || metadata(&self.file, &self.path)?.mode & 0o7777 != 0o700 {
+            return Ok(false);
+        }
+        ensure_no_acl(&self.file, &self.path)?;
+        Ok(true)
+    }
     fn still_owned(&self) -> Result<bool, ApplyError> {
         Ok(id(&metadata(&self.file, &self.path)?) == self.identity
             && bound(&self.parent, &self.name, &self.file, &self.path)?)
@@ -155,7 +174,7 @@ impl Batch {
             if let Some(index) = self.parent_keys.get(&key) {
                 used.push(*index);
                 let owned = &self.parents[*index];
-                if !owned.still_owned()? {
+                if !owned.private_directory_is_current()? {
                     return Err(error(&label, ApplyErrorKind::DestinationChanged));
                 }
                 current = Arc::clone(&owned.file);
@@ -426,11 +445,13 @@ fn install(
         source_current(source, options.verification.inventory)?;
         bindings(destination)?;
         for owned in &batch.parents {
-            if !owned.still_owned()? {
+            if !owned.private_directory_is_current()? {
                 return Err(error(&owned.path, ApplyErrorKind::DestinationChanged));
             }
         }
-        if !stage.still_owned()? || metadata(&stage.file, &stage.path)? != verified_stage {
+        if !stage.private_directory_is_current()?
+            || metadata(&stage.file, &stage.path)? != verified_stage
+        {
             return Err(error(&stage.path, ApplyErrorKind::StageChanged));
         }
         for (owned, verified) in objects.iter().zip(verified_objects) {
@@ -453,6 +474,21 @@ fn install(
         Ok(())
     })();
     if let Err(failure) = checkpoint(hook, Phase::BeforeCleanup, &stage.path) {
+        cleanup.push(failure);
+        return result;
+    }
+    let cleanup_context = bindings(destination).and_then(|()| {
+        if !stage.private_directory_is_current()? {
+            return Err(error(&stage.path, ApplyErrorKind::StageChanged));
+        }
+        for parent in &batch.parents {
+            if !parent.private_directory_is_current()? {
+                return Err(error(&parent.path, ApplyErrorKind::DestinationChanged));
+            }
+        }
+        Ok(())
+    });
+    if let Err(failure) = cleanup_context {
         cleanup.push(failure);
         return result;
     }

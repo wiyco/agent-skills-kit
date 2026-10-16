@@ -559,3 +559,35 @@ fn failure_after_a_partial_file_write_removes_only_owned_staging() {
     assert!(!plan.destinations()[0].path().unwrap().exists());
     no_stages(plan.destinations()[0].path().unwrap().parent().unwrap());
 }
+
+#[test]
+fn changed_private_parent_or_stage_modes_block_commit_and_cleanup() {
+    use std::os::unix::fs::PermissionsExt;
+    for stage_changed in [false, true] {
+        let root = Root::new();
+        let plan = root.plan(&["claude-code"]);
+        let mut retained = None;
+        let report = run(&plan, ApplyOptions::default(), &mut |phase, path| {
+            if phase == Phase::AfterStage {
+                let changed = if stage_changed {
+                    path
+                } else {
+                    path.parent().unwrap()
+                };
+                std::fs::set_permissions(changed, std::fs::Permissions::from_mode(0o777))?;
+                retained = Some(path.to_owned());
+            }
+            Ok(())
+        });
+        assert!(
+            matches!(report.outcomes[0].status, OutcomeStatus::Failed(_)),
+            "{report:#?}"
+        );
+        assert!(!report.cleanup_errors.is_empty());
+        assert!(!plan.destinations()[0].path().unwrap().exists());
+        assert!(
+            retained.unwrap().join("sample/SKILL.md").is_file(),
+            "uncertain private context must be retained"
+        );
+    }
+}
