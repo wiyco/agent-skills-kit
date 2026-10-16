@@ -233,7 +233,7 @@ pub(crate) fn open_root(path: &Path) -> io::Result<File> {
 
 /// Single-component lookup/create relative to a retained parent; no path fallback.
 pub(crate) fn child(parent: &File, name: &OsStr, kind: Kind, create: bool) -> io::Result<File> {
-    child_impl(parent, name, kind, create, ptr::null_mut())
+    child_impl(parent, name, kind, create, ptr::null_mut(), false)
 }
 
 #[cfg(test)]
@@ -243,7 +243,15 @@ pub(crate) fn create_with_security(
     kind: Kind,
     descriptor: &security::creation::Descriptor,
 ) -> io::Result<File> {
-    child_impl(parent, name, kind, true, descriptor.as_ptr())
+    child_impl(parent, name, kind, true, descriptor.as_ptr(), false)
+}
+
+/// Reopen an owned post-commit entry for permission finalization. Descendant
+/// copy handles must be closed before directory rename; reacquire these while
+/// every entry is still private, verify identity, and hold them through updates.
+#[cfg(test)]
+pub(crate) fn open_permissions(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
+    child_impl(parent, name, kind, false, ptr::null_mut(), true)
 }
 
 fn child_impl(
@@ -252,6 +260,7 @@ fn child_impl(
     kind: Kind,
     create: bool,
     descriptor: windows_sys::Win32::Security::PSECURITY_DESCRIPTOR,
+    permissions: bool,
 ) -> io::Result<File> {
     if stamp(parent)?.kind != Kind::Directory {
         return Err(invalid("directory parent required"));
@@ -275,7 +284,9 @@ fn child_impl(
     let mut status = Default::default();
     let access = FILE_GENERIC_READ
         | if create {
-            FILE_GENERIC_WRITE | DELETE
+            FILE_GENERIC_WRITE | DELETE | if descriptor.is_null() { 0 } else { WRITE_DAC }
+        } else if permissions {
+            WRITE_DAC
         } else {
             0
         };
@@ -287,7 +298,8 @@ fn child_impl(
             FILE_NON_DIRECTORY_FILE
         };
     // SAFETY: SDK structs/pointers are live for this synchronous call. The name
-    // contains exactly one validated component. No ACL/EA/payload is supplied.
+    // contains one validated component. The descriptor is null or a live SDK
+    // self-relative allocation borrowed for this call. No EA/payload is supplied.
     let result = unsafe {
         NtCreateFile(
             &mut handle,
