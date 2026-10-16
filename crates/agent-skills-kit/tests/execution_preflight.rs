@@ -459,3 +459,46 @@ fn acl_bearing_parent_is_refused_without_staging_or_permission_changes() {
     );
     assert_eq!(tree(&fixture.root), before);
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn default_acl_parent_is_refused_without_modifying_its_acl() {
+    let fixture = Fixture::new();
+    let parent = fixture.destination().parent().unwrap().to_owned();
+    fs::create_dir_all(&parent).unwrap();
+    let descriptor = fs::File::open(&parent).unwrap();
+    // Original fixture encoding follows Linux UAPI posix_acl_xattr.h version 2:
+    // little-endian header and user/group/other entries with undefined IDs.
+    // No header/source implementation is copied or executed.
+    let mut acl = 2u32.to_le_bytes().to_vec();
+    for (tag, permission) in [(1u16, 7u16), (4, 0), (32, 0)] {
+        acl.extend_from_slice(&tag.to_le_bytes());
+        acl.extend_from_slice(&permission.to_le_bytes());
+        acl.extend_from_slice(&u32::MAX.to_le_bytes());
+    }
+    rustix::fs::fsetxattr(
+        &descriptor,
+        "system.posix_acl_default",
+        &acl,
+        rustix::fs::XattrFlags::empty(),
+    )
+    .expect("native ACL fixture must be supported and actually stored");
+    let plan = fixture.plan();
+    let before = tree(&fixture.root);
+    let report = apply_plan(&plan, ApplyOptions::default());
+    assert!(
+        matches!(
+            report.outcomes[0].status,
+            OutcomeStatus::Failed(ApplyError {
+                kind: ApplyErrorKind::Unsupported(_),
+                ..
+            })
+        ),
+        "{report:#?}"
+    );
+    let mut current = [0u8; 256];
+    let length =
+        rustix::fs::fgetxattr(&descriptor, "system.posix_acl_default", &mut current[..]).unwrap();
+    assert_eq!(&current[..length], acl);
+    assert_eq!(tree(&fixture.root), before);
+}
