@@ -23,7 +23,7 @@ The source is completely revalidated after staging, completed stage/entry stamps
 
 `InstallReport` includes every physical destination and all copied source/target attribution, with Created, Unchanged, Failed or NotAttempted. Default stop-on-failure leaves later operations NotAttempted; callers can explicitly continue independent operations. Earlier successes remain installed. A whole-plan preflight failure leaves every outcome NotAttempted and reports its typed cause. Cleanup errors are separate: a successful commit followed by cleanup failure remains Created, with an unsuccessful overall report and a recovery diagnostic. I/O operation/kind/native code and validation failures remain structured.
 
-The [receipt codec](receipts.md) defines bounded, versioned observational data with lossless native paths. It does not add persistence or confer cleanup authority; executor integration follows separately in ASK-011.
+The [receipt API](receipts.md) constructs bounded, versioned observational records from a borrowed plan/report with lossless native paths. It does not add persistence or confer cleanup authority; conversion failure leaves the full install report available.
 
 ## Cleanup authority and recovery
 

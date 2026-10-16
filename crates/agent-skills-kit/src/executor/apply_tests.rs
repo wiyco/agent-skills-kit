@@ -63,19 +63,7 @@ fn run(
     hook: &mut impl FnMut(Phase, &Path) -> io::Result<()>,
 ) -> InstallReport {
     verify_plan(plan, options.verification).unwrap();
-    let mut report = InstallReport {
-        preflight_error: None,
-        cleanup_errors: Vec::new(),
-        outcomes: plan
-            .destinations()
-            .iter()
-            .map(|destination| DestinationOutcome {
-                path: destination.path().map(Path::to_owned),
-                attributions: Vec::new(),
-                status: OutcomeStatus::NotAttempted,
-            })
-            .collect(),
-    };
+    let mut report = super::super::initial_report(plan);
     apply_with_hook(plan, options, &mut report, hook);
     report
 }
@@ -219,10 +207,33 @@ fn cleanup_substitution_leaves_unrelated_stage_and_reports_uncertainty() {
             .iter()
             .any(|failure| failure.kind == ApplyErrorKind::StageChanged)
     );
-    assert_eq!(
-        std::fs::read(saved.unwrap().join("sentinel")).unwrap(),
-        b"unrelated"
+    let saved = saved.unwrap();
+    assert_eq!(std::fs::read(saved.join("sentinel")).unwrap(), b"unrelated");
+    assert!(root.0.join("moved-owned-stage/sample/SKILL.md").is_file());
+    use crate::receipt::{OperationId, Receipt, ReceiptFailureCode, ReceiptLimits};
+    let receipt = Receipt::from_report(
+        &plan,
+        &report,
+        OperationId::new("cleanup-uncertain").unwrap(),
+        ReceiptLimits::default(),
+    )
+    .unwrap();
+    let parsed = Receipt::from_json(
+        &receipt.to_json(ReceiptLimits::default()).unwrap(),
+        ReceiptLimits::default(),
+    )
+    .unwrap();
+    assert!(
+        parsed
+            .document()
+            .cleanup_diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == ReceiptFailureCode::StageChanged)
     );
+    let retry = root.plan(&["codex"]);
+    let retry_report = apply_plan(&retry, ApplyOptions::default());
+    assert!(retry_report.is_successful(), "{retry_report:#?}");
+    assert_eq!(std::fs::read(saved.join("sentinel")).unwrap(), b"unrelated");
     assert!(root.0.join("moved-owned-stage/sample/SKILL.md").is_file());
 }
 
@@ -270,6 +281,54 @@ fn batch_reports_partial_success_and_not_attempted_without_rollback() {
                 .is_file()
         );
         assert!(report.cleanup_errors.is_empty(), "{report:#?}");
+        use crate::receipt::{OperationId, Receipt, ReceiptLimits, ReceiptStatus};
+        use std::os::unix::fs::MetadataExt;
+        let recorded = Receipt::from_report(
+            &plan,
+            &report,
+            OperationId::new("partial-batch").unwrap(),
+            ReceiptLimits::default(),
+        )
+        .unwrap();
+        let parsed = Receipt::from_json(
+            &recorded.to_json(ReceiptLimits::default()).unwrap(),
+            ReceiptLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            parsed.document().destinations[0].status,
+            ReceiptStatus::Created
+        );
+        assert_eq!(
+            parsed.document().destinations[1].status,
+            ReceiptStatus::Failed
+        );
+        assert_eq!(
+            parsed.document().destinations[2].status,
+            if stop {
+                ReceiptStatus::NotAttempted
+            } else {
+                ReceiptStatus::Created
+            }
+        );
+        let first = report.outcomes[0].path.as_ref().unwrap();
+        let inode = std::fs::metadata(first).unwrap().ino();
+        let retry = root.plan(&["claude-code", "codex", "opencode"]);
+        let retry_report = apply_plan(&retry, ApplyOptions::default());
+        assert!(retry_report.is_successful(), "{retry_report:#?}");
+        assert_eq!(retry_report.outcomes[0].status, OutcomeStatus::Unchanged);
+        assert_eq!(std::fs::metadata(first).unwrap().ino(), inode);
+        let retried = Receipt::from_report(
+            &retry,
+            &retry_report,
+            OperationId::new("partial-retry").unwrap(),
+            ReceiptLimits::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            retried.document().destinations[0].status,
+            ReceiptStatus::Unchanged
+        );
     }
 }
 
@@ -382,6 +441,23 @@ fn failed_new_parent_batch_retains_only_reported_ancestors() {
     assert!(parent.is_dir());
     assert_eq!(std::fs::read_dir(parent).unwrap().count(), 0);
     assert!(!plan.destinations()[0].path().unwrap().exists());
+    use crate::receipt::{OperationId, Receipt, ReceiptFailureCode, ReceiptLimits};
+    let receipt = Receipt::from_report(
+        &plan,
+        &report,
+        OperationId::new("retained-parents").unwrap(),
+        ReceiptLimits::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        receipt
+            .document()
+            .cleanup_diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.code == ReceiptFailureCode::CreatedParentRetained)
+            .count(),
+        2
+    );
 }
 
 #[test]

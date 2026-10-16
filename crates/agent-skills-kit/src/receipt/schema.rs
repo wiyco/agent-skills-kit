@@ -193,7 +193,7 @@ pub struct ReceiptDiagnostic {
     pub code: ReceiptFailureCode,
     /// Relevant native label, when the failure has one.
     pub path: Option<NativePath>,
-    /// Exact static operation label when supplied by the native backend.
+    /// Static operation or constraint label when supplied by the library.
     pub operation: Option<String>,
     /// Native OS error number, interpreted only for the recorded platform.
     pub os_error: Option<i32>,
