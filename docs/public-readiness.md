@@ -34,13 +34,19 @@ The scan used bounded credential signatures (private-key headers, GitHub tokens,
 
 **Do not change visibility on the assumption that the preparation is already on main.** Required CI for #92 and this preparation is blocked by GitHub's runner-start restriction. Provider annotations identify account billing/spending configuration; no account payment details were collected. Jobs that did not start are unrun, not passing code tests. Local verification and earlier green commits cannot satisfy final-revision native CI.
 
-The preparation PR must pass the existing checks and merge before its default-branch policies can be relied on. No protection exception, direct push, fabricated status, alternate default branch or automatic visibility change is part of this work. The maintainer must resolve Actions availability through GitHub account administration/support if compliant pre-transition merging remains unavailable. The free public-runner model is not authorization to bypass the private-stage merge gate. No billing changes or purchases are performed by the agent.
+Ordinary PRs must pass the existing checks before merging. The maintainer subsequently authorized the one-time preparation exception below; it is not inferred from public runner pricing. No direct push, fabricated status, alternate default branch, billing change, purchase or automatic visibility action is authorized. Account administration/support may still be needed if public runner availability does not recover.
+
+## Explicit one-time preparation merge exception
+
+After reviewing the blocked preparation, the maintainer explicitly authorized temporary protection relaxation for PR #94 only. Record the exact final SHA and the local-versus-unrun CI evidence in its QA comment. Temporarily disable admin enforcement only, use a SHA-matched administrative squash merge, and immediately restore and compare the saved protection settings even if the merge fails. Required checks remain configured for ordinary contributors throughout. No other PR, including #92, receives this exception.
+
+This supersedes the ordinary green-CI prerequisite solely for this source-preview preparation merge. It is not a passing CI result, independent approval or a library/CLI release authorization. All seven checks, admin enforcement and other protections must be restored before the handoff is complete. Post-transition native CI remains unverified until it actually runs.
 
 ## Maintainer handoff
 
 Before changing repository visibility personally:
 
-1. Review the preparation PR and its final-SHA evidence, resolve its CI/merge prerequisite, and confirm it is on main. #92 can remain open until its own exact-revision gates pass; do not advertise its unmerged adapter as shipped.
+1. Review the preparation PR and its final-SHA evidence, confirm its explicit one-time exception and restored protections, and confirm it is on main. #92 can remain open until its own exact-revision gates pass; do not advertise its unmerged adapter as shipped.
 2. Confirm the intended public scope is WIP source/history/Issues/PRs/Actions logs, including existing generic infrastructure-failure annotations. Review any content added since the audit. Project #10 stays private.
 3. Confirm no package/binary publishing or release workflow was added and `publish = false` remains. Reporting/contribution arrangements are deferred, not operational or silently approved for release.
 4. Use GitHub's repository visibility settings yourself. This document and the agent do not execute that action.
