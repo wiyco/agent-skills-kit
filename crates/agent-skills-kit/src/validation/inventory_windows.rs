@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    filesystem_windows::{self as native, Kind, Stamp, reader},
+    filesystem_windows::{self as native, Kind, reader},
     validation::parse_metadata,
 };
 use std::{
@@ -9,7 +9,7 @@ use std::{
     os::windows::ffi::OsStrExt,
     sync::Arc,
 };
-use windows_sys::Win32::Storage::FileSystem::{FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_READONLY};
+use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_DIRECTORY;
 
 fn failure(path: &Path, operation: &'static str, error: io::Error) -> InventoryError {
     if let Some(reason) = error
@@ -27,39 +27,9 @@ fn failure(path: &Path, operation: &'static str, error: io::Error) -> InventoryE
         InventoryError::io(path, operation, error)
     }
 }
-fn snapshot(native: Stamp) -> EntryStamp {
-    let mode = if native.kind == Kind::Directory {
-        0o040555
-    } else {
-        0o100444
-    } | if native.attributes & FILE_ATTRIBUTE_READONLY == 0 {
-        0o200
-    } else {
-        0
-    };
-    EntryStamp {
-        device: native.volume,
-        inode: u64::from_le_bytes(native.identity[..8].try_into().unwrap()),
-        mode,
-        links: u64::from(native.links),
-        length: native.length as u64,
-        modified: (
-            native.modified / 10_000_000,
-            (native.modified % 10_000_000) * 100,
-        ),
-        changed: (
-            native.changed / 10_000_000,
-            (native.changed % 10_000_000) * 100,
-        ),
-        windows: native,
-    }
-}
 fn observe(file: &File, path: &Path) -> Result<EntryStamp, InventoryError> {
-    reader::unnamed_stream_only(file)
-        .map_err(|error| failure(path, "reject alternate Windows data streams", error))?;
-    native::stamp(file)
-        .map(snapshot)
-        .map_err(|error| failure(path, "inspect retained Windows object", error))
+    native::entry_stamp(file)
+        .map_err(|error| failure(path, "inspect retained Windows object and streams", error))
 }
 fn local(file: &File, path: &Path) -> Result<(), InventoryError> {
     reader::local_ntfs(file).map_err(|error| {

@@ -374,3 +374,38 @@ use windows_sys::Wdk::Storage::FileSystem::{
 };
 #[path = "filesystem_windows_read.rs"]
 pub(crate) mod reader;
+
+#[path = "filesystem_windows_security.rs"]
+pub(crate) mod security;
+
+fn snapshot(native: Stamp) -> crate::validation::EntryStamp {
+    let mode = if native.kind == Kind::Directory {
+        0o040555
+    } else {
+        0o100444
+    } | if native.attributes & FILE_ATTRIBUTE_READONLY == 0 {
+        0o200
+    } else {
+        0
+    };
+    crate::validation::EntryStamp {
+        device: native.volume,
+        inode: u64::from_le_bytes(native.identity[..8].try_into().unwrap()),
+        mode,
+        links: u64::from(native.links),
+        length: native.length as u64,
+        modified: (
+            native.modified / 10_000_000,
+            (native.modified % 10_000_000) * 100,
+        ),
+        changed: (
+            native.changed / 10_000_000,
+            (native.changed % 10_000_000) * 100,
+        ),
+        windows: native,
+    }
+}
+pub(crate) fn entry_stamp(file: &File) -> io::Result<crate::validation::EntryStamp> {
+    reader::unnamed_stream_only(file)?;
+    stamp(file).map(snapshot)
+}
