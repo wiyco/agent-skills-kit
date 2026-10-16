@@ -252,8 +252,18 @@ fn create_directory(
         identity: id(&stamp),
     };
     if let Err(failure) = ensure_no_acl(&owned.file, path).and_then(|()| {
-        rustix::fs::fchmod(&owned.file, Mode::from_raw_mode(0o700))
-            .map_err(|observed| io_error(path, "set private directory mode", observed))
+        // mkdir/open is not an atomic creator-identity primitive. Never chmod
+        // an object reopened by name: a replacement must not grant permission
+        // to change someone else's directory. Require the private mode already
+        // established by exclusive mkdir; an over-restrictive umask may fail.
+        if metadata(&owned.file, path)?.mode & 0o7777 == 0o700 {
+            Ok(())
+        } else {
+            Err(error(
+                path,
+                ApplyErrorKind::Unsupported("new directory lacks required private mode"),
+            ))
+        }
     }) {
         // This helper also creates destination parents outside private staging.
         // Do not turn a failed setup into check-then-unlink authority there.
