@@ -21,6 +21,7 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             "codex",
             "crush-cli",
             "cursor-ide",
+            "devin-desktop-cascade",
             "factory-droid-cli",
             "gemini-cli",
             "github-copilot-cli",

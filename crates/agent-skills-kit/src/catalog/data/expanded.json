@@ -6100,6 +6100,297 @@
         "Install, System requirements (https://docs.openclaw.ai/install; reviewed 2026-10-16) documents macOS/Linux/native Windows plus separate WSL/companion choices. Native library CI is not installed Gateway, Windows Hub, Tauri/macOS app, remote node, desktop/ARM, WSL or runtime/version validation.",
         "No legacy Clawdbot/Moltbot brand alias, cloud/remote identity, model/credential injection or dependency-installer behavior is inferred. Config, metadata.openclaw gating, policy commands, imports and skills are not executed or modified. No additional reserved local name or minimum skills version is established."
       ]
+    },
+    {
+      "id": "devin-desktop-cascade",
+      "aliases": [],
+      "product_id": "devin-desktop",
+      "variant": "cascade",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".devin",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.devin.ai/desktop/cascade/skills",
+                "section": "Manual Creation; Skill Scopes",
+                "accessed": "2026-10-16",
+                "applicability": "Current Devin Desktop Cascade rolling docs; stable 3.10.67 release listed 2026-10-12, minimum skills version and actual discovery untested; not Devin Local/CLI"
+              },
+              "resolver_tests": [
+                "expanded_targets::devin_cascade_renamed_paths_and_conditional_reader_boundaries",
+                "expanded_targets::devin_cascade_native_and_legacy_preservation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Windsurf URL redirects to this Cascade documentation. Legacy namespaces are retained exactly where documented; conditional Claude readers and enterprise directories are not enabled or enumerated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".devin",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.devin.ai/desktop/cascade/skills",
+                    "section": "Manual Creation; Skill Scopes",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Devin Desktop Cascade rolling docs; stable 3.10.67 release listed 2026-10-12, minimum skills version and actual discovery untested; not Devin Local/CLI"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::devin_cascade_renamed_paths_and_conditional_reader_boundaries",
+                    "expanded_targets::devin_cascade_native_and_legacy_preservation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Windsurf URL redirects to this Cascade documentation. Legacy namespaces are retained exactly where documented; conditional Claude readers and enterprise directories are not enabled or enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".windsurf",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.devin.ai/desktop/cascade/skills",
+                    "section": "Manual Creation; Skill Scopes",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Devin Desktop Cascade rolling docs; stable 3.10.67 release listed 2026-10-12, minimum skills version and actual discovery untested; not Devin Local/CLI"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::devin_cascade_renamed_paths_and_conditional_reader_boundaries",
+                    "expanded_targets::devin_cascade_native_and_legacy_preservation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Windsurf URL redirects to this Cascade documentation. Legacy namespaces are retained exactly where documented; conditional Claude readers and enterprise directories are not enabled or enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.devin.ai/desktop/cascade/skills",
+                    "section": "Manual Creation; Skill Scopes",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Devin Desktop Cascade rolling docs; stable 3.10.67 release listed 2026-10-12, minimum skills version and actual discovery untested; not Devin Local/CLI"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::devin_cascade_renamed_paths_and_conditional_reader_boundaries",
+                    "expanded_targets::devin_cascade_native_and_legacy_preservation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Windsurf URL redirects to this Cascade documentation. Legacy namespaces are retained exactly where documented; conditional Claude readers and enterprise directories are not enabled or enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Project workspace is the explicit project-specific folder, not a multi-root Spaces container or arbitrary ApplicationWorkspace fallback. User native write chooses the documented manual-creation .codeium/windsurf location; .config/devin is an alternative reader, not an inferred XDG override. Enumeration does not assert duplicate priority or ancestor traversal."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".codeium",
+                "windsurf",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.devin.ai/desktop/cascade/skills",
+                "section": "Manual Creation; Skill Scopes",
+                "accessed": "2026-10-16",
+                "applicability": "Current Devin Desktop Cascade rolling docs; stable 3.10.67 release listed 2026-10-12, minimum skills version and actual discovery untested; not Devin Local/CLI"
+              },
+              "resolver_tests": [
+                "expanded_targets::devin_cascade_renamed_paths_and_conditional_reader_boundaries",
+                "expanded_targets::devin_cascade_native_and_legacy_preservation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Windsurf URL redirects to this Cascade documentation. Legacy namespaces are retained exactly where documented; conditional Claude readers and enterprise directories are not enabled or enumerated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".codeium",
+                    "windsurf",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.devin.ai/desktop/cascade/skills",
+                    "section": "Manual Creation; Skill Scopes",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Devin Desktop Cascade rolling docs; stable 3.10.67 release listed 2026-10-12, minimum skills version and actual discovery untested; not Devin Local/CLI"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::devin_cascade_renamed_paths_and_conditional_reader_boundaries",
+                    "expanded_targets::devin_cascade_native_and_legacy_preservation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Windsurf URL redirects to this Cascade documentation. Legacy namespaces are retained exactly where documented; conditional Claude readers and enterprise directories are not enabled or enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".config",
+                    "devin",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.devin.ai/desktop/cascade/skills",
+                    "section": "Manual Creation; Skill Scopes",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Devin Desktop Cascade rolling docs; stable 3.10.67 release listed 2026-10-12, minimum skills version and actual discovery untested; not Devin Local/CLI"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::devin_cascade_renamed_paths_and_conditional_reader_boundaries",
+                    "expanded_targets::devin_cascade_native_and_legacy_preservation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Windsurf URL redirects to this Cascade documentation. Legacy namespaces are retained exactly where documented; conditional Claude readers and enterprise directories are not enabled or enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.devin.ai/desktop/cascade/skills",
+                    "section": "Manual Creation; Skill Scopes",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Devin Desktop Cascade rolling docs; stable 3.10.67 release listed 2026-10-12, minimum skills version and actual discovery untested; not Devin Local/CLI"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::devin_cascade_renamed_paths_and_conditional_reader_boundaries",
+                    "expanded_targets::devin_cascade_native_and_legacy_preservation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Windsurf URL redirects to this Cascade documentation. Legacy namespaces are retained exactly where documented; conditional Claude readers and enterprise directories are not enabled or enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Project workspace is the explicit project-specific folder, not a multi-root Spaces container or arbitrary ApplicationWorkspace fallback. User native write chooses the documented manual-creation .codeium/windsurf location; .config/devin is an alternative reader, not an inferred XDG override. Enumeration does not assert duplicate priority or ancestor traversal."
+          ]
+        }
+      ],
+      "limitations": [
+        "https://docs.windsurf.com/windsurf/cascade/skills redirects to the reviewed canonical https://docs.devin.ai/desktop/cascade/skills. Product FAQ https://devin.ai/desktop (reviewed 2026-10-16) explicitly identifies Devin Desktop as renamed Windsurf with settings migration. This current Cascade adapter does not assert pre-upgrade version parity or alias ambiguous brand names.",
+        "Current manual creation and Skill Scopes establish preferred project .devin/skills, legacy .windsurf/skills and cross-agent .agents/skills. User manual creation still names ~/.codeium/windsurf/skills, with ~/.config/devin/skills as a documented alternative shared with Devin CLI. Branding does not rename those persisted roots or make CLI behavior identical.",
+        "Only default documented readers are enumerated. .claude/skills and ~/.claude/skills are conditional on enabled Claude Code config reading. That configuration is not evaluated or changed, and the conditional roots are not reported as always active.",
+        "Enterprise system stores are OS-specific read-only managed locations with Devin-if-present/Windsurf-fallback behavior, not a merged directory or writable MVP scope. They remain unenumerated. No admin/system store is created.",
+        "The source explicitly distinguishes Devin Local agent, which uses Devin CLI skills format/discovery. That mode, cloud agents, third-party ACP agents, Agent Command Center Spaces and Windsurf JetBrains/plugins require separate capability evidence; none is an alias to Cascade.",
+        "No replacement skills-root variable is established by the reviewed page. DEVIN_HOME, WINDSURF_HOME, XDG_CONFIG_HOME and CLAUDE_CONFIG_DIR are not modeled as overrides for this adapter. Config and effective host settings remain untested; .config/devin is a literal documented alternative, not automatic XDG relocation.",
+        "Official Releases (https://docs.devin.ai/desktop/releases; reviewed 2026-10-16) explicitly lists stable macOS/Windows/Linux builds and current 3.10.67 dated 2026-10-12. This is a release reference, not minimum skills-version or installed-host/desktop/ARM/distro verification. Native CI tests library behavior only.",
+        "The page requests lowercase letters, numbers and hyphens and required name/description. Generic portable validation/folder agreement and no-link copying remain mandatory; no additional reserved local name or undocumented ASCII-only regex is inferred. No host, credential, model request, migration, skill script or settings mutation was used."
+      ]
     }
   ]
 }
