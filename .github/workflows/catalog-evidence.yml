@@ -1,0 +1,38 @@
+name: Catalog evidence review
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-evidence-review
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read development pin
+        run: python -c 'import tomllib; print("DEV_TOOLCHAIN=" + tomllib.load(open("rust-toolchain.toml", "rb"))["toolchain"]["channel"])' >> "$GITHUB_ENV"
+      - name: Install pinned toolchain
+        run: rustup toolchain install "$DEV_TOOLCHAIN" --profile minimal
+      - name: Export validated catalog and observe public documentation headers
+        run: |
+          cargo run --quiet -p agent-skills-kit --example catalog_json --locked > "$RUNNER_TEMP/ask-catalog.json"
+          python -B .github/scripts/catalog_drift.py --catalog "$RUNNER_TEMP/ask-catalog.json" --online > "$RUNNER_TEMP/ask-evidence-report.json"
+      - name: Write review-only summary
+        run: |
+          python - <<'PY'
+          import html
+          import os
+          from pathlib import Path
+          report = (Path(os.environ["RUNNER_TEMP"]) / "ask-evidence-report.json").read_text()
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("# Catalog evidence observations\n\nHuman review required. HTTP reachability is not path correctness; no adapters or review dates were changed.\n\n<pre>" + html.escape(report) + "</pre>\n")
+          PY
