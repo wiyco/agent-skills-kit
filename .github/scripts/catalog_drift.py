@@ -1,4 +1,4 @@
-"""Offline evidence-age audit; reachability never establishes path correctness."""
+"""Evidence-age audit; opt-in HEAD observations never establish path correctness."""
 
 import argparse
 from datetime import date, datetime, timezone
@@ -177,9 +177,15 @@ def main(argv=None):
     parser.add_argument("--catalog", type=Path, required=True, help="explicit validated catalog JSON export")
     parser.add_argument("--as-of", default=datetime.now(timezone.utc).date().isoformat())
     parser.add_argument("--stale-after-days", type=int, default=90)
+    parser.add_argument("--online", action="store_true", help="opt in to public HTTPS HEAD observations")
+    parser.add_argument("--timeout-seconds", type=float, default=8)
+    parser.add_argument("--budget-seconds", type=float, default=180)
     args = parser.parse_args(argv)
     try:
         report = build_report(load_catalog(args.catalog), iso_date(args.as_of), args.stale_after_days)
+        if args.online:
+            from evidence_transport import observe_report
+            report = observe_report(report, timeout=args.timeout_seconds, budget=args.budget_seconds)
     except (OSError, ValueError, TypeError, RecursionError) as error:
         parser.exit(2, f"Evidence audit failed: {error}\n")
     print(json.dumps(report, sort_keys=True, indent=2, ensure_ascii=True))
