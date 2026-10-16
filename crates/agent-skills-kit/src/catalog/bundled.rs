@@ -68,8 +68,11 @@ impl Catalog {
                 user: &[".config", "opencode", "skills"],
                 ancestors: true,
                 compatibility: true,
-                status: SupportStatus::Unverified,
-                resolver_tests: &[],
+                status: SupportStatus::Documented,
+                resolver_tests: &[
+                    "core_targets::opencode_native_writes_and_compatible_readers",
+                    "core_targets::opencode_context_and_configuration_limits",
+                ],
             },
         ];
         Self::new(CatalogDocument {
@@ -174,6 +177,14 @@ impl Seed {
                 "Claude local names synced (case-insensitive) and anthropic-skills or its colon namespace are reserved; check both folder and frontmatter names with reserved_skill_name before planning".to_owned(),
                 "Enterprise overrides personal overrides project for duplicate local names; actual loading and configuration enablement are not tested".to_owned(),
                 "Claude follows skill-folder symlinks; this installer rejects descendant links. Worktree fallback, nested/additional directories and plugin payload semantics are not modeled".to_owned(),
+            ]);
+        }
+        if self.id == "opencode" {
+            limitations.extend([
+                "OpenCode also reads Claude/agent-compatible roots; native writes are not replaced by shared roots".to_owned(),
+                "XDG_CONFIG_HOME skills behavior is undocumented in the reviewed skills/config pages; it is not interpreted. OPENCODE_CONFIG_DIR is an additional config source, not an established replacement skills write root. Custom-directory skills discovery remains unverified (https://opencode.ai/docs/config/, Precedence order; Custom directory, reviewed 2026-10-16)".to_owned(),
+                "Discovery descriptors are not exhaustive for custom configurations. Duplicate-name precedence and symlink discovery are not established by the reviewed skills page; use unique names, and reject descendant links under installer policy".to_owned(),
+                "The documented name syntax is lowercase ASCII letters/digits with single hyphens, 1-64 characters and matching the folder. Description length is 1-1024 characters. General validation and host-specific validation remain separate".to_owned(),
             ]);
         }
         TargetDefinition {
