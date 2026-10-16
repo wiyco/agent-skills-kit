@@ -301,6 +301,19 @@ impl Payload {
         Ok(())
     }
     fn verify(&self, label: &Path) -> Result<(), ApplyError> {
+        let mut children: BTreeMap<PathBuf, BTreeSet<OsString>> = BTreeMap::new();
+        for record in self.records.iter().skip(1) {
+            children
+                .entry(
+                    record
+                        .relative
+                        .parent()
+                        .expect("relative parent")
+                        .to_owned(),
+                )
+                .or_default()
+                .insert(record.relative.file_name().expect("entry name").to_owned());
+        }
         for record in &self.records {
             let path = label.join(&record.relative);
             let file = &self.live[&record.relative];
@@ -321,15 +334,7 @@ impl Payload {
                 }
             }
             if record.entry == SourceEntryKind::Directory {
-                let expected = self
-                    .records
-                    .iter()
-                    .filter(|child| {
-                        !child.relative.as_os_str().is_empty()
-                            && child.relative.parent() == Some(record.relative.as_path())
-                    })
-                    .map(|child| child.relative.file_name().unwrap().to_owned())
-                    .collect::<BTreeSet<_>>();
+                let expected = children.get(&record.relative).cloned().unwrap_or_default();
                 let scan = native::reader::Handle::new(file.try_clone().map_err(|observed| {
                     io_error(&path, "retain stage enumeration handle", observed)
                 })?);
