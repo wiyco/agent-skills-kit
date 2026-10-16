@@ -85,7 +85,7 @@ pub(crate) fn component(name: &OsStr) -> io::Result<Vec<u16>> {
         .iter()
         .any(|name| upper == name.encode_utf16().collect::<Vec<_>>())
         || (upper.len() == 4
-            && (&upper[..3] == [67, 79, 77] || &upper[..3] == [76, 80, 84])
+            && (upper[..3] == [67, 79, 77] || upper[..3] == [76, 80, 84])
             && ((49..=57).contains(&upper[3]) || [0xb9, 0xb2, 0xb3].contains(&upper[3])))
     {
         return Err(invalid("reserved native component"));

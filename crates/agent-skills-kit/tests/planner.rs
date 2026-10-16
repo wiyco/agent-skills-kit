@@ -1,7 +1,7 @@
 use agent_skills_kit::planner::*;
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -63,6 +63,7 @@ mod native {
         ffi::OsStrExt,
         fs::{MetadataExt, PermissionsExt, symlink},
     };
+    use std::path::Path;
 
     fn source_dir(root: &Root, parent: &str, name: &str, description: &str) -> PathBuf {
         let path = root.0.join(parent).join(name);
