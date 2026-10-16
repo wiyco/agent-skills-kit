@@ -2704,3 +2704,221 @@ fn openclaw_native_copy_and_refused_state_preservation() {
         assert_eq!(fs::read(source.join("SKILL.md")).unwrap(), bytes);
     }
 }
+
+#[test]
+fn devin_cascade_renamed_paths_and_conditional_reader_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "DEVIN_HOME",
+        "WINDSURF_HOME",
+        "XDG_CONFIG_HOME",
+        "CLAUDE_CONFIG_DIR",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "unmodeled and ignored".into());
+    }
+    let target = catalog.get("devin-desktop-cascade").unwrap();
+    assert_eq!(target.product_id, "devin-desktop");
+    assert_eq!(target.variant, "cascade");
+    assert!(target.aliases.is_empty());
+    for (scope, base, root, expected) in [
+        (
+            Scope::Project,
+            ContextBase::Project,
+            context.project_root.as_ref().unwrap(),
+            vec![".devin/skills", ".windsurf/skills", ".agents/skills"],
+        ),
+        (
+            Scope::User,
+            ContextBase::Home,
+            context.user_home.as_ref().unwrap(),
+            vec![
+                ".codeium/windsurf/skills",
+                ".config/devin/skills",
+                ".agents/skills",
+            ],
+        ),
+    ] {
+        let result = resolve(&catalog, "devin-desktop-cascade", scope, &context).unwrap();
+        assert_eq!(result.preferred_write.path, root.join(expected[0]));
+        assert_eq!(result.preferred_write.origin, PathOrigin::Context(base));
+        assert_eq!(result.discovery[0].location, result.preferred_write);
+        assert_eq!(result.discovery.len(), expected.len());
+        for (reader, suffix) in result.discovery.iter().zip(expected) {
+            assert_eq!(reader.location.path, root.join(suffix));
+            assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+            assert_eq!(
+                reader.location.evidence.source.as_ref().unwrap().url,
+                "https://docs.devin.ai/desktop/cascade/skills"
+            );
+            assert!(reader.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::PlacementNotExclusive)
+        );
+        assert!(
+            !result
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    assert!(matches!(
+        resolve(
+            &catalog,
+            "devin-desktop-cascade",
+            Scope::ApplicationWorkspace,
+            &context
+        ),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.user_home = None;
+    assert!(resolve(&catalog, "devin-desktop-cascade", Scope::Project, &context).is_ok());
+    assert!(matches!(
+        resolve(&catalog, "devin-desktop-cascade", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "devin-desktop-cascade", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+    context.project_root = Some("relative".into());
+    assert!(matches!(
+        resolve(&catalog, "devin-desktop-cascade", Scope::Project, &context),
+        Err(ResolveError::InvalidContext {
+            base: ContextBase::Project,
+            issue: PathIssue::Relative
+        })
+    ));
+    for id in [
+        "devin",
+        "devin-desktop",
+        "devin-local",
+        "devin-cli",
+        "devin-cloud",
+        "windsurf",
+        "windsurf-jetbrains",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+}
+
+#[test]
+fn devin_cascade_native_and_legacy_preservation() {
+    for scope in [Scope::User, Scope::Project] {
+        let fixture = Fixture::new();
+        let source = fixture.0.join("source/sample");
+        fs::create_dir_all(source.join("empty")).unwrap();
+        fs::write(
+            source.join("SKILL.md"),
+            b"---\nname: sample\ndescription: Original inert Cascade fixture\n---\nData only.\n",
+        )
+        .unwrap();
+        fs::write(source.join("resource café.txt"), b"original inert bytes").unwrap();
+        let mut context = InstallContext::new(native_platform().unwrap());
+        context.user_home = Some(fixture.0.join("home 日本語"));
+        context.project_root = Some(fixture.0.join("project space"));
+        for root in [&context.user_home, &context.project_root] {
+            fs::create_dir(root.as_ref().unwrap()).unwrap();
+        }
+        let legacy = if scope == Scope::Project {
+            context
+                .project_root
+                .as_ref()
+                .unwrap()
+                .join(".windsurf/skills/sample")
+        } else {
+            context
+                .user_home
+                .as_ref()
+                .unwrap()
+                .join(".config/devin/skills/sample")
+        };
+        fs::create_dir_all(&legacy).unwrap();
+        fs::write(legacy.join("sentinel"), b"legacy preserved").unwrap();
+        let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        let catalog = Catalog::bundled().unwrap();
+        let selected = resolve(&catalog, "devin-desktop-cascade", scope, &context).unwrap();
+        let codex = resolve(&catalog, "codex", scope, &context).unwrap();
+        assert_ne!(selected.preferred_write.path, codex.preferred_write.path);
+        assert!(
+            selected
+                .discovery
+                .iter()
+                .any(|reader| reader.location.path == codex.preferred_write.path)
+        );
+        let preview = || {
+            plan_install(
+                &catalog,
+                InstallRequest {
+                    skills: &sources,
+                    target_ids: &["devin-desktop-cascade", "codex", "devin-desktop-cascade"],
+                    scope,
+                    context: &context,
+                    limits: PlanLimits::default(),
+                },
+            )
+            .unwrap()
+        };
+        let plan = preview();
+        assert!(plan.is_applicable(), "{plan:?}");
+        assert_eq!(plan.targets().len(), 2);
+        assert_eq!(plan.destinations().len(), 2);
+        assert!(
+            plan.destinations()
+                .iter()
+                .all(|row| row.attributions().len() == 1)
+        );
+        let report = apply_plan(&plan, ApplyOptions::default());
+        assert!(report.is_successful(), "{report:?}");
+        assert!(
+            report
+                .outcomes
+                .iter()
+                .all(|row| row.status == OutcomeStatus::Created)
+        );
+        for container in [
+            selected.preferred_write.path.clone(),
+            codex.preferred_write.path,
+        ] {
+            for name in ["SKILL.md", "resource café.txt"] {
+                assert_eq!(
+                    fs::read(container.join("sample").join(name)).unwrap(),
+                    fs::read(source.join(name)).unwrap()
+                );
+            }
+            assert!(container.join("sample/empty").is_dir());
+        }
+        let repeated = apply_plan(&preview(), ApplyOptions::default());
+        assert!(repeated.is_successful(), "{repeated:?}");
+        assert!(
+            repeated
+                .outcomes
+                .iter()
+                .all(|row| row.status == OutcomeStatus::Unchanged)
+        );
+        let edited = selected
+            .preferred_write
+            .path
+            .join("sample/resource café.txt");
+        fs::write(&edited, b"preserve manual edit").unwrap();
+        let conflict = preview();
+        assert!(!conflict.is_applicable());
+        assert!(!apply_plan(&conflict, ApplyOptions::default()).is_successful());
+        assert_eq!(fs::read(&edited).unwrap(), b"preserve manual edit");
+        assert_eq!(
+            fs::read(legacy.join("sentinel")).unwrap(),
+            b"legacy preserved"
+        );
+        assert!(!legacy.join("SKILL.md").exists());
+    }
+}
