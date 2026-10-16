@@ -89,30 +89,43 @@ impl Seed {
         }
     }
 
+    fn scope(&self, scope: Scope, base: PathBase, path: &[&str]) -> ScopeDefinition {
+        let preferred = self.rule(base.clone(), path);
+        let traversal = if scope == Scope::Project && self.ancestors {
+            DiscoveryTraversal::AncestorsToRepository
+        } else {
+            DiscoveryTraversal::Exact
+        };
+        let mut discovery = vec![DiscoveryLocation {
+            location: preferred.clone(),
+            traversal,
+        }];
+        if self.compatibility {
+            for root in [".claude", ".agents"] {
+                discovery.push(DiscoveryLocation {
+                    location: self.rule(base.clone(), &[root, "skills"]),
+                    traversal,
+                });
+            }
+        }
+        ScopeDefinition {
+            scope,
+            status: SupportStatus::Unverified,
+            platforms: vec![Platform::Linux, Platform::Macos, Platform::Windows],
+            preferred_write: Some(preferred),
+            discovery,
+            limitations: vec![
+                "Platform candidates only; adapter review and native tests are still required"
+                    .to_owned(),
+            ],
+        }
+    }
+
     fn target(self) -> TargetDefinition {
-        let scopes = [(Scope::Project, PathBase::Project, self.project), (Scope::User, PathBase::Home, self.user)]
-            .into_iter().map(|(scope, base, path)| {
-                let preferred = self.rule(base.clone(), path);
-                let traversal = if scope == Scope::Project && self.ancestors {
-                    DiscoveryTraversal::AncestorsToRepository
-                } else {
-                    DiscoveryTraversal::Exact
-                };
-                let mut discovery = vec![DiscoveryLocation { location: preferred.clone(), traversal }];
-                if self.compatibility {
-                    for root in [".claude", ".agents"] {
-                        discovery.push(DiscoveryLocation { location: self.rule(base.clone(), &[root, "skills"]), traversal });
-                    }
-                }
-                ScopeDefinition {
-                    scope,
-                    status: SupportStatus::Unverified,
-                    platforms: vec![Platform::Linux, Platform::Macos, Platform::Windows],
-                    preferred_write: Some(preferred),
-                    discovery,
-                    limitations: vec!["Platform candidates only; not advertised as supported before adapter review and native tests".to_owned()],
-                }
-            }).collect();
+        let scopes = vec![
+            self.scope(Scope::Project, PathBase::Project, self.project),
+            self.scope(Scope::User, PathBase::Home, self.user),
+        ];
         TargetDefinition {
             id: self.id.to_owned(),
             aliases: self.aliases.iter().map(|alias| (*alias).to_owned()).collect(),
