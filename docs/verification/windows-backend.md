@@ -4,7 +4,7 @@ The maintainer explicitly requires successful Windows copying and native validat
 
 ## Native primitives
 
-The first implementation layer is a private module compiled only into Windows library tests. It is real native API code intended for subsequent inventory/planner/executor integration, not a simulated Windows path walker. Public Windows installation remains disabled until all layers are complete and natively verified.
+The first implementation layer tested the real native primitives before exposing them to library operations. The second enables the read-only subset for Windows NTFS inventory; commit/cleanup primitives remain test-only until executor integration. Public Windows installation remains disabled until all layers are complete and natively verified.
 
 - The caller-trusted absolute root is opened with backup-directory and final reparse-open flags, then inspected through the actual handle. Ancestor trust is explicit; this root operation is not a descendant walker.
 - Descendants use a single validated UTF-16 component and `NtCreateFile` with `OBJECT_ATTRIBUTES.RootDirectory`, reparse-open behavior, an explicit file/directory type, synchronous I/O, and either open-existing or create-new disposition. There is no full-path descendant fallback, overwrite disposition or alternate stream syntax.
@@ -41,3 +41,10 @@ Evidence: the exact cached registry package manifests and generated modules were
 ## Remaining integration gates
 
 Directory enumeration/resource limits, local-filesystem eligibility, source snapshots, native namespace observation, overlap/collision/dedup planning, permissions/private stage ACLs, copied-byte readback, stale-plan revalidation, partial reports/receipts, concurrent installers, cleanup/interruption and final native acceptance matrix are not completed by these primitives. Inherited destination security descriptors must not silently grant staging access; source security descriptors/attributes must not be copied. Windows success support remains unvalidated until that work passes required CI and final QA.
+
+
+## Read-only integration layer
+
+Source inventory is implemented separately from public plan/apply support. It adds bounded directory enumeration through an independent retained-object scan cursor, local NTFS/remote-device checks and alternate data stream rejection. Full native stamps are retained for comparisons; ordinary portable mode intent is explicitly not ACL equivalence. See [validation](../validation.md#windows-read-only-inventory) for behavior, API considerations and tests. Windows copying remains required and gated.
+
+Additional Microsoft primary API sections reviewed 2026-10-16: [ReOpenFile parameters/flags](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-reopenfile); [NtQueryDirectoryFile parameters/completion/scan semantics](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntquerydirectoryfile); [volume information classes](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-zwqueryvolumeinformationfile); [device characteristics layout](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_fs_device_information); [volume identity](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getvolumeinformationbyhandlew); [stream record layout/alignment](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_stream_info). Exact Windows CI still establishes whether these contracts work in the tested environment.

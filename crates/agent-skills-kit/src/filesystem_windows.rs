@@ -3,7 +3,7 @@ use std::{
     ffi::OsStr,
     fs::{File, OpenOptions},
     io,
-    mem::{offset_of, size_of},
+    mem::size_of,
     os::windows::{
         ffi::OsStrExt,
         fs::OpenOptionsExt,
@@ -17,8 +17,7 @@ use windows_sys::{
         Foundation::OBJECT_ATTRIBUTES,
         Storage::FileSystem::{
             FILE_CREATE, FILE_DIRECTORY_FILE, FILE_NON_DIRECTORY_FILE, FILE_OPEN,
-            FILE_OPEN_REPARSE_POINT, FILE_RENAME_INFORMATION, FILE_SYNCHRONOUS_IO_NONALERT,
-            FileRenameInformation, NtCreateFile, NtSetInformationFile,
+            FILE_OPEN_REPARSE_POINT, FILE_SYNCHRONOUS_IO_NONALERT, NtCreateFile,
         },
     },
     Win32::{
@@ -238,6 +237,7 @@ pub(crate) fn child(parent: &File, name: &OsStr, kind: Kind, create: bool) -> io
 }
 
 /// Move the held object to one child name with replacement disabled in the syscall.
+#[cfg(test)]
 pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::Result<()> {
     let wide = component(name)?;
     if stamp(parent)?.kind != Kind::Directory {
@@ -247,8 +247,7 @@ pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::
     if source.volume != stamp(parent)?.volume {
         return Err(unsupported("cross-volume commit"));
     }
-    let bytes = (offset_of!(FILE_RENAME_INFORMATION, FileName) + wide.len() * 2)
-        .max(size_of::<FILE_RENAME_INFORMATION>());
+    let bytes = (offset_of!(FileName) + wide.len() * 2).max(size_of::<FILE_RENAME_INFORMATION>());
     // u64 storage supplies SDK alignment on the validated 64-bit Windows targets.
     let mut storage = vec![0u64; bytes.div_ceil(size_of::<u64>())];
     // SAFETY: zeroed aligned storage is large enough for the SDK header + name.
@@ -268,7 +267,6 @@ pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::
             &mut completion,
             info.cast(),
             bytes as u32,
-            FileRenameInformation,
         );
         if status < 0 {
             return Err(io::Error::from_raw_os_error(
@@ -280,6 +278,7 @@ pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::
 }
 
 /// Delete only the retained, operation-owned object; directories must be empty.
+#[cfg(test)]
 pub(crate) fn delete_owned(file: File) -> io::Result<()> {
     let _ = stamp(&file)?;
     let disposition = FILE_DISPOSITION_INFO { DeleteFile: true };
@@ -298,5 +297,15 @@ pub(crate) fn delete_owned(file: File) -> io::Result<()> {
     Ok(())
 }
 
+#[cfg(test)]
 #[path = "filesystem_windows_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+use std::mem::offset_of;
+#[cfg(test)]
+use windows_sys::Wdk::Storage::FileSystem::{
+    FILE_RENAME_INFORMATION, FileRenameInformation, NtSetInformationFile,
+};
+#[path = "filesystem_windows_read.rs"]
+pub(crate) mod reader;

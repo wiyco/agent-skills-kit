@@ -36,7 +36,7 @@ impl Drop for Root {
     }
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 #[test]
 fn unsupported_native_inventory_fails_closed_without_inspection() {
     let root = Root::new();
@@ -480,13 +480,13 @@ fn windows_real_directory_reparse_fixture_is_refused_without_touching_target() {
         inventory_skill(&source, InventoryLimits::default())
             .unwrap_err()
             .kind,
-        InventoryErrorKind::UnsupportedPlatform
+        InventoryErrorKind::UnsafeEntry
     );
     assert_eq!(
         inventory_skill(&link, InventoryLimits::default())
             .unwrap_err()
             .kind,
-        InventoryErrorKind::UnsupportedPlatform
+        InventoryErrorKind::UnsafeEntry
     );
     assert_eq!(
         fs::read(outside.join("sentinel")).unwrap(),
@@ -499,4 +499,182 @@ fn windows_real_directory_reparse_fixture_is_refused_without_touching_target() {
     // Remove the directory link itself before ordinary owned-root teardown.
     fs::remove_dir(&link).unwrap();
     assert!(outside.join("sentinel").is_file());
+}
+
+#[cfg(windows)]
+mod windows {
+    use super::*;
+    use std::{
+        ffi::OsString,
+        os::windows::{ffi::OsStringExt, fs::MetadataExt},
+        path::Path,
+    };
+    fn tree(root: &Path) -> Vec<(PathBuf, Vec<u8>, u32)> {
+        fn walk(root: &Path, path: &Path, result: &mut Vec<(PathBuf, Vec<u8>, u32)>) {
+            let metadata = fs::symlink_metadata(path).unwrap();
+            assert!(!metadata.is_symlink());
+            result.push((
+                path.strip_prefix(root).unwrap().into(),
+                if metadata.is_file() {
+                    fs::read(path).unwrap()
+                } else {
+                    vec![]
+                },
+                metadata.file_attributes(),
+            ));
+            if metadata.is_dir() {
+                for entry in fs::read_dir(path).unwrap() {
+                    walk(root, &entry.unwrap().path(), result);
+                }
+            }
+        }
+        let mut result = vec![];
+        walk(root, root, &mut result);
+        result.sort_by(|a, b| a.0.cmp(&b.0));
+        result
+    }
+    #[test]
+    fn inventory_preserves_bytes_wide_names_and_explicit_read_only_intent_without_writes() {
+        let root = Root::new();
+        let source = root.source();
+        fs::create_dir(source.join("empty directory 中")).unwrap();
+        fs::write(source.join("reference café 中.txt"), [0u8, 255, 128]).unwrap();
+        let opaque = OsString::from_wide(&[b'r' as u16, b'-' as u16, 0xd800]);
+        fs::write(source.join(&opaque), b"opaque native name").unwrap();
+        let read_only = source.join("read-only");
+        fs::write(&read_only, b"read only data").unwrap();
+        let mut permissions = fs::metadata(&read_only).unwrap().permissions();
+        permissions.set_readonly(true);
+        fs::set_permissions(&read_only, permissions).unwrap();
+        let before = tree(&root.0);
+        let first = inventory_skill(&source, InventoryLimits::default()).unwrap();
+        let second = inventory_skill(&source, InventoryLimits::default()).unwrap();
+        assert_eq!(first.inventory().entries(), second.inventory().entries());
+        assert_eq!(
+            first.metadata().source_bytes(),
+            fs::read(source.join("SKILL.md")).unwrap()
+        );
+        assert!(
+            first
+                .inventory()
+                .entries()
+                .iter()
+                .any(|entry| entry.relative_path == Path::new(&opaque) && entry.digest.is_some())
+        );
+        assert_eq!(
+            first
+                .inventory()
+                .entries()
+                .iter()
+                .find(|entry| entry.relative_path == Path::new("read-only"))
+                .unwrap()
+                .output_mode,
+            0o444
+        );
+        assert!(first.inventory().root_is_unchanged().unwrap());
+        assert_eq!(tree(&root.0), before);
+        assert!(!root.0.join("forbidden").exists());
+        let mut permissions = fs::metadata(&read_only).unwrap().permissions();
+        permissions.set_readonly(false);
+        fs::set_permissions(&read_only, permissions).unwrap();
+    }
+    #[test]
+    fn inventory_limits_and_invalid_metadata_fail_without_writes() {
+        let root = Root::new();
+        let source = root.source();
+        let before = tree(&root.0);
+        for (limits, expected) in [
+            (
+                InventoryLimits {
+                    max_entries: 0,
+                    ..InventoryLimits::default()
+                },
+                InventoryErrorKind::InvalidLimits,
+            ),
+            (
+                InventoryLimits {
+                    max_file_bytes: 1,
+                    ..InventoryLimits::default()
+                },
+                InventoryErrorKind::Limit("file bytes"),
+            ),
+            (
+                InventoryLimits {
+                    max_total_bytes: 1,
+                    ..InventoryLimits::default()
+                },
+                InventoryErrorKind::Limit("total bytes"),
+            ),
+        ] {
+            assert_eq!(inventory_skill(&source, limits).unwrap_err().kind, expected);
+        }
+        fs::create_dir(source.join("nested")).unwrap();
+        fs::write(source.join("nested/resource"), b"inert").unwrap();
+        assert_eq!(
+            inventory_skill(
+                &source,
+                InventoryLimits {
+                    max_entries: 1,
+                    ..InventoryLimits::default()
+                }
+            )
+            .unwrap_err()
+            .kind,
+            InventoryErrorKind::Limit("entry count")
+        );
+        assert_eq!(
+            inventory_skill(
+                &source,
+                InventoryLimits {
+                    max_depth: 1,
+                    ..InventoryLimits::default()
+                }
+            )
+            .unwrap_err()
+            .kind,
+            InventoryErrorKind::Limit("entry depth")
+        );
+        fs::remove_dir_all(source.join("nested")).unwrap();
+        assert_eq!(tree(&root.0), before);
+        fs::write(
+            source.join("SKILL.md"),
+            b"---\nname: different\ndescription: inert\n---\n",
+        )
+        .unwrap();
+        assert!(matches!(
+            inventory_skill(&source, InventoryLimits::default())
+                .unwrap_err()
+                .kind,
+            InventoryErrorKind::Metadata(_)
+        ));
+    }
+    #[test]
+    fn multiply_linked_and_stream_named_inputs_are_not_accepted_as_resources() {
+        let root = Root::new();
+        let source = root.source();
+        fs::write(source.join("SKILL.md:hidden"), b"inert hidden stream").unwrap();
+        assert_eq!(
+            inventory_skill(&source, InventoryLimits::default())
+                .unwrap_err()
+                .kind,
+            InventoryErrorKind::UnsafeEntry
+        );
+        fs::remove_file(source.join("SKILL.md:hidden")).unwrap();
+        fs::write(source.join("original"), b"inert").unwrap();
+        fs::hard_link(source.join("original"), source.join("alias")).unwrap();
+        let before = tree(&root.0);
+        assert_eq!(
+            inventory_skill(&source, InventoryLimits::default())
+                .unwrap_err()
+                .kind,
+            InventoryErrorKind::UnsafeEntry
+        );
+        assert_eq!(tree(&root.0), before);
+        assert_eq!(
+            inventory_skill(Path::new("relative/sample"), InventoryLimits::default())
+                .unwrap_err()
+                .kind,
+            InventoryErrorKind::InvalidRoot
+        );
+    }
 }
