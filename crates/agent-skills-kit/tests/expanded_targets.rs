@@ -121,6 +121,9 @@ fn cursor_ide_native_writes_are_not_shared_reader_rewrites() {
     native_writes_remain_distinct("cursor-ide");
 }
 fn native_writes_remain_distinct(target: &str) {
+    native_writes_with_override(target, None);
+}
+fn native_writes_with_override(target: &str, native_override: Option<&str>) {
     for scope in [Scope::User, Scope::Project] {
         let fixture = Fixture::new();
         let source = fixture.0.join("source/sample");
@@ -136,6 +139,13 @@ fn native_writes_remain_distinct(target: &str) {
         context.project_root = Some(fixture.0.join("project"));
         fs::create_dir(context.user_home.as_ref().unwrap()).unwrap();
         fs::create_dir(context.project_root.as_ref().unwrap()).unwrap();
+        if let Some(variable) = native_override {
+            let alternate = fixture.0.join("alternate native root 日本語");
+            fs::create_dir(&alternate).unwrap();
+            context
+                .overrides
+                .insert(variable.into(), alternate.into_os_string());
+        }
         let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
         let catalog = Catalog::bundled().unwrap();
         let preview = || {
@@ -749,6 +759,142 @@ fn kilo_new_platform_scopes_and_configuration_gaps() {
         "kilo-code-jetbrains",
         "kilo-code-desktop",
         "kilo-code-cloud",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+}
+
+#[test]
+fn kimi_code_native_and_alternate_writes_remain_distinct() {
+    native_writes_with_override("kimi-code-cli", None);
+    native_writes_with_override("kimi-code-cli", Some("KIMI_CODE_HOME"));
+}
+#[test]
+fn kimi_code_current_roots_override_and_legacy_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "KIMI_SHARE_DIR",
+        "XDG_CONFIG_HOME",
+        "CLINE_DIR",
+        "CODEX_HOME",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "legacy or unrelated relocation".into());
+    }
+    let target = catalog.get("kimi-code-cli").unwrap();
+    assert_eq!(target.product_id, "kimi-code");
+    assert_eq!(target.variant, "cli");
+    for (scope, root) in [
+        (Scope::User, context.user_home.as_ref().unwrap()),
+        (Scope::Project, context.project_root.as_ref().unwrap()),
+    ] {
+        let resolved = resolve(&catalog, "kimi-code-cli", scope, &context).unwrap();
+        assert_eq!(
+            resolved.preferred_write.path,
+            root.join(".kimi-code/skills")
+        );
+        assert_eq!(resolved.discovery.len(), 2);
+        assert_eq!(resolved.discovery[0].location, resolved.preferred_write);
+        assert_eq!(
+            resolved.discovery[1].location.path,
+            root.join(".agents/skills")
+        );
+        for reader in &resolved.discovery {
+            assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+            assert_eq!(
+                reader.location.evidence.source.as_ref().unwrap().url,
+                "https://moonshotai.github.io/kimi-code/en/customization/skills.html"
+            );
+            assert!(reader.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            resolved
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            resolved
+                .warnings
+                .contains(&ResolutionWarning::PlacementNotExclusive)
+        );
+        assert!(
+            !resolved
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    let project = resolve(&catalog, "kimi-code-cli", Scope::Project, &context).unwrap();
+    let alternate = context
+        .user_home
+        .as_ref()
+        .unwrap()
+        .join("alternate Kimi 日本語");
+    context
+        .overrides
+        .insert("KIMI_CODE_HOME".into(), alternate.clone().into_os_string());
+    let user = resolve(&catalog, "kimi-code-cli", Scope::User, &context).unwrap();
+    assert_eq!(user.preferred_write.path, alternate.join("skills"));
+    assert_eq!(
+        user.preferred_write.origin,
+        PathOrigin::Override("KIMI_CODE_HOME".into())
+    );
+    assert_eq!(user.discovery[0].location, user.preferred_write);
+    assert_eq!(
+        user.discovery[1].location.path,
+        context.user_home.as_ref().unwrap().join(".agents/skills")
+    );
+    assert_eq!(
+        project,
+        resolve(&catalog, "kimi-code-cli", Scope::Project, &context).unwrap()
+    );
+    let mut no_home = context.clone();
+    no_home.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "kimi-code-cli", Scope::User, &no_home),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    for value in ["", "relative", "~/.kimi-code"] {
+        context
+            .overrides
+            .insert("KIMI_CODE_HOME".into(), value.into());
+        assert!(matches!(
+            resolve(&catalog, "kimi-code-cli", Scope::User, &context),
+            Err(ResolveError::InvalidOverride { .. })
+        ));
+        assert_eq!(
+            project,
+            resolve(&catalog, "kimi-code-cli", Scope::Project, &context).unwrap()
+        );
+    }
+    context.overrides.remove(&OsString::from("KIMI_CODE_HOME"));
+    assert!(matches!(
+        resolve(
+            &catalog,
+            "kimi-code-cli",
+            Scope::ApplicationWorkspace,
+            &context
+        ),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "kimi-code-cli", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "kimi-code-cli", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+    for id in [
+        "kimi",
+        "kimi-cli",
+        "kimi-agent",
+        "kimi-code",
+        "kimi-code-ide",
+        "kimi-code-web",
     ] {
         assert!(catalog.get(id).is_none());
     }
