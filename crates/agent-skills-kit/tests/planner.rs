@@ -919,7 +919,7 @@ mod windows {
         for relative in [
             ".agents/skills/sample",
             ".claude/skills/sample",
-            ".opencode/skills/sample",
+            ".config/opencode/skills/sample",
         ] {
             assert!(
                 plan.destinations()
