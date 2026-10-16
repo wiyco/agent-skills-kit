@@ -86,6 +86,41 @@ fn inspect_with_hook(
             InventoryErrorKind::SourceChanged,
         ));
     }
+    let mut validated = inspect_retained_with_hook(Arc::clone(&root), source, name, limits, hook)?;
+    let final_fd = rustix::fs::open(&normalized, flags() | OFlags::DIRECTORY, Mode::empty())
+        .map_err(|error| InventoryError::io(source, "recheck source root binding", error.into()))?;
+    if stamp(&metadata(&File::from(final_fd), source)?) != root_stamp
+        || validated.inventory.root_stamp != root_stamp
+    {
+        return Err(InventoryError::new(
+            source,
+            InventoryErrorKind::SourceChanged,
+        ));
+    }
+    validated.inventory.canonical_root = canonical;
+    Ok(validated)
+}
+
+// The caller owns the retained namespace binding and its revalidation. This
+// routine never reopens `source`: it is a diagnostic label only.
+pub(super) fn inspect_retained(
+    root: Arc<File>,
+    source: &Path,
+    name: &str,
+    limits: InventoryLimits,
+) -> Result<ValidatedSkill, InventoryError> {
+    inspect_retained_with_hook(root, source, name, limits, &mut |_, _| {})
+}
+
+fn inspect_retained_with_hook(
+    root: Arc<File>,
+    source: &Path,
+    name: &str,
+    limits: InventoryLimits,
+    hook: &mut impl FnMut(Phase, &Path),
+) -> Result<ValidatedSkill, InventoryError> {
+    local_filesystem(&root, source)?;
+    let root_stamp = stamp(&metadata(&root, source)?);
     let mut walker = Walker {
         source,
         limits,
@@ -96,9 +131,7 @@ fn inspect_with_hook(
         manifest: None,
     };
     walker.walk(&root, Path::new(""), 0, hook)?;
-    let final_fd = rustix::fs::open(&normalized, flags() | OFlags::DIRECTORY, Mode::empty())
-        .map_err(|error| InventoryError::io(source, "recheck source root binding", error.into()))?;
-    if stamp(&metadata(&File::from(final_fd), source)?) != root_stamp {
+    if stamp(&metadata(&root, source)?) != root_stamp {
         return Err(InventoryError::new(
             source,
             InventoryErrorKind::SourceChanged,
@@ -120,7 +153,7 @@ fn inspect_with_hook(
         metadata,
         inventory: SourceInventory {
             requested_root: source.to_owned(),
-            canonical_root: canonical,
+            canonical_root: source.to_owned(),
             root_stamp,
             root_handle: root,
             entries: walker.entries,
@@ -332,6 +365,33 @@ mod tests {
         os::unix::fs::symlink,
         sync::atomic::{AtomicU64, Ordering},
     };
+
+    #[test]
+    fn retained_inspection_never_reopens_a_swapped_diagnostic_path() {
+        let root = Root::new();
+        let source = root.source();
+        let retained = Arc::new(File::from(
+            rustix::fs::open(&source, flags() | OFlags::DIRECTORY, Mode::empty()).unwrap(),
+        ));
+        let original = fs::read(source.join("SKILL.md")).unwrap();
+        let outside = root.0.join("outside");
+        fs::create_dir(&outside).unwrap();
+        fs::write(
+            outside.join("SKILL.md"),
+            b"---\nname: sample\ndescription: outside\n---\n",
+        )
+        .unwrap();
+        fs::rename(&source, root.0.join("moved")).unwrap();
+        symlink(&outside, &source).unwrap();
+        let inspected =
+            inspect_retained(retained, &source, "sample", InventoryLimits::default()).unwrap();
+        assert_eq!(inspected.metadata().source_bytes(), original);
+        assert_eq!(inspected.inventory().entries().len(), 2);
+        assert_eq!(
+            fs::read(outside.join("SKILL.md")).unwrap(),
+            b"---\nname: sample\ndescription: outside\n---\n"
+        );
+    }
 
     struct Root(PathBuf);
     impl Root {

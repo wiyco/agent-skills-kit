@@ -18,7 +18,7 @@ use crate::{
     catalog::ContextBase,
     filesystem::{flags, stamp},
     resolver::{PathOrigin, add_evidence_warnings, resolve},
-    validation::{SourceEntryKind, inventory_skill},
+    validation::{SourceEntryKind, inventory_retained, inventory_skill},
 };
 
 type Identity = (u64, u64);
@@ -167,7 +167,10 @@ pub(super) fn plan(
                         existing.problems.push(DestinationProblem::CompetingSources);
                     }
                 }
-                if destination.action != PlannedAction::Create {
+                if matches!(
+                    destination.action,
+                    PlannedAction::Conflict | PlannedAction::Unsupported
+                ) {
                     existing.action = destination.action;
                 }
                 for problem in &destination.problems {
@@ -338,6 +341,7 @@ fn candidate(
         source_index: attribution.source_index,
         namespace: None,
         writes: Vec::new(),
+        existing: None,
     };
     let resolved = match &target.resolution {
         Ok(resolved) => resolved,
@@ -396,10 +400,7 @@ fn candidate(
                     result.action = PlannedAction::Create;
                 }
             } else {
-                result.action = PlannedAction::Conflict;
-                result
-                    .problems
-                    .push(DestinationProblem::ExistingDirectoryUncompared);
+                compare_existing(&snapshot, source, &mut result, budget)?;
             }
             result.namespace = Some(snapshot);
         }
@@ -418,6 +419,108 @@ fn candidate(
     }
     Ok(result)
 }
+fn compare_existing(
+    snapshot: &DestinationSnapshot,
+    source: &ValidatedSkill,
+    result: &mut PlannedDestination,
+    budget: &mut Budget,
+) -> Result<(), PlanError> {
+    result.action = PlannedAction::Conflict;
+    let leaf = snapshot.anchors.last().expect("existing root retained");
+    // A case-insensitive native lookup can succeed using a different raw name.
+    // Verify actual spelling before treating metadata as matching that directory.
+    let parent = snapshot
+        .anchors
+        .iter()
+        .rev()
+        .nth(1)
+        .expect("skill has a parent");
+    let wanted = std::ffi::OsStr::new(source.metadata().name());
+    let mut exact_name = false;
+    let reader = Dir::read_from(&parent.handle).map_err(|error| {
+        PlanError::Namespace(NamespaceError::io(
+            &parent.path,
+            "enumerate existing skill spelling",
+            error.into(),
+        ))
+    })?;
+    for entry in reader {
+        let entry = entry.map_err(|error| {
+            PlanError::Namespace(NamespaceError::io(
+                &parent.path,
+                "read existing skill spelling",
+                error.into(),
+            ))
+        })?;
+        let bytes = entry.file_name().to_bytes();
+        if matches!(bytes, b"." | b"..") {
+            continue;
+        }
+        budget.entry()?;
+        use std::os::unix::ffi::OsStrExt;
+        if std::ffi::OsStr::from_bytes(bytes) == wanted {
+            exact_name = true;
+        }
+    }
+    if !exact_name {
+        result
+            .problems
+            .push(DestinationProblem::ExistingNameMismatch);
+        return Ok(());
+    }
+    let limits = budget.inventory_limits()?;
+    let existing = match inventory_retained(
+        Arc::clone(&leaf.handle),
+        &leaf.path,
+        source.metadata().name(),
+        limits,
+    ) {
+        Ok(existing) => existing,
+        Err(error) => {
+            // A failed bounded traversal may already have read up to its entire
+            // allowance. Reserve that allowance rather than undercount reads
+            // when subsequent destinations are inspected.
+            budget.bytes += limits.max_total_bytes;
+            budget.entries += limits.max_entries;
+            result
+                .problems
+                .push(DestinationProblem::ExistingInspection(error));
+            return Ok(());
+        }
+    };
+    budget.bytes += existing.inventory().total_bytes();
+    for entry in existing.inventory().entries() {
+        budget.entry()?;
+        budget.path(&entry.relative_path)?;
+    }
+    let identical = existing.metadata().source_bytes() == source.metadata().source_bytes()
+        && existing.inventory().root_stamp().mode & 0o7777
+            == source.inventory().root_stamp().mode & 0o755
+        && existing.inventory().entries().len() == source.inventory().entries().len()
+        && existing
+            .inventory()
+            .entries()
+            .iter()
+            .zip(source.inventory().entries())
+            .all(|(actual, intended)| {
+                actual.relative_path == intended.relative_path
+                    && actual.kind == intended.kind
+                    && actual.stamp.mode & 0o7777 == intended.output_mode
+                    && actual.digest == intended.digest
+                    && (actual.kind != SourceEntryKind::File
+                        || actual.stamp.length == intended.stamp.length)
+            });
+    if identical {
+        result.action = PlannedAction::Unchanged;
+        result.existing = Some(existing);
+    } else {
+        result
+            .problems
+            .push(DestinationProblem::ExistingContentDiffers);
+    }
+    Ok(())
+}
+
 fn context_path(base: ContextBase, context: &InstallContext) -> Option<PathBuf> {
     match base {
         ContextBase::Home => context.user_home.clone(),
