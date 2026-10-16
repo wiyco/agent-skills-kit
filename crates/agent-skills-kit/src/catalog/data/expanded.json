@@ -1679,6 +1679,230 @@
         "No application workspace, JetBrains, desktop, SDK, cloud, remote, plugin or managed store variant is enabled by analogy. Host skill toggles and activation remain untouched.",
         "Skills, Where Skills Live, explicitly gives macOS/Linux and Windows home-relative examples. Native resolver/copy evidence is not an installed host/version test."
       ]
+    },
+    {
+      "id": "roo-code-vscode",
+      "aliases": [],
+      "product_id": "roo-code",
+      "variant": "vscode",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".roo",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://roocodeinc.github.io/Roo-Code/features/skills/",
+                "section": "Creating Your First Skill, Choose a location; Override Priority",
+                "accessed": "2026-10-16",
+                "applicability": "Roo Code VS Code extension rolling documentation, updated 2026-05-15; generic skills only; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::roo_vscode_scopes_and_fork_boundaries",
+                "expanded_targets::roo_reader_alias_does_not_rewrite_native_installation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Native lexical and copy tests are separate from actual Roo Code discovery, watchers and mode selection."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".roo",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://roocodeinc.github.io/Roo-Code/features/skills/",
+                    "section": "Creating Your First Skill, Choose a location; Override Priority",
+                    "accessed": "2026-10-16",
+                    "applicability": "Roo Code VS Code extension rolling documentation, updated 2026-05-15; generic skills only; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::roo_vscode_scopes_and_fork_boundaries",
+                    "expanded_targets::roo_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical and copy tests are separate from actual Roo Code discovery, watchers and mode selection."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://roocodeinc.github.io/Roo-Code/features/skills/",
+                    "section": "Creating Your First Skill, Choose a location; Override Priority",
+                    "accessed": "2026-10-16",
+                    "applicability": "Roo Code VS Code extension rolling documentation, updated 2026-05-15; generic skills only; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::roo_vscode_scopes_and_fork_boundaries",
+                    "expanded_targets::roo_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical and copy tests are separate from actual Roo Code discovery, watchers and mode selection."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Only generic skills at the explicit caller root are described; mode-specific directories and host activation remain separate."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".roo",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://roocodeinc.github.io/Roo-Code/features/skills/",
+                "section": "Creating Your First Skill, Choose a location; Override Priority",
+                "accessed": "2026-10-16",
+                "applicability": "Roo Code VS Code extension rolling documentation, updated 2026-05-15; generic skills only; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::roo_vscode_scopes_and_fork_boundaries",
+                "expanded_targets::roo_reader_alias_does_not_rewrite_native_installation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Native lexical and copy tests are separate from actual Roo Code discovery, watchers and mode selection."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".roo",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://roocodeinc.github.io/Roo-Code/features/skills/",
+                    "section": "Creating Your First Skill, Choose a location; Override Priority",
+                    "accessed": "2026-10-16",
+                    "applicability": "Roo Code VS Code extension rolling documentation, updated 2026-05-15; generic skills only; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::roo_vscode_scopes_and_fork_boundaries",
+                    "expanded_targets::roo_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical and copy tests are separate from actual Roo Code discovery, watchers and mode selection."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://roocodeinc.github.io/Roo-Code/features/skills/",
+                    "section": "Creating Your First Skill, Choose a location; Override Priority",
+                    "accessed": "2026-10-16",
+                    "applicability": "Roo Code VS Code extension rolling documentation, updated 2026-05-15; generic skills only; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::roo_vscode_scopes_and_fork_boundaries",
+                    "expanded_targets::roo_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical and copy tests are separate from actual Roo Code discovery, watchers and mode selection."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Only generic skills at the explicit caller root are described; mode-specific directories and host activation remain separate."
+          ]
+        }
+      ],
+      "limitations": [
+        "The source redirects from https://docs.roocode.com/features/skills to this canonical project documentation. Paths are independently reviewed, not inherited from Cline or Kilo.",
+        "Project skills override global; .roo paths override .agents at the same project level. Mode-specific stores have additional priority but are not modeled as generic installation scopes.",
+        "No relocation override, additional reserved local name or minimum skills version is established by the reviewed sections. Cline and Claude overrides do not change literal Roo paths.",
+        "Host symlink discovery support does not relax this installer copy-only/no-descendant-link policy.",
+        "Installing Roo Code explicitly identifies the VS Code extension. CLI, cloud, other editor variants and mode-specific directories remain unverified or excluded; no host is invoked.",
+        "Choose a location gives macOS/Linux and Windows home-relative examples. The caller supplies home; no USERPROFILE or global environment is read."
+      ]
     }
   ]
 }

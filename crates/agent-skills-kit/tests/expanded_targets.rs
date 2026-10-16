@@ -573,3 +573,84 @@ fn cline_scopes_overrides_and_variant_boundaries() {
         assert!(catalog.get(id).is_none());
     }
 }
+
+#[test]
+fn roo_reader_alias_does_not_rewrite_native_installation() {
+    native_writes_remain_distinct("roo-code-vscode");
+}
+#[test]
+fn roo_vscode_scopes_and_fork_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "ROO_CODE_HOME",
+        "CLINE_DIR",
+        "CLAUDE_CONFIG_DIR",
+        "KILO_HOME",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "unverified relocation".into());
+    }
+    let target = catalog.get("roo-code-vscode").unwrap();
+    assert_eq!(target.product_id, "roo-code");
+    assert_eq!(target.variant, "vscode");
+    for (scope, root) in [
+        (Scope::User, context.user_home.as_ref().unwrap()),
+        (Scope::Project, context.project_root.as_ref().unwrap()),
+    ] {
+        let result = resolve(&catalog, "roo-code-vscode", scope, &context).unwrap();
+        assert_eq!(result.preferred_write.path, root.join(".roo/skills"));
+        assert_eq!(result.discovery.len(), 2);
+        assert_eq!(result.discovery[0].location, result.preferred_write);
+        assert_eq!(
+            result.discovery[1].location.path,
+            root.join(".agents/skills")
+        );
+        for reader in &result.discovery {
+            assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+            assert_eq!(
+                reader.location.evidence.source.as_ref().unwrap().url,
+                "https://roocodeinc.github.io/Roo-Code/features/skills/"
+            );
+            assert!(reader.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::PlacementNotExclusive)
+        );
+        assert!(
+            !result
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    for id in ["roo", "roo-code", "roo-code-cli", "roo-code-cloud"] {
+        assert!(catalog.get(id).is_none());
+    }
+    assert!(matches!(
+        resolve(
+            &catalog,
+            "roo-code-vscode",
+            Scope::ApplicationWorkspace,
+            &context
+        ),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "roo-code-vscode", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "roo-code-vscode", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+}
