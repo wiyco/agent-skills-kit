@@ -684,3 +684,86 @@ fn windows_read_only_verification_does_not_enable_copy_execution() {
     );
     assert_eq!(before, tree(&fixture.root));
 }
+
+#[test]
+fn committed_permission_failures_are_explicit_unsuccessful_and_receipt_compatible() {
+    use agent_skills_kit::receipt::*;
+    let fixture = Fixture::new();
+    let plan = fixture.plan();
+    let before = tree(&fixture.root);
+    // Synthetic report projection only: this test does not perform a copy or
+    // assert that the fixture's destination exists. Native finalization QA is separate.
+    let failure = ApplyError {
+        path: plan.destinations()[0].path().unwrap().to_owned(),
+        kind: ApplyErrorKind::Io {
+            operation: "synthetic finalization failure",
+            kind: std::io::ErrorKind::PermissionDenied,
+            raw_os_error: Some(5),
+        },
+    };
+    let committed = OutcomeStatus::CommittedWithPermissionFailure(failure.clone());
+    assert!(committed.payload_was_committed());
+    assert!(OutcomeStatus::Created.payload_was_committed());
+    for status in [
+        OutcomeStatus::Unchanged,
+        OutcomeStatus::NotAttempted,
+        OutcomeStatus::Failed(failure),
+    ] {
+        assert!(!status.payload_was_committed());
+    }
+    let report = InstallReport {
+        preflight_error: None,
+        outcomes: vec![DestinationOutcome {
+            path: plan.destinations()[0].path().map(Path::to_owned),
+            attributions: plan.destinations()[0]
+                .attributions()
+                .iter()
+                .map(|attribution| OutcomeAttribution {
+                    source: plan.sources()[attribution.source_index]
+                        .inventory()
+                        .requested_root()
+                        .to_owned(),
+                    target_id: plan.targets()[attribution.target_index].id().to_owned(),
+                })
+                .collect(),
+            status: committed,
+        }],
+        cleanup_errors: vec![],
+    };
+    assert!(!report.is_successful());
+    let receipt = Receipt::from_report(
+        &plan,
+        &report,
+        OperationId::new("synthetic-committed-permissions").unwrap(),
+        ReceiptLimits::default(),
+    )
+    .unwrap();
+    let destination = &receipt.document().destinations[0];
+    assert_eq!(destination.status, ReceiptStatus::Failed);
+    let diagnostic = destination.failure.as_ref().unwrap();
+    assert_eq!(diagnostic.code, ReceiptFailureCode::Io);
+    assert_eq!(diagnostic.os_error, Some(5));
+    assert_eq!(
+        diagnostic.operation.as_deref(),
+        Some("payload committed; destination permission finalization failed")
+    );
+    assert_eq!(diagnostic.path.as_ref(), destination.path.as_ref());
+    let encoded = receipt.to_json(ReceiptLimits::default()).unwrap();
+    let parsed = Receipt::from_json(&encoded, ReceiptLimits::default()).unwrap();
+    assert_eq!(parsed.document(), receipt.document());
+    assert_eq!(parsed.document().schema_version, RECEIPT_SCHEMA_VERSION);
+    assert_eq!(tree(&fixture.root), before);
+    fixture.existing();
+    let unchanged = fixture.plan();
+    let before = tree(&fixture.root);
+    assert!(matches!(
+        Receipt::from_report(
+            &unchanged,
+            &report,
+            OperationId::new("invalid-committed-unchanged").unwrap(),
+            ReceiptLimits::default()
+        ),
+        Err(ReceiptError::InvalidDocument(_))
+    ));
+    assert_eq!(tree(&fixture.root), before);
+}

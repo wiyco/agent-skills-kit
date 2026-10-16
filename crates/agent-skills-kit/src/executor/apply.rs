@@ -48,14 +48,29 @@ pub struct DestinationOutcome {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum OutcomeStatus {
-    /// Exact staged payload was committed without replacement.
+    /// Exact staged payload and required destination permissions were completed.
     Created,
     /// Approved existing payload was revalidated and left untouched.
     Unchanged,
-    /// Operation failed, with existing content preserved.
+    /// Operation failed before payload commit, with existing content preserved.
     Failed(ApplyError),
+    /// Complete payload was committed without replacement, but destination
+    /// permission finalization failed or may be partial. It remains installed;
+    /// this error never authorizes deleting it or rolling back earlier targets.
+    CommittedWithPermissionFailure(ApplyError),
     /// Preflight failed or stop-on-failure prevented this operation.
     NotAttempted,
+}
+
+impl OutcomeStatus {
+    /// Whether this operation observed a payload commit, even if later permission
+    /// finalization failed. This is historical evidence, never cleanup authority.
+    pub fn payload_was_committed(&self) -> bool {
+        matches!(
+            self,
+            Self::Created | Self::CommittedWithPermissionFailure(_)
+        )
+    }
 }
 
 /// Full batch result, including cleanup diagnostics independently of commit status.
