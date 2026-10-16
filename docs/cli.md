@@ -1,5 +1,7 @@
 # Command-line usage
 
+> **WIP — not ready for use.** This is development reference material, not a released or supported library/CLI. Exercise examples only in owned temporary fixtures; do not install into real skill stores. Public release and contribution/reporting readiness remain pending.
+
 The executable is `agent-skills-kit`; it consumes the same library catalog and validation APIs as other Rust applications. Commands use the library for inspection, planning and approved copying:
 
 ```text

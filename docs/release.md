@@ -2,11 +2,13 @@
 
 This document is a checklist, not authorization to publish.
 
+Source visibility can precede completion of M3/M4, provided unfinished capabilities and release gates remain explicit. [Source visibility readiness](public-readiness.md) records the separate preparation under #93. It does not complete ASK-026, authorize package/binary publication, or waive CI/merge safeguards.
+
 ## Before any visibility change
 
 - Confirm final names and the approved license, attribution, and contributor policy.
 - Review tracked files and full Git history, issues, PRs, Projects text, logs, artifacts, and links for secrets/private information.
-- Verify a private security-reporting route and a usable code of conduct reporting route.
+- For supported use, public contribution intake or release, verify confidential security and conduct reporting, alternate handling and appeal routes. The maintainer explicitly deferred these for the WIP source-only preview in [ADR 0008](adr/0008-public-source-preview.md); do not advertise unavailable routes or open contribution intake.
 - Confirm README and examples describe features that actually exist, with no fabricated badges or releases.
 - Review documentation, resolver tests, and real-host evidence for every advertised target.
 

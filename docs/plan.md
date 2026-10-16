@@ -2,7 +2,7 @@
 
 ## Objective
 
-Build and eventually publish a reusable Rust library that installs local Agent Skills into officially documented directories for selected tools. Build a thin CLI on top. Keep the repository private during development; use English throughout so public release does not require rewriting private discussion into OSS documentation.
+Build and eventually publish a reusable Rust library that installs local Agent Skills into officially documented directories for selected tools. Build a thin CLI on top. Use English throughout. The maintainer controls source visibility separately from release-candidate completion, crate publication and binary distribution; see [source visibility readiness](public-readiness.md). A public development repository must describe incomplete work accurately.
 
 ## User journey
 

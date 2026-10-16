@@ -1,6 +1,8 @@
 # Contributing
 
-This project is in private pre-release development. Public contribution and licensing policies will be finalized before the OSS launch.
+**WIP: public contribution intake and user support are not open.** Existing authorized maintainer development follows this guide. The public source preview is not a usable supported library or CLI, and it must not be used with real skill stores.
+
+This is unreleased development. Source visibility, contribution readiness and crate/binary publication are separate decisions. Original contributions follow the approved MIT OR Apache-2.0 licensing and attribution policy; there is no released stability or support guarantee. See the [source visibility checklist](docs/public-readiness.md) for outstanding transition gates.
 
 Read [AGENTS.md](AGENTS.md) for implementation rules; they apply to human-assisted and automated changes alike. Use one issue and one focused PR per coherent change. All repository-facing writing is in English.
 
@@ -30,7 +32,7 @@ Use the PR template, link the actual issue number, and report the exact checks r
 
 ## Reporting concerns
 
-Follow the [code of conduct](CODE_OF_CONDUCT.md). Security issues must not be posted as public exploit reports; follow [SECURITY.md](SECURITY.md). Current reporting routes apply only during private development. A confidential public-contributor route and alternate conduct contact remain explicit publication gates.
+Follow the [code of conduct](CODE_OF_CONDUCT.md). Security issues must not be posted as public exploit reports; follow [SECURITY.md](SECURITY.md). Issues, PRs and reviews are not confidential reporting channels. If a policy marks its confidential or alternate reporting route as pending, do not send sensitive details there or assume GitHub reporting is enabled. The maintainer has deferred those arrangements for the WIP source preview; they must be approved and verified before public contribution intake or supported library/CLI publication.
 
 ## Repository hygiene
 
