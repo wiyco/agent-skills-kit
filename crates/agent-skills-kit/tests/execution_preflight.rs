@@ -432,6 +432,43 @@ fn native_batch_keeps_every_attribution_and_shares_only_owned_parents() {
 }
 
 #[test]
+fn project_copy_uses_only_the_explicit_project_and_native_core_placements() {
+    let mut fixture = Fixture::new();
+    let project = fixture.root.join("new-project");
+    fixture.context.project_root = Some(project.clone());
+    let sources = [inventory_skill(&fixture.source, InventoryLimits::default()).unwrap()];
+    let source_before = tree(&fixture.source);
+    let plan = plan_install(
+        &Catalog::bundled().unwrap(),
+        InstallRequest {
+            skills: &sources,
+            target_ids: &["codex", "claude-code", "opencode"],
+            scope: Scope::Project,
+            context: &fixture.context,
+            limits: PlanLimits::default(),
+        },
+    )
+    .unwrap();
+    assert!(!project.exists());
+    let report = apply_plan(&plan, ApplyOptions::default());
+    assert!(report.is_successful(), "{report:#?}");
+    assert_eq!(report.outcomes.len(), 3);
+    for directory in [".agents/skills", ".claude/skills", ".opencode/skills"] {
+        assert_eq!(
+            fs::read(project.join(directory).join("sample/SKILL.md")).unwrap(),
+            sources[0].metadata().source_bytes()
+        );
+    }
+    assert_eq!(
+        fs::read_dir(fixture.context.user_home.as_ref().unwrap())
+            .unwrap()
+            .count(),
+        0
+    );
+    assert_eq!(tree(&fixture.source), source_before);
+}
+
+#[test]
 fn apply_preflight_never_overwrites_new_or_modified_content() {
     let fixture = Fixture::new();
     let plan = fixture.plan();
