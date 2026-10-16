@@ -41,3 +41,7 @@ The crates.io `agent-skill` entry still points to `luckie2076/agent-skill`, but 
 ## Conduct and reporting decision
 
 The maintainer separately approved the original conduct policy and existing restricted repository issue route for private development on 2026-10-16. The repository has Issues enabled and remains private; this is a real current channel for authorized participants, not a fabricated address or an enabled public security-reporting service. Public reporting arrangements and an alternate contact for concerns involving the maintainer must be approved and verified before visibility changes. ASK-026 must retain that publication gate. Neither confidential email details nor service activation are inferred from a public GitHub profile.
+
+## Source-only preview follow-up
+
+[ADR 0008](0008-public-source-preview.md) records the maintainer-authorized WIP source preview and deferral of public reporting/contribution arrangements. It supersedes the earlier visibility-timing gate for those arrangements, without changing the names, license, provenance or release requirements above.

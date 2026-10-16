@@ -1,5 +1,7 @@
 # Using the library independently
 
+> **WIP — not ready for use.** This is development reference material, not a released or supported library/CLI. Exercise examples only in owned temporary fixtures; do not install into real skill stores. Public release and contribution/reporting readiness remain pending.
+
 The `agent-skills-kit` library is the implementation boundary. Neither it nor the standalone consumer depends on `agent-skills-kit-cli`. No runtime network, prompt, process exit, global environment/configuration mutation or terminal renderer belongs in the library. Errors are returned; applications decide how to display them and whether to exit.
 
 ## Separate reusable operations

@@ -1,8 +1,12 @@
 # GitHub Project workflow
 
+**WIP source preview:** not a supported library/CLI release. Public contribution intake is not open. Source visibility preparation is tracked in #93; full release readiness remains ASK-026.
+
 ## Model
 
-Create a **private owner-level GitHub Project (Projects v2)** and link it to the private repository. A Project is not created inside the repository; linking makes it accessible from the repository's Projects tab. Repository and Project visibility are managed separately.
+The maintainer roadmap is the **private owner-level GitHub Project (Projects v2) #10** linked to this repository. Repository visibility and Project visibility are separate. Making the source public does not authorize publishing the Project; it remains private unless the maintainer separately decides otherwise. Public readers can use repository Issues and milestones for progress. Do not promise that a Project link is accessible to them.
+
+The provisioning bundle originally creates a private Project and repository. A Project belongs to its owner, not inside the repository; linking exposes it in the Projects tab only to authorized viewers.
 
 The provisioning bundle creates Issues (not draft Project notes), six milestones, labels, and the following Project fields:
 

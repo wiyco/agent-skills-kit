@@ -1,5 +1,7 @@
 # Standalone public API consumer
 
+> **WIP — not ready for use.** This is development reference material, not a released or supported library/CLI. Exercise examples only in owned temporary fixtures; do not install into real skill stores. Public release and contribution/reporting readiness remain pending.
+
 This unpublished package deliberately has its own workspace and Cargo.lock. It depends only on the library; it uses no CLI internals or unsafe code. From the repository root:
 
 ```sh

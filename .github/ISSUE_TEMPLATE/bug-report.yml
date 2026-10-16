@@ -2,6 +2,10 @@ name: Bug report
 description: Report an installation, resolution, or CLI defect without including secrets.
 title: "[Bug]: "
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues are not confidential. Do not include credentials, private paths or exploitable vulnerability details. Read [the security policy](https://github.com/wiyco/agent-skills-kit/blob/main/SECURITY.md) for reporting availability before sharing security information.
   - type: input
     id: version
     attributes:
