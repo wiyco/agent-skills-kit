@@ -9,6 +9,15 @@ use windows_sys::Win32::Storage::FileSystem::{
 };
 
 fn failure(path: &Path, operation: &'static str, error: io::Error) -> InventoryError {
+    if let Some(reason) = error
+        .get_ref()
+        .and_then(|cause| cause.downcast_ref::<native::UnsupportedRoot>())
+    {
+        return InventoryError::new(
+            path,
+            InventoryErrorKind::UnsupportedFilesystem(reason.to_string()),
+        );
+    }
     if error.kind() == io::ErrorKind::Unsupported {
         InventoryError::new(path, InventoryErrorKind::UnsafeEntry)
     } else {

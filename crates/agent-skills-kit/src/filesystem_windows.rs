@@ -23,6 +23,7 @@ use windows_sys::{
     Win32::{
         Foundation::{OBJ_CASE_INSENSITIVE, RtlNtStatusToDosError, UNICODE_STRING},
         Storage::FileSystem::*,
+        System::WindowsProgramming::DRIVE_FIXED,
     },
 };
 
@@ -47,6 +48,17 @@ fn invalid(message: &'static str) -> io::Error {
 }
 fn unsupported(message: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::Unsupported, message)
+}
+#[derive(Debug)]
+pub(crate) struct UnsupportedRoot(pub(crate) &'static str);
+impl std::fmt::Display for UnsupportedRoot {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.0)
+    }
+}
+impl std::error::Error for UnsupportedRoot {}
+fn unsupported_root(message: &'static str) -> io::Error {
+    io::Error::new(io::ErrorKind::Unsupported, UnsupportedRoot(message))
 }
 
 pub(crate) fn component(name: &OsStr) -> io::Result<Vec<u16>> {
@@ -147,8 +159,8 @@ pub(crate) fn stamp(file: &File) -> io::Result<Stamp> {
     })
 }
 
-/// Only caller-trusted ancestors may be resolved through an absolute root open.
-pub(crate) fn open_root(path: &Path) -> io::Result<File> {
+// Pure prefix policy: it can reject UNC/device roots without any filesystem call.
+fn root_drive(path: &Path) -> io::Result<u8> {
     if !path.is_absolute()
         || path.as_os_str().encode_wide().any(|unit| unit == 0)
         || path
@@ -160,30 +172,45 @@ pub(crate) fn open_root(path: &Path) -> io::Result<File> {
     if path.as_os_str().encode_wide().count() > 32768 {
         return Err(invalid("native root exceeds path budget"));
     }
-    let drive = match path.components().next() {
+    match path.components().next() {
         Some(std::path::Component::Prefix(prefix)) => match prefix.kind() {
-            std::path::Prefix::Disk(drive) | std::path::Prefix::VerbatimDisk(drive) => drive,
-            _ => {
-                return Err(unsupported(
-                    "UNC and device namespace roots are not eligible",
-                ));
-            }
+            std::path::Prefix::Disk(drive) | std::path::Prefix::VerbatimDisk(drive) => Ok(drive),
+            _ => Err(unsupported_root(
+                "UNC and device namespace roots are not eligible",
+            )),
         },
-        _ => return Err(invalid("explicit drive root required")),
-    };
+        _ => Err(invalid("explicit drive root required")),
+    }
+}
+
+/// Open a fixed-drive root component by component, rejecting ancestor reparse points.
+pub(crate) fn open_root(path: &Path) -> io::Result<File> {
+    let drive = root_drive(path)?;
     let drive_root = [u16::from(drive), 58, 92, 0];
     // SAFETY: fixed NUL-terminated drive root. Reject mapped network drives before
     // opening a caller's path; later handle checks still verify local NTFS.
     if unsafe { GetDriveTypeW(drive_root.as_ptr()) } != DRIVE_FIXED {
-        return Err(unsupported("only fixed local drive roots are eligible"));
+        return Err(unsupported_root(
+            "only fixed local drive roots are eligible",
+        ));
     }
-    let file = OpenOptions::new()
+    let drive_path = format!("{}:\\", char::from(drive));
+    let mut file = OpenOptions::new()
         .read(true)
         .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
         .custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT)
-        .open(path)?;
+        .open(drive_path)?;
     if stamp(&file)?.kind != Kind::Directory {
         return Err(invalid("directory root required"));
+    }
+    for part in path.components().skip(1) {
+        match part {
+            std::path::Component::Normal(name) => {
+                file = child(&file, name, Kind::Directory, false)?;
+            }
+            std::path::Component::RootDir | std::path::Component::CurDir => (),
+            _ => return Err(invalid("unexpected native root component")),
+        }
     }
     Ok(file)
 }

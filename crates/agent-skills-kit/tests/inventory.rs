@@ -496,6 +496,15 @@ fn windows_real_directory_reparse_fixture_is_refused_without_touching_target() {
         fs::canonicalize(&link).unwrap(),
         fs::canonicalize(&outside).unwrap()
     );
+    let ancestor_alias = root.0.join("ancestor-alias");
+    symlink_dir(&root.0, &ancestor_alias).expect("required ancestor reparse fixture privilege");
+    assert_eq!(
+        inventory_skill(&ancestor_alias.join("sample"), InventoryLimits::default())
+            .unwrap_err()
+            .kind,
+        InventoryErrorKind::UnsafeEntry
+    );
+    fs::remove_dir(ancestor_alias).unwrap();
     // Remove the directory link itself before ordinary owned-root teardown.
     fs::remove_dir(&link).unwrap();
     assert!(outside.join("sentinel").is_file());
