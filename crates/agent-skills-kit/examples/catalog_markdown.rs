@@ -53,6 +53,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Roots are explicit caller context, not discovered HOME or current directories. Scope status describes documentation classification; platform arrays/test IDs are resolver evidence, not actual host discovery or universal OS/version support. Exact native CI results belong to each final-SHA QA record.\n"
     );
     println!(
+        "The discovery column reflects bundled records only. [Opt-in host smoke results](verification/host-discovery.md) separately record exact versions, OS/scopes, failed attempts and unrun procedures; a bounded sample does not establish other host combinations.\n"
+    );
+    println!(
         "| Target / product / variant | Scope status / resolver platforms | Preferred write | Readable locations (declared order) | Primary review / resolver evidence | Real-host discovery |"
     );
     println!("| --- | --- | --- | --- | --- | --- |");

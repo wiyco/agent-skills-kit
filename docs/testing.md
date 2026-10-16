@@ -54,6 +54,8 @@ Map relevant layer tests to [threat scenarios TM-01 through TM-22](threat-model.
 
 PRs state the commands actually run and their results. Report untested platforms, scopes, host versions, and failure modes explicitly. Documentation review, resolver tests, and real-host discovery tests are separate columns in the support matrix.
 
+The [opt-in core-host discovery procedures and actual results](verification/host-discovery.md) use an original inert fixture and keep real-host execution outside required PR CI. Only the measured version/OS/scope can be marked tested; onboarding, startup refusals and unrun procedures are recorded separately. The Codex/macOS helper verifies OS isolation before any host launch and uses the workspace CLI/library for installation.
+
 An MVP security regression blocks release. Broad catalog expansion does not excuse missing coverage for already shipped targets.
 
 ## Native interruption and capability fixtures
