@@ -1,0 +1,25 @@
+# Observational receipt schema
+
+The first ASK-011 layer provides a pure, bounded receipt codec. Executor integration and persisted rerun/recovery scenarios follow in the dependent change. `Receipt::new(document, limits)` validates structural relationships; `from_json` and `to_json` read/write caller-owned byte buffers. No receipt API inspects, copies, chmods, deletes or persists filesystem content.
+
+Schema version 1 records a caller-selected `operation_id`, native platform, explicit scope, `blake3_256` digest interpretation, deduplicated source payload records, target selection labels, destination outcomes and optional preflight/cleanup diagnostics. Each requested source/target pair must appear exactly once across destination attributions. Created, Unchanged, Failed and NotAttempted are distinct. Failed requires a diagnostic; attempted results require a path, and repeated exact attempted path labels are rejected. A preflight failure cannot coexist with attempted outcomes or cleanup activity. Unresolved NotAttempted requests may retain the same unverified path label.
+
+An operation ID is a 1–128 byte ASCII letters/digits/dot/underscore/hyphen correlation label chosen by the caller. The library does not generate IDs, guarantee uniqueness or infer ownership from them. Digests use exactly 64 lowercase hexadecimal characters; directories have neither file bytes nor a digest. Source root/entry modes record only intended ordinary bits capped at 0755. Source content digests are integrity observations, not malware review or proof of current bytes.
+
+## Lossless native paths
+
+Paths are tagged data, for example `{"format":"unix_utf8","data":"/fixture/sample"}`. Valid Unicode paths use `unix_utf8` or `windows_utf8` text. Non-Unicode paths use `unix_bytes` (native byte integers) or `windows_wide` (u16 integers, preserving unpaired surrogates). Byte/wide forms must actually contain non-Unicode data, avoiding multiple encodings of the same spelling. No normalization or lossy replacement occurs. Empty/NUL paths and unsafe relative entry traversal are rejected.
+
+Imported foreign-platform paths remain readable as data. `NativePath::to_native` refuses the wrong native family instead of interpreting Windows labels as Unix paths or vice versa. Windows codec tests exercise actual Windows native string APIs; this is independent of the unsupported Windows installer. Parsing validates data shape, references and resource bounds, not actual filesystem layout, host support, permissions, current identity or digest truth. A structurally valid forged/stale Created receipt is still untrusted data and cannot authorize replacement, deletion or adoption. Unchanged explicitly records preexisting content with no creation claim.
+
+## Bounds and compatibility
+
+`ReceiptLimits` defaults/ceilings: JSON 2/16 MiB; payload entries 65536/65536; one path 32768/32768 native units (Unix bytes or Windows u16); aggregate paths 16/64 Mi units; cleanup diagnostics 4096/131072. Limits are positive. Fixed structural ceilings are 128 sources, 256 targets and 1024 source/target combinations/destination rows. Target labels are at most 4096 UTF-8 bytes so unresolved selection text can be recorded; operation labels are at most 256 bytes. Individual recorded file lengths cannot exceed the inventory reader's 256 MiB ceiling. Oversized receipt output fails in a bounded writer before returning bytes, not after unbounded serialization.
+
+Unknown versions, fields, enum values, duplicate fields, malformed/corrupt JSON, invalid digests/modes, missing manifests, duplicate source/entry/reference records and inconsistent outcomes fail explicitly. Unknown versions are detected before interpreting a future document layout. JSON errors retain line/column without echoing attacker-controlled fields into a diagnostic. The immutable `Receipt` wraps validated data; a public `ReceiptDocument` is only model input until validated. Version 1 is a strict observational format, not an authentication or ownership protocol.
+
+Only the existing serde/serde_json dependencies are used. Tests use original synthetic path labels without opening them, exercise exact byte/structural boundaries and corrupted data, preserve Unix non-UTF-8 and Windows unpaired-surrogate identity on native runners, and round-trip foreign records as inert data. No real skill stores, process environment changes, telemetry, new installation paths or tool installations are involved.
+
+## Persistence and recovery boundary
+
+Callers may explicitly store encoded bytes in their chosen location **outside skill payloads**. There is no hidden home state or automatic receipt discovery. A stale receipt does not bypass a fresh plan or its execution checks. Cleanup authority remains with live operation-owned handles under [execution.md](execution.md); an ID, recorded path, staging prefix or parsed receipt cannot recreate it. Failed receipt encoding must not hide the actual install report. The dependent integration layer must retain that report separately and test retries/partial results without cross-target rollback or deletion of unmanaged content.

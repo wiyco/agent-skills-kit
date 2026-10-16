@@ -9,6 +9,7 @@ mod filesystem;
 pub mod catalog;
 pub mod executor;
 pub mod planner;
+pub mod receipt;
 pub mod resolver;
 pub mod validation;
 
