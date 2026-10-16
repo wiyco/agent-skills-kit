@@ -153,6 +153,110 @@ impl Drop for Descriptor {
     }
 }
 
+/// Apply real destination inheritance only after native commit. This can fail or
+/// leave a partially finalized tree; callers must report a committed payload,
+/// never delete it. Each inventoried object requires its own bounded update.
+pub(crate) fn finalize_inheritance(file: &File, parent: &File, token: &Token) -> io::Result<()> {
+    use windows_sys::Win32::{
+        Security::{
+            CreatePrivateObjectSecurityEx, DestroyPrivateObjectSecurity, GENERIC_MAPPING,
+            GetSecurityDescriptorDacl, SEF_DACL_AUTO_INHERIT,
+            UNPROTECTED_DACL_SECURITY_INFORMATION,
+        },
+        Storage::FileSystem::{
+            FILE_ALL_ACCESS, FILE_GENERIC_EXECUTE, FILE_GENERIC_READ, FILE_GENERIC_WRITE,
+        },
+    };
+    let bytes = super::descriptor(parent)?;
+    let mut aligned = vec![0u64; bytes.len().div_ceil(8)];
+    // SAFETY: aligned initialized buffer has at least bytes.len() bytes available.
+    unsafe {
+        ptr::copy_nonoverlapping(bytes.as_ptr(), aligned.as_mut_ptr().cast(), bytes.len());
+    }
+    struct Inherited(PSECURITY_DESCRIPTOR);
+    impl Drop for Inherited {
+        fn drop(&mut self) {
+            // SAFETY: uniquely owned output of CreatePrivateObjectSecurityEx below.
+            unsafe {
+                DestroyPrivateObjectSecurity(ptr::addr_of_mut!(self.0));
+            }
+        }
+    }
+    let mapping = GENERIC_MAPPING {
+        GenericRead: FILE_GENERIC_READ,
+        GenericWrite: FILE_GENERIC_WRITE,
+        GenericExecute: FILE_GENERIC_EXECUTE,
+        GenericAll: FILE_ALL_ACCESS,
+    };
+    let mut result = ptr::null_mut();
+    let is_directory = i32::from(
+        crate::filesystem_windows::stamp(file)?.kind == crate::filesystem_windows::Kind::Directory,
+    );
+    // SAFETY: SDK-produced bounded parent descriptor, aligned copy, live query
+    // token and exact file rights mapping. No source/creator descriptor or owner/
+    // privilege bypass flags; the result has its documented distinct destructor.
+    if unsafe {
+        CreatePrivateObjectSecurityEx(
+            aligned.as_mut_ptr().cast(),
+            ptr::null_mut(),
+            &mut result,
+            ptr::null(),
+            is_directory,
+            SEF_DACL_AUTO_INHERIT,
+            token.0,
+            &mapping,
+        )
+    } == 0
+    {
+        return Err(io::Error::last_os_error());
+    }
+    if result.is_null() {
+        return Err(io::Error::other(
+            "no destination inheritance descriptor returned",
+        ));
+    }
+    let inherited = Inherited(result);
+    // SAFETY: successful SDK descriptor; size is checked before extracting its DACL.
+    if !(20..=65536).contains(&unsafe { GetSecurityDescriptorLength(inherited.0) }) {
+        return Err(io::Error::other(
+            "destination inheritance descriptor exceeds bounds",
+        ));
+    }
+    let mut present = 0;
+    let mut defaulted = 0;
+    let mut acl = ptr::null_mut();
+    // SAFETY: descriptor remains live, writable typed outputs, borrowed DACL.
+    if unsafe { GetSecurityDescriptorDacl(inherited.0, &mut present, &mut acl, &mut defaulted) }
+        == 0
+    {
+        return Err(io::Error::last_os_error());
+    }
+    if present == 0 || acl.is_null() {
+        return Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "null destination DACL is not supported",
+        ));
+    }
+    // SAFETY: live committed operation-owned handle with WRITE_DAC and bounded
+    // SDK self-relative descriptor. This updates exactly the held object, without
+    // a recursive user-space namespace walk or source metadata. Each inventoried
+    // child must be finalized separately through its own retained handle.
+    let status = unsafe {
+        windows_sys::Wdk::Storage::FileSystem::NtSetSecurityObject(
+            file.as_raw_handle(),
+            DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION,
+            inherited.0,
+        )
+    };
+    if status < 0 {
+        Err(io::Error::from_raw_os_error(unsafe {
+            windows_sys::Win32::Foundation::RtlNtStatusToDosError(status)
+        } as i32))
+    } else {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -483,6 +587,14 @@ mod tests {
                 native::open_permissions(&payload, OsStr::new("resource"), Kind::File).unwrap();
             assert_eq!(native::stamp(&child).unwrap().identity, identity);
             assert_eq!(allow_policy(&child), child_private);
+            let outside_path = root.0.join("outside");
+            fs::create_dir(&outside_path).unwrap();
+            fs::write(outside_path.join("sentinel"), b"outside unchanged").unwrap();
+            let outside = native::open_root(&outside_path).unwrap();
+            let outside_security = super::super::descriptor(&outside).unwrap();
+            let late_link = root.0.join("destination parent/installed/late-link");
+            std::os::windows::fs::symlink_dir(&outside_path, &late_link)
+                .expect("required post-commit reparse fixture privilege");
             finalize_inheritance(&payload, &parent, &token).unwrap();
             assert_eq!(
                 allow_policy(&payload),
@@ -506,6 +618,16 @@ mod tests {
                 "real inherited grants must propagate through the complete payload"
             );
             assert_eq!(parent_security, super::super::descriptor(&parent).unwrap());
+            assert_eq!(
+                outside_security,
+                super::super::descriptor(&outside).unwrap(),
+                "never propagate permissions through an unexpected post-commit reparse point"
+            );
+            assert_eq!(
+                fs::read(outside_path.join("sentinel")).unwrap(),
+                b"outside unchanged"
+            );
+            fs::remove_dir(late_link).unwrap();
             assert_eq!(
                 fs::read(root.0.join("destination parent/installed/resource")).unwrap(),
                 b"inert original bytes"
@@ -552,109 +674,5 @@ mod tests {
         );
         assert_eq!(fs::read(root.0.join("winner")).unwrap(), b"existing winner");
         assert_eq!(before, super::super::descriptor(&winner).unwrap());
-    }
-}
-
-/// Apply real destination inheritance only after native commit. This can fail or
-/// leave a partially finalized tree; callers must report a committed payload,
-/// never delete it. Each inventoried object requires its own bounded update.
-pub(crate) fn finalize_inheritance(file: &File, parent: &File, token: &Token) -> io::Result<()> {
-    use windows_sys::Win32::{
-        Security::{
-            CreatePrivateObjectSecurityEx, DestroyPrivateObjectSecurity, GENERIC_MAPPING,
-            GetSecurityDescriptorDacl, SEF_DACL_AUTO_INHERIT,
-            UNPROTECTED_DACL_SECURITY_INFORMATION,
-        },
-        Storage::FileSystem::{
-            FILE_ALL_ACCESS, FILE_GENERIC_EXECUTE, FILE_GENERIC_READ, FILE_GENERIC_WRITE,
-        },
-    };
-    let bytes = super::descriptor(parent)?;
-    let mut aligned = vec![0u64; bytes.len().div_ceil(8)];
-    // SAFETY: aligned initialized buffer has at least bytes.len() bytes available.
-    unsafe {
-        ptr::copy_nonoverlapping(bytes.as_ptr(), aligned.as_mut_ptr().cast(), bytes.len());
-    }
-    struct Inherited(PSECURITY_DESCRIPTOR);
-    impl Drop for Inherited {
-        fn drop(&mut self) {
-            // SAFETY: uniquely owned output of CreatePrivateObjectSecurityEx below.
-            unsafe {
-                DestroyPrivateObjectSecurity(&mut self.0);
-            }
-        }
-    }
-    let mapping = GENERIC_MAPPING {
-        GenericRead: FILE_GENERIC_READ,
-        GenericWrite: FILE_GENERIC_WRITE,
-        GenericExecute: FILE_GENERIC_EXECUTE,
-        GenericAll: FILE_ALL_ACCESS,
-    };
-    let mut result = ptr::null_mut();
-    let is_directory = i32::from(
-        crate::filesystem_windows::stamp(file)?.kind == crate::filesystem_windows::Kind::Directory,
-    );
-    // SAFETY: SDK-produced bounded parent descriptor, aligned copy, live query
-    // token and exact file rights mapping. No source/creator descriptor or owner/
-    // privilege bypass flags; the result has its documented distinct destructor.
-    if unsafe {
-        CreatePrivateObjectSecurityEx(
-            aligned.as_mut_ptr().cast(),
-            ptr::null_mut(),
-            &mut result,
-            ptr::null(),
-            is_directory,
-            SEF_DACL_AUTO_INHERIT,
-            token.0,
-            &mapping,
-        )
-    } == 0
-    {
-        return Err(io::Error::last_os_error());
-    }
-    if result.is_null() {
-        return Err(io::Error::other(
-            "no destination inheritance descriptor returned",
-        ));
-    }
-    let inherited = Inherited(result);
-    // SAFETY: successful SDK descriptor; size is checked before extracting its DACL.
-    if !(20..=65536).contains(&unsafe { GetSecurityDescriptorLength(inherited.0) }) {
-        return Err(io::Error::other(
-            "destination inheritance descriptor exceeds bounds",
-        ));
-    }
-    let mut present = 0;
-    let mut defaulted = 0;
-    let mut acl = ptr::null_mut();
-    // SAFETY: descriptor remains live, writable typed outputs, borrowed DACL.
-    if unsafe { GetSecurityDescriptorDacl(inherited.0, &mut present, &mut acl, &mut defaulted) }
-        == 0
-    {
-        return Err(io::Error::last_os_error());
-    }
-    if present == 0 || acl.is_null() {
-        return Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "null destination DACL is not supported",
-        ));
-    }
-    // SAFETY: live committed operation-owned handle with WRITE_DAC and bounded
-    // SDK self-relative descriptor. This updates exactly the held object, without
-    // a recursive user-space namespace walk or source metadata. Each inventoried
-    // child must be finalized separately through its own retained handle.
-    let status = unsafe {
-        windows_sys::Wdk::Storage::FileSystem::NtSetSecurityObject(
-            file.as_raw_handle(),
-            DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION,
-            inherited.0,
-        )
-    };
-    if status < 0 {
-        Err(io::Error::from_raw_os_error(unsafe {
-            windows_sys::Win32::Foundation::RtlNtStatusToDosError(status)
-        } as i32))
-    } else {
-        Ok(())
     }
 }
