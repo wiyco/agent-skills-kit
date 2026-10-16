@@ -63,4 +63,4 @@ This project is independent of the agent products it targets and makes no affili
 
 See the [public API guide](docs/api.md) and [standalone consumer](examples/external-consumer) for library use without the CLI.
 
-The [generated target matrix](docs/targets.md) separates documented rules/resolver evidence from unverified real-host discovery. Product-specific source and variant limits are in the [catalog review](docs/catalog.md). The [ASK-020 outcomes](docs/research/ask-020-outcomes.md) reconcile workspace-based and renamed products with explicit deferred capabilities.
+The [generated target matrix](docs/targets.md) separates documented rules/resolver evidence from real-host discovery records. [Opt-in host smoke results](docs/verification/host-discovery.md) identify the exact tested versions/OS/scopes and failed or unrun attempts. Product-specific source and variant limits are in the [catalog review](docs/catalog.md). The [ASK-020 outcomes](docs/research/ask-020-outcomes.md) reconcile workspace-based and renamed products with explicit deferred capabilities.
