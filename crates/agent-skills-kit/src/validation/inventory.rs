@@ -4,8 +4,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use std::fs::File;
 #[cfg(any(target_os = "linux", target_os = "macos", windows))]
-use std::{fs::File, sync::Arc};
+use std::sync::Arc;
 
 use super::{Diagnostic, MetadataLimits, SkillMetadata};
 
@@ -123,8 +125,10 @@ pub struct SourceInventory {
     pub(super) requested_root: PathBuf,
     pub(super) canonical_root: PathBuf,
     pub(super) root_stamp: EntryStamp,
-    #[cfg(any(target_os = "linux", target_os = "macos", windows))]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     pub(super) root_handle: Arc<File>,
+    #[cfg(windows)]
+    pub(super) root_handle: Arc<crate::filesystem_windows::reader::Handle>,
     pub(super) entries: Vec<SourceEntry>,
     pub(super) total_bytes: u64,
 }

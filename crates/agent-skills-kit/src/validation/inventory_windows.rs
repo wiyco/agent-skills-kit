@@ -3,7 +3,12 @@ use crate::{
     filesystem_windows::{self as native, Kind, Stamp, reader},
     validation::parse_metadata,
 };
-use std::{fs, io::Read, os::windows::ffi::OsStrExt, sync::Arc};
+use std::{
+    fs::{self, File},
+    io::Read,
+    os::windows::ffi::OsStrExt,
+    sync::Arc,
+};
 use windows_sys::Win32::Storage::FileSystem::{
     FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_READONLY, FILE_ATTRIBUTE_REPARSE_POINT,
 };
@@ -89,13 +94,15 @@ pub(super) fn inspect(
         .file_name()
         .and_then(|name| name.to_str())
         .ok_or_else(|| InventoryError::new(source, InventoryErrorKind::NonUtf8SkillName))?;
-    let root = Arc::new(native::open_root(source).map_err(|error| {
-        failure(
-            source,
-            "open Windows source root without reparse traversal",
-            error,
-        )
-    })?);
+    let root = Arc::new(reader::Handle::new(native::open_root(source).map_err(
+        |error| {
+            failure(
+                source,
+                "open Windows source root without reparse traversal",
+                error,
+            )
+        },
+    )?));
     local(&root, source)?;
     let canonical = fs::canonicalize(source).map_err(|error| {
         InventoryError::io(source, "canonicalize caller-trusted Windows root", error)
@@ -122,7 +129,7 @@ pub(super) fn inspect(
     Ok(validated)
 }
 fn inspect_retained(
-    root: Arc<File>,
+    root: Arc<reader::Handle>,
     label: &Path,
     name: &str,
     limits: InventoryLimits,
@@ -184,7 +191,7 @@ impl Walker<'_> {
     }
     fn walk(
         &mut self,
-        directory: &File,
+        directory: &reader::Handle,
         relative: &Path,
         depth: usize,
     ) -> Result<(), InventoryError> {
@@ -193,15 +200,15 @@ impl Walker<'_> {
         if before.device != self.volume {
             return Err(self.error(relative, InventoryErrorKind::CrossDevice));
         }
-        let names = reader::entries(directory, self.limits.max_entries - self.observed).map_err(
-            |error| {
+        let names = directory
+            .entries(self.limits.max_entries - self.observed)
+            .map_err(|error| {
                 if error.kind() == io::ErrorKind::FileTooLarge {
                     self.error(relative, InventoryErrorKind::Limit("entry count"))
                 } else {
                     failure(&path, "enumerate retained Windows directory", error)
                 }
-            },
-        )?;
+            })?;
         self.observed += names.len();
         for entry in names {
             let child = relative.join(&entry.name);
@@ -222,8 +229,10 @@ impl Walker<'_> {
             } else {
                 Kind::File
             };
-            let mut opened = native::child(directory, &entry.name, kind, false)
-                .map_err(|error| failure(&path, "open Windows child no-follow", error))?;
+            let mut opened = reader::Handle::new(
+                native::child(directory, &entry.name, kind, false)
+                    .map_err(|error| failure(&path, "open Windows child no-follow", error))?,
+            );
             let observed = observe(&opened, &path)?;
             if observed.device != self.volume {
                 return Err(self.error(&child, InventoryErrorKind::CrossDevice));

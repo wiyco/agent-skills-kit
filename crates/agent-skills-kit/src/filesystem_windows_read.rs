@@ -12,10 +12,7 @@ use windows_sys::{
             FILE_FS_DEVICE_INFORMATION, FILE_REMOTE_DEVICE, FILE_REMOTE_DEVICE_VSMB,
         },
     },
-    Win32::{
-        Foundation::{INVALID_HANDLE_VALUE, STATUS_NO_MORE_FILES},
-        System::IO::IO_STATUS_BLOCK,
-    },
+    Win32::{Foundation::STATUS_NO_MORE_FILES, System::IO::IO_STATUS_BLOCK},
 };
 
 pub(crate) fn local_ntfs(file: &File) -> io::Result<()> {
@@ -76,33 +73,46 @@ pub(crate) struct DirectoryEntry {
     pub(crate) attributes: u32,
 }
 
-/// A separate native open owns this scan's cursor; cloned retained handles do not.
-pub(crate) fn entries(directory: &File, max: usize) -> io::Result<Vec<DirectoryEntry>> {
+/// Every clone shares this explicit per-object cursor lock; there is no global lock.
+#[derive(Debug)]
+pub(crate) struct Handle {
+    file: File,
+    scan: std::sync::Mutex<()>,
+}
+impl Handle {
+    pub(crate) fn new(file: File) -> Self {
+        Self {
+            file,
+            scan: std::sync::Mutex::new(()),
+        }
+    }
+    pub(crate) fn entries(&self, max: usize) -> io::Result<Vec<DirectoryEntry>> {
+        let _guard = self
+            .scan
+            .lock()
+            .map_err(|_| io::Error::other("directory scan lock poisoned"))?;
+        entries_locked(&self.file, max)
+    }
+}
+impl std::ops::Deref for Handle {
+    type Target = File;
+    fn deref(&self) -> &File {
+        &self.file
+    }
+}
+impl std::ops::DerefMut for Handle {
+    fn deref_mut(&mut self) -> &mut File {
+        &mut self.file
+    }
+}
+
+fn entries_locked(directory: &File, max: usize) -> io::Result<Vec<DirectoryEntry>> {
     if max > 65536 {
         return Err(invalid("entry ceiling exceeded"));
     }
     let expected = stamp(directory)?;
     if expected.kind != Kind::Directory {
         return Err(invalid("directory scan required"));
-    }
-    // SAFETY: live validated disk-directory handle, read-only access, independent
-    // open/cursor. Delete sharing accommodates an original operation-owned handle;
-    // that original still denies every other opener delete access.
-    let handle = unsafe {
-        ReOpenFile(
-            directory.as_raw_handle(),
-            FILE_GENERIC_READ,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
-        )
-    };
-    if handle == INVALID_HANDLE_VALUE {
-        return Err(io::Error::last_os_error());
-    }
-    // SAFETY: ReOpenFile returned one new owned handle.
-    let reader = unsafe { File::from_raw_handle(handle) };
-    if stamp(&reader)? != expected {
-        return Err(io::Error::other("directory changed while opening scan"));
     }
     let mut result = Vec::new();
     let mut restart = true;
@@ -115,7 +125,7 @@ pub(crate) fn entries(directory: &File, max: usize) -> io::Result<Vec<DirectoryE
         // no callbacks/event/filter. The completion byte count is checked below.
         let status = unsafe {
             NtQueryDirectoryFile(
-                reader.as_raw_handle(),
+                directory.as_raw_handle(),
                 ptr::null_mut(),
                 None,
                 ptr::null(),
@@ -228,4 +238,98 @@ pub(crate) fn unnamed_stream_only(file: &File) -> io::Result<()> {
         return Err(unsupported("alternate stream rejected"));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{
+        fs,
+        sync::{
+            Arc, Barrier,
+            atomic::{AtomicU64, Ordering},
+        },
+        time::Duration,
+    };
+    #[test]
+    fn repeated_and_concurrent_scans_share_one_explicit_cursor_guard() {
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        struct Root(std::path::PathBuf);
+        impl Drop for Root {
+            fn drop(&mut self) {
+                fs::remove_dir_all(&self.0).expect("owned cursor fixture teardown");
+            }
+        }
+        let root = (0..100)
+            .find_map(|_| {
+                let path = std::env::temp_dir().join(format!(
+                    "ask-windows-cursor-{}-{}",
+                    std::process::id(),
+                    NEXT.fetch_add(1, Ordering::Relaxed)
+                ));
+                match fs::create_dir(&path) {
+                    Ok(()) => Some(Root(path)),
+                    Err(error) if error.kind() == io::ErrorKind::AlreadyExists => None,
+                    Err(error) => panic!("owned cursor root: {error}"),
+                }
+            })
+            .expect("cursor fixture collision budget");
+        for name in ["a", "b"] {
+            fs::write(root.0.join(name), b"inert").unwrap();
+        }
+        let held = Arc::new(Handle::new(open_root(&root.0).unwrap()));
+        let names = |entries: Vec<DirectoryEntry>| {
+            entries
+                .into_iter()
+                .map(|entry| entry.name)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            held.entries(1).unwrap_err().kind(),
+            io::ErrorKind::FileTooLarge
+        );
+        for _ in 0..2 {
+            assert_eq!(
+                names(held.entries(2).unwrap()),
+                vec![OsString::from("a"), OsString::from("b")]
+            );
+        }
+        let barrier = Arc::new(Barrier::new(2));
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let threads = (0..2)
+            .map(|_| {
+                let held = Arc::clone(&held);
+                let barrier = Arc::clone(&barrier);
+                let sender = sender.clone();
+                std::thread::spawn(move || {
+                    for _ in 0..16 {
+                        barrier.wait();
+                        let result = held.entries(2).map(|entries| {
+                            entries
+                                .into_iter()
+                                .map(|entry| entry.name)
+                                .collect::<Vec<_>>()
+                        });
+                        sender.send(result).unwrap();
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+        let observations = (0..32)
+            .map(|_| {
+                receiver
+                    .recv_timeout(Duration::from_secs(10))
+                    .expect("bounded concurrent scan")
+            })
+            .collect::<Vec<_>>();
+        for thread in threads {
+            thread.join().unwrap();
+        }
+        for observation in observations {
+            assert_eq!(
+                observation.unwrap(),
+                vec![OsString::from("a"), OsString::from("b")]
+            );
+        }
+    }
 }
