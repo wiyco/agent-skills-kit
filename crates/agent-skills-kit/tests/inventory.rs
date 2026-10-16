@@ -552,7 +552,8 @@ mod windows {
         fs::write(source.join(&opaque), b"opaque native name").unwrap();
         let read_only = source.join("read-only");
         fs::write(&read_only, b"read only data").unwrap();
-        let mut permissions = fs::metadata(&read_only).unwrap().permissions();
+        let original_permissions = fs::metadata(&read_only).unwrap().permissions();
+        let mut permissions = original_permissions.clone();
         permissions.set_readonly(true);
         fs::set_permissions(&read_only, permissions).unwrap();
         let before = tree(&root.0);
@@ -583,9 +584,7 @@ mod windows {
         assert!(first.inventory().root_is_unchanged().unwrap());
         assert_eq!(tree(&root.0), before);
         assert!(!root.0.join("forbidden").exists());
-        let mut permissions = fs::metadata(&read_only).unwrap().permissions();
-        permissions.set_readonly(false);
-        fs::set_permissions(&read_only, permissions).unwrap();
+        fs::set_permissions(&read_only, original_permissions).unwrap();
     }
     #[test]
     fn inventory_limits_and_invalid_metadata_fail_without_writes() {
