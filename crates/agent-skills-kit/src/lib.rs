@@ -3,7 +3,11 @@
 //! Installation APIs are not implemented yet. The API remains provisional
 //! pending its implementation and review.
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+mod filesystem;
+
 pub mod catalog;
+pub mod planner;
 pub mod resolver;
 pub mod validation;
 
