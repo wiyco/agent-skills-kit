@@ -78,6 +78,19 @@ pub struct EntryStamp {
     /// Metadata-change seconds/nanoseconds.
     pub changed: (i64, i64),
 }
+impl EntryStamp {
+    /// Volume/device and complete native object identifier for this observation.
+    ///
+    /// Unix inode values are zero-extended; Windows retains all 128 file-ID bits.
+    /// This is an opaque, lifetime-scoped identity, not a persistent ownership token.
+    pub fn file_identity(&self) -> (u64, [u8; 16]) {
+        #[cfg(windows)]
+        let identifier = self.windows.identity;
+        #[cfg(not(windows))]
+        let identifier = u128::from(self.inode).to_le_bytes();
+        (self.device, identifier)
+    }
+}
 
 /// Only these source entry types can enter a successful inventory.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
