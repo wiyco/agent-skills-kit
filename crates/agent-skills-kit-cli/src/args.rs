@@ -9,6 +9,11 @@ pub(crate) enum Command {
     Target(String),
     Validate(PathBuf),
     Plan(PlanArgs),
+    Install {
+        plan: PlanArgs,
+        yes: bool,
+        dry_run: bool,
+    },
 }
 pub(crate) fn json_requested(args: &[OsString]) -> bool {
     args.iter()
@@ -31,6 +36,8 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
     let mut scope = None;
     let mut user_home = None;
     let mut project_root = None;
+    let mut yes = false;
+    let mut dry_run = false;
     let mut index = 0;
     while index < args.len() {
         let arg = &args[index];
@@ -44,6 +51,16 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
                 return Err("--json may appear only once".into());
             }
             json = true;
+        } else if arg == "--yes" || arg == "--dry-run" {
+            let flag = if arg == "--yes" {
+                &mut yes
+            } else {
+                &mut dry_run
+            };
+            if *flag {
+                return Err(format!("{} may appear only once", arg.to_string_lossy()));
+            }
+            *flag = true;
         } else if arg == "--help" || arg == "-h" {
             return Ok(Command::Help);
         } else if arg == "--version" || arg == "-V" {
@@ -94,10 +111,10 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
         }
     }
     if let [command, source] = positional.as_slice() {
-        if command.as_os_str() == "plan" {
-            let scope = scope.ok_or("plan requires --scope user or project")?;
+        if command.as_os_str() == "plan" || command.as_os_str() == "install" {
+            let scope = scope.ok_or("plan/install requires --scope user or project")?;
             if targets.is_empty() {
-                return Err("plan requires at least one --target".into());
+                return Err("plan/install requires at least one --target".into());
             }
             if (scope == Scope::User && user_home.is_none())
                 || (scope == Scope::Project && project_root.is_none())
@@ -106,17 +123,28 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
                     "supply --user-home for user scope or --project-root for project scope".into(),
                 );
             }
-            return Ok(Command::Plan(PlanArgs {
+            if command.as_os_str() == "plan" && (yes || dry_run) {
+                return Err("--yes and --dry-run require install".into());
+            }
+            let plan = PlanArgs {
                 source: PathBuf::from(source),
                 targets,
                 scope,
                 user_home,
                 project_root,
-            }));
+            };
+            return Ok(if command.as_os_str() == "install" {
+                Command::Install { plan, yes, dry_run }
+            } else {
+                Command::Plan(plan)
+            });
         }
     }
+    if yes || dry_run {
+        return Err("--yes and --dry-run require install".into());
+    }
     if !targets.is_empty() || scope.is_some() || user_home.is_some() || project_root.is_some() {
-        return Err("target/scope/context options require the plan command".into());
+        return Err("target/scope/context options require plan or install".into());
     }
     match positional.as_slice() {
         [] => Ok(Command::Help),
@@ -130,7 +158,7 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
             Ok(Command::Validate(PathBuf::from(source)))
         }
         _ => Err(
-            "expected targets list/show, validate <source>, or plan <source>; see --help".into(),
+            "expected targets list/show, validate <source>, plan <source>, or install <source>; see --help".into(),
         ),
     }
 }
