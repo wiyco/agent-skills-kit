@@ -346,3 +346,396 @@ fn windows_candidate_copy_fault_cleans_only_owned_stage_and_retains_new_parents(
         "{report:?}"
     );
 }
+
+fn set_fixture_dacl(path: &Path, sddl: &str) {
+    use windows_sys::Win32::{
+        Foundation::LocalFree,
+        Security::{
+            Authorization::{
+                ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
+            },
+            DACL_SECURITY_INFORMATION, PROTECTED_DACL_SECURITY_INFORMATION,
+        },
+        Storage::FileSystem::{READ_CONTROL, WRITE_DAC},
+    };
+    let file = fs::OpenOptions::new()
+        .access_mode(READ_CONTROL | WRITE_DAC)
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+        .custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT)
+        .open(path)
+        .unwrap();
+    let text = sddl.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
+    let mut pointer = std::ptr::null_mut();
+    // SAFETY: trusted original fixture SDDL, terminated input and one API allocation.
+    assert_ne!(
+        unsafe {
+            ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                text.as_ptr(),
+                SDDL_REVISION_1,
+                &mut pointer,
+                std::ptr::null_mut(),
+            )
+        },
+        0
+    );
+    assert!(!pointer.is_null());
+    struct Descriptor(*mut core::ffi::c_void);
+    impl Drop for Descriptor {
+        fn drop(&mut self) {
+            // SAFETY: unique allocation from successful SDDL conversion.
+            unsafe {
+                LocalFree(self.0);
+            }
+        }
+    }
+    let descriptor = Descriptor(pointer);
+    use std::os::windows::io::AsRawHandle;
+    // SAFETY: exact held owned fixture object with WRITE_DAC and live descriptor.
+    let status = unsafe {
+        windows_sys::Wdk::Storage::FileSystem::NtSetSecurityObject(
+            file.as_raw_handle(),
+            DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
+            descriptor.0,
+        )
+    };
+    assert_eq!(status, 0, "set owned fixture DACL: {status:#x}");
+}
+fn fixture_dacl(path: &Path) -> String {
+    use windows_sys::Win32::{
+        Foundation::LocalFree,
+        Security::{
+            Authorization::{
+                ConvertSecurityDescriptorToStringSecurityDescriptorW, SDDL_REVISION_1,
+            },
+            DACL_SECURITY_INFORMATION,
+        },
+    };
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+        .custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT)
+        .open(path)
+        .unwrap();
+    let bytes = security::descriptor(&file).unwrap();
+    let mut aligned = vec![0u64; bytes.len().div_ceil(8)];
+    // SAFETY: aligned initialized allocation has sufficient byte capacity.
+    unsafe {
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), aligned.as_mut_ptr().cast(), bytes.len());
+    }
+    let mut text = std::ptr::null_mut();
+    let mut length = 0;
+    // SAFETY: valid bounded SDK descriptor in aligned storage and API-allocated output.
+    assert_ne!(
+        unsafe {
+            ConvertSecurityDescriptorToStringSecurityDescriptorW(
+                aligned.as_mut_ptr().cast(),
+                SDDL_REVISION_1,
+                DACL_SECURITY_INFORMATION,
+                &mut text,
+                &mut length,
+            )
+        },
+        0
+    );
+    assert!(!text.is_null());
+    struct Text(*mut u16);
+    impl Drop for Text {
+        fn drop(&mut self) {
+            // SAFETY: unique SDK conversion allocation.
+            unsafe {
+                LocalFree(self.0.cast());
+            }
+        }
+    }
+    let text = Text(text);
+    assert!((1..=65536).contains(&length));
+    // SAFETY: reported allocation bound; stop at the first returned NUL.
+    let units = unsafe { std::slice::from_raw_parts(text.0, length as usize) };
+    let end = units.iter().position(|unit| *unit == 0).unwrap();
+    String::from_utf16(&units[..end]).unwrap()
+}
+#[test]
+fn windows_actual_create_permission_denial_keeps_prior_success_and_honors_stop_policy() {
+    for stop in [true, false] {
+        let fixture = Fixture::new();
+        let denied = fixture
+            .context
+            .user_home
+            .as_ref()
+            .unwrap()
+            .join(".claude/skills");
+        fs::create_dir_all(&denied).unwrap();
+        let token = creation::Token::effective().unwrap();
+        let sid = token.user_sid().unwrap();
+        // Deny only FILE_ADD_SUBDIRECTORY, keeping enumeration/READ_CONTROL valid.
+        set_fixture_dacl(
+            &denied,
+            &format!("O:{sid}D:P(D;;0x4;;;{sid})(A;;FA;;;{sid})"),
+        );
+        let before = fixture_dacl(&denied);
+        let plan = fixture.plan(&["codex", "claude-code", "opencode"], Scope::User);
+        assert!(plan.is_applicable());
+        let report = apply(
+            &plan,
+            ApplyOptions {
+                stop_on_failure: stop,
+                ..ApplyOptions::default()
+            },
+            &mut |_, _| Ok(()),
+        );
+        let row = |target: &str| {
+            report
+                .outcomes
+                .iter()
+                .find(|row| {
+                    row.attributions
+                        .iter()
+                        .any(|attribution| attribution.target_id == target)
+                })
+                .unwrap()
+        };
+        assert_eq!(row("codex").status, OutcomeStatus::Created, "{report:?}");
+        assert!(
+            matches!(
+                row("claude-code").status,
+                OutcomeStatus::Failed(ApplyError {
+                    kind: ApplyErrorKind::Io {
+                        kind: io::ErrorKind::PermissionDenied,
+                        ..
+                    },
+                    ..
+                })
+            ),
+            "{report:?}"
+        );
+        assert_eq!(
+            row("opencode").status,
+            if stop {
+                OutcomeStatus::NotAttempted
+            } else {
+                OutcomeStatus::Created
+            },
+            "{report:?}"
+        );
+        assert_eq!(
+            fs::read(row("codex").path.as_ref().unwrap().join("SKILL.md")).unwrap(),
+            fs::read(fixture.source.join("SKILL.md")).unwrap()
+        );
+        assert!(!denied.join("sample").exists());
+        assert_eq!(before, fixture_dacl(&denied));
+        assert!(stages(&fixture.root).is_empty());
+    }
+}
+#[test]
+fn windows_copy_does_not_import_source_acl_grants_and_conflicts_preserve_edits() {
+    let fixture = Fixture::new();
+    let resource = fixture.source.join("reference café.txt");
+    let sid = creation::Token::effective().unwrap().user_sid().unwrap();
+    set_fixture_dacl(&resource, &format!("O:{sid}D:P(A;;FA;;;{sid})(A;;FR;;;WD)"));
+    let source_security = fixture_dacl(&resource);
+    assert!(source_security.contains(";;;WD)"));
+    let plan = fixture.plan(&["codex"], Scope::User);
+    let report = apply(&plan, ApplyOptions::default(), &mut |_, _| Ok(()));
+    assert!(report.is_successful(), "{report:?}");
+    let target = report.outcomes[0].path.as_ref().unwrap();
+    assert!(!fixture_dacl(&target.join("reference café.txt")).contains(";;;WD)"));
+    assert_eq!(source_security, fixture_dacl(&resource));
+    fs::write(target.join("reference café.txt"), b"preserved manual edit").unwrap();
+    let conflict = fixture.plan(&["codex"], Scope::User);
+    assert_eq!(conflict.destinations()[0].action(), PlannedAction::Conflict);
+    let report = apply(&conflict, ApplyOptions::default(), &mut |_, _| Ok(()));
+    assert!(report.preflight_error.is_some());
+    assert_eq!(report.outcomes[0].status, OutcomeStatus::NotAttempted);
+    assert_eq!(
+        fs::read(target.join("reference café.txt")).unwrap(),
+        b"preserved manual edit"
+    );
+    assert!(stages(&fixture.root).is_empty());
+}
+#[test]
+fn windows_last_moment_file_empty_directory_and_reparse_winners_are_preserved() {
+    for scenario in ["file", "directory", "reparse"] {
+        let fixture = Fixture::new();
+        let plan = fixture.plan(&["codex"], Scope::User);
+        let outside = fixture.root.join("outside");
+        fs::create_dir(&outside).unwrap();
+        fs::write(outside.join("sentinel"), b"untouched").unwrap();
+        let mut reached = false;
+        let report = apply(&plan, ApplyOptions::default(), &mut |phase, path| {
+            if phase == Phase::BeforeCommit {
+                reached = true;
+                match scenario {
+                    "file" => fs::write(path, b"winner")?,
+                    "directory" => fs::create_dir(path)?,
+                    "reparse" => std::os::windows::fs::symlink_dir(&outside, path)
+                        .expect("required winner reparse fixture privilege"),
+                    _ => unreachable!(),
+                }
+            }
+            Ok(())
+        });
+        assert!(reached);
+        assert!(
+            matches!(report.outcomes[0].status, OutcomeStatus::Failed(_)),
+            "{report:?}"
+        );
+        let path = plan.destinations()[0].path().unwrap();
+        match scenario {
+            "file" => assert_eq!(fs::read(path).unwrap(), b"winner"),
+            "directory" => assert_eq!(fs::read_dir(path).unwrap().count(), 0),
+            "reparse" => {
+                assert!(fs::symlink_metadata(path).unwrap().file_type().is_symlink());
+                fs::remove_dir(path).unwrap();
+            }
+            _ => unreachable!(),
+        }
+        assert_eq!(fs::read(outside.join("sentinel")).unwrap(), b"untouched");
+        assert!(stages(&fixture.root).is_empty(), "{report:?}");
+    }
+}
+#[test]
+fn windows_source_and_stage_mutations_fail_before_commit_without_touching_outside_data() {
+    for scenario in [
+        "source-bytes",
+        "source-reparse",
+        "stage-bytes",
+        "stage-extra",
+    ] {
+        let fixture = Fixture::new();
+        let plan = fixture.plan(&["codex"], Scope::User);
+        let outside = fixture.root.join("outside-sentinel");
+        fs::write(&outside, b"outside unchanged").unwrap();
+        let mut reached = false;
+        let report = apply(&plan, ApplyOptions::default(), &mut |phase, path| {
+            if !reached
+                && scenario == "source-bytes"
+                && phase == Phase::AfterSourceRead
+                && path.ends_with("reference café.txt")
+            {
+                reached = true;
+                fs::write(path, b"modified resource bytes")?;
+            }
+            if !reached
+                && scenario == "source-reparse"
+                && phase == Phase::BeforeCopyFile
+                && path.ends_with("reference café.txt")
+            {
+                reached = true;
+                fs::remove_file(path)?;
+                std::os::windows::fs::symlink_file(&outside, path)
+                    .expect("required source-swap reparse privilege");
+            }
+            if !reached && phase == Phase::AfterStage && scenario.starts_with("stage-") {
+                reached = true;
+                let payload = path.join("sample");
+                if scenario == "stage-bytes" {
+                    fs::write(
+                        payload.join("reference café.txt"),
+                        b"modified resource bytes",
+                    )?;
+                } else {
+                    fs::write(payload.join("unowned extra"), b"foreign entry")?;
+                }
+            }
+            Ok(())
+        });
+        assert!(reached, "{scenario}");
+        assert!(
+            matches!(report.outcomes[0].status, OutcomeStatus::Failed(_)),
+            "{scenario}: {report:?}"
+        );
+        assert!(!plan.destinations()[0].path().unwrap().exists());
+        assert_eq!(fs::read(outside).unwrap(), b"outside unchanged");
+        if scenario == "stage-extra" {
+            assert!(!report.cleanup_errors.is_empty());
+            let retained = stages(&fixture.root);
+            assert_eq!(retained.len(), 1, "{report:?}");
+            assert_eq!(
+                fs::read(retained[0].join("sample/unowned extra")).unwrap(),
+                b"foreign entry"
+            );
+        } else {
+            assert!(stages(&fixture.root).is_empty(), "{scenario}: {report:?}");
+        }
+    }
+}
+#[test]
+fn windows_two_installs_race_at_native_commit_with_exactly_one_winner() {
+    use std::{sync::mpsc, thread, time::Duration};
+    let fixture = Fixture::new();
+    fs::create_dir_all(
+        fixture
+            .context
+            .user_home
+            .as_ref()
+            .unwrap()
+            .join(".agents/skills"),
+    )
+    .unwrap();
+    let first = fixture.plan(&["codex"], Scope::User);
+    let second = fixture.plan(&["codex"], Scope::User);
+    let (ready_tx, ready_rx) = mpsc::channel();
+    let mut releases = vec![];
+    let mut workers = vec![];
+    for plan in [first, second] {
+        let ready_tx = ready_tx.clone();
+        let (release_tx, release_rx) = mpsc::sync_channel(1);
+        releases.push(release_tx);
+        workers.push(thread::spawn(move || {
+            apply(&plan, ApplyOptions::default(), &mut |phase, _| {
+                if phase == Phase::BeforeCommit {
+                    ready_tx
+                        .send(())
+                        .map_err(|_| io::Error::other("commit readiness disconnected"))?;
+                    release_rx
+                        .recv_timeout(Duration::from_secs(10))
+                        .map_err(|_| {
+                            io::Error::new(io::ErrorKind::TimedOut, "bounded commit release")
+                        })?;
+                }
+                Ok(())
+            })
+        }));
+    }
+    drop(ready_tx);
+    let readiness = (0..2)
+        .map(|_| ready_rx.recv_timeout(Duration::from_secs(10)))
+        .collect::<Vec<_>>();
+    for release in releases {
+        let _ = release.send(());
+    }
+    let reports = workers
+        .into_iter()
+        .map(|worker| worker.join())
+        .collect::<Vec<_>>();
+    assert!(readiness.iter().all(Result::is_ok), "{readiness:?}");
+    let reports = reports.into_iter().map(Result::unwrap).collect::<Vec<_>>();
+    assert_eq!(
+        reports
+            .iter()
+            .filter(|report| report.outcomes[0].status == OutcomeStatus::Created)
+            .count(),
+        1,
+        "{reports:?}"
+    );
+    assert_eq!(
+        reports
+            .iter()
+            .filter(|report| matches!(report.outcomes[0].status, OutcomeStatus::Failed(_)))
+            .count(),
+        1,
+        "{reports:?}"
+    );
+    assert!(
+        reports
+            .iter()
+            .all(|report| report.cleanup_errors.is_empty()),
+        "{reports:?}"
+    );
+    let path = reports[0].outcomes[0].path.as_ref().unwrap();
+    assert_eq!(
+        fs::read(path.join("SKILL.md")).unwrap(),
+        fs::read(fixture.source.join("SKILL.md")).unwrap()
+    );
+    assert!(stages(&fixture.root).is_empty());
+}
