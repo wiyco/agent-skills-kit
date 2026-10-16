@@ -42,7 +42,7 @@ impl Default for InventoryLimits {
     }
 }
 impl InventoryLimits {
-    fn validate(self) -> bool {
+    pub(crate) fn validate(self) -> bool {
         (1..=65536).contains(&self.max_entries)
             && (1..=256 * 1024 * 1024).contains(&self.max_file_bytes)
             && (1..=1024 * 1024 * 1024).contains(&self.max_total_bytes)
@@ -128,6 +128,11 @@ impl SourceInventory {
     pub fn total_bytes(&self) -> u64 {
         self.total_bytes
     }
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub(crate) fn retained_root(&self) -> &Arc<File> {
+        &self.root_handle
+    }
+
     /// Re-observe the retained root without resolving its pathname.
     ///
     /// Later planning must also revalidate pathname identity and every descendant;

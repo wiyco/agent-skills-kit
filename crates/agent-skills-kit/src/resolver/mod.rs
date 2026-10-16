@@ -294,7 +294,10 @@ pub fn resolve_targets<'a>(
     Ok(destinations.into_values().collect())
 }
 
-fn add_evidence_warnings(evidence: &RuleEvidence, warnings: &mut BTreeSet<ResolutionWarning>) {
+pub(crate) fn add_evidence_warnings(
+    evidence: &RuleEvidence,
+    warnings: &mut BTreeSet<ResolutionWarning>,
+) {
     if evidence.discovery_tests.is_empty() {
         warnings.insert(ResolutionWarning::HostDiscoveryUntested);
     }
