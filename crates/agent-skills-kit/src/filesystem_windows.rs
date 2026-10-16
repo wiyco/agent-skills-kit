@@ -233,6 +233,26 @@ pub(crate) fn open_root(path: &Path) -> io::Result<File> {
 
 /// Single-component lookup/create relative to a retained parent; no path fallback.
 pub(crate) fn child(parent: &File, name: &OsStr, kind: Kind, create: bool) -> io::Result<File> {
+    child_impl(parent, name, kind, create, ptr::null_mut())
+}
+
+#[cfg(test)]
+pub(crate) fn create_with_security(
+    parent: &File,
+    name: &OsStr,
+    kind: Kind,
+    descriptor: &security::creation::Descriptor,
+) -> io::Result<File> {
+    child_impl(parent, name, kind, true, descriptor.as_ptr())
+}
+
+fn child_impl(
+    parent: &File,
+    name: &OsStr,
+    kind: Kind,
+    create: bool,
+    descriptor: windows_sys::Win32::Security::PSECURITY_DESCRIPTOR,
+) -> io::Result<File> {
     if stamp(parent)?.kind != Kind::Directory {
         return Err(invalid("directory parent required"));
     }
@@ -248,6 +268,7 @@ pub(crate) fn child(parent: &File, name: &OsStr, kind: Kind, create: bool) -> io
         RootDirectory: parent.as_raw_handle(),
         ObjectName: &native_name,
         Attributes: OBJ_CASE_INSENSITIVE,
+        SecurityDescriptor: descriptor,
         ..Default::default()
     };
     let mut handle = ptr::null_mut();
