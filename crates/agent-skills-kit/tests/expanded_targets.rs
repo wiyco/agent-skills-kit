@@ -124,6 +124,13 @@ fn native_writes_remain_distinct(target: &str) {
     native_writes_with_override(target, None);
 }
 fn native_writes_with_override(target: &str, native_override: Option<&str>) {
+    native_writes_with_expected_overlap(target, native_override, true);
+}
+fn native_writes_with_expected_overlap(
+    target: &str,
+    native_override: Option<&str>,
+    shared_reader: bool,
+) {
     for scope in [Scope::User, Scope::Project] {
         let fixture = Fixture::new();
         let source = fixture.0.join("source/sample");
@@ -171,11 +178,12 @@ fn native_writes_with_override(target: &str, native_override: Option<&str>) {
         );
         let codex = resolve(&catalog, "codex", scope, &context).unwrap();
         let selected = resolve(&catalog, target, scope, &context).unwrap();
-        assert!(
+        assert_eq!(
             selected
                 .discovery
                 .iter()
-                .any(|reader| reader.location.path == codex.preferred_write.path)
+                .any(|reader| reader.location.path == codex.preferred_write.path),
+            shared_reader
         );
         assert_ne!(selected.preferred_write.path, codex.preferred_write.path);
         let report = apply_plan(&plan, ApplyOptions::default());
@@ -1091,4 +1099,114 @@ fn factory_droid_native_and_both_compatibility_roots() {
         resolve(&catalog, "factory-droid-cli", Scope::Project, &context),
         Err(ResolveError::MissingContext(ContextBase::Project))
     ));
+}
+
+#[test]
+fn qwen_code_native_and_alternate_writes_are_not_fork_readers() {
+    native_writes_with_expected_overlap("qwen-code-cli", None, false);
+    native_writes_with_expected_overlap("qwen-code-cli", Some("QWEN_HOME"), false);
+}
+#[test]
+fn qwen_code_home_override_and_unshared_reader_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "QWEN_RUNTIME_DIR",
+        "QWEN_CODE_HOME",
+        "XDG_CONFIG_HOME",
+        "GEMINI_CLI_HOME",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "unrelated or unverified relocation".into());
+    }
+    let target = catalog.get("qwen-code-cli").unwrap();
+    assert_eq!(target.product_id, "qwen-code");
+    assert_eq!(target.variant, "cli");
+    for (scope, root) in [
+        (Scope::User, context.user_home.as_ref().unwrap()),
+        (Scope::Project, context.project_root.as_ref().unwrap()),
+    ] {
+        let result = resolve(&catalog, "qwen-code-cli", scope, &context).unwrap();
+        assert_eq!(result.preferred_write.path, root.join(".qwen/skills"));
+        assert_eq!(result.discovery.len(), 1);
+        assert_eq!(result.discovery[0].location, result.preferred_write);
+        assert_eq!(result.discovery[0].traversal, DiscoveryTraversal::Exact);
+        assert_eq!(
+            result.preferred_write.evidence.source.as_ref().unwrap().url,
+            if scope == Scope::User {
+                "https://qwenlm.github.io/qwen-code-docs/en/users/configuration/settings/"
+            } else {
+                "https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/"
+            }
+        );
+        assert!(result.preferred_write.evidence.discovery_tests.is_empty());
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            !result
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    let project = resolve(&catalog, "qwen-code-cli", Scope::Project, &context).unwrap();
+    let alternate = context
+        .user_home
+        .as_ref()
+        .unwrap()
+        .join("Qwen alternate 日本語");
+    context
+        .overrides
+        .insert("QWEN_HOME".into(), alternate.clone().into_os_string());
+    context.user_home = None;
+    let user = resolve(&catalog, "qwen-code-cli", Scope::User, &context).unwrap();
+    assert_eq!(user.preferred_write.path, alternate.join("skills"));
+    assert_eq!(
+        user.preferred_write.origin,
+        PathOrigin::Override("QWEN_HOME".into())
+    );
+    assert_eq!(user.discovery.len(), 1);
+    assert_eq!(user.discovery[0].location, user.preferred_write);
+    for value in ["", "relative", "~/.qwen"] {
+        context.overrides.insert("QWEN_HOME".into(), value.into());
+        assert!(matches!(
+            resolve(&catalog, "qwen-code-cli", Scope::User, &context),
+            Err(ResolveError::InvalidOverride { .. })
+        ));
+        assert_eq!(
+            project,
+            resolve(&catalog, "qwen-code-cli", Scope::Project, &context).unwrap()
+        );
+    }
+    context.overrides.remove(&OsString::from("QWEN_HOME"));
+    assert!(matches!(
+        resolve(&catalog, "qwen-code-cli", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "qwen-code-cli", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+    assert!(matches!(
+        resolve(
+            &catalog,
+            "qwen-code-cli",
+            Scope::ApplicationWorkspace,
+            &context
+        ),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    for id in [
+        "qwen",
+        "qwen-code",
+        "qwen-code-ide",
+        "qwen-code-cloud",
+        "qwen-code-extension",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
 }

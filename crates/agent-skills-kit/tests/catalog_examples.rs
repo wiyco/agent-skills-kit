@@ -25,6 +25,7 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             "kilo-code-vscode",
             "kimi-code-cli",
             "opencode",
+            "qwen-code-cli",
             "roo-code-vscode"
         ]
     );
