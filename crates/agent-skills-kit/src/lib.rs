@@ -6,6 +6,10 @@
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod filesystem;
 
+// Native primitives are tested before the public Windows backend is enabled.
+#[cfg(all(windows, test))]
+mod filesystem_windows;
+
 pub mod catalog;
 pub mod executor;
 pub mod planner;
