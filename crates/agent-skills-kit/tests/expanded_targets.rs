@@ -1210,3 +1210,151 @@ fn qwen_code_home_override_and_unshared_reader_boundaries() {
         assert!(catalog.get(id).is_none());
     }
 }
+
+#[test]
+fn pi_native_and_alternate_writes_remain_distinct() {
+    native_writes_with_override("pi-cli", None);
+    native_writes_with_override("pi-cli", Some("PI_CODING_AGENT_DIR"));
+}
+#[test]
+fn pi_current_roots_override_and_reader_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "PI_CODING_AGENT_SESSION_DIR",
+        "XDG_CONFIG_HOME",
+        "PI_PACKAGE_DIR",
+        "PI_HOME",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "legacy or unrelated relocation".into());
+    }
+    let target = catalog.get("pi-cli").unwrap();
+    assert_eq!(target.product_id, "pi");
+    assert_eq!(target.variant, "cli");
+    for (scope, root) in [
+        (Scope::User, context.user_home.as_ref().unwrap()),
+        (Scope::Project, context.project_root.as_ref().unwrap()),
+    ] {
+        let resolved = resolve(&catalog, "pi-cli", scope, &context).unwrap();
+        assert_eq!(
+            resolved.preferred_write.path,
+            root.join(if scope == Scope::User {
+                ".pi/agent/skills"
+            } else {
+                ".pi/skills"
+            })
+        );
+        assert_eq!(resolved.discovery.len(), 2);
+        assert_eq!(
+            resolved
+                .warnings
+                .contains(&ResolutionWarning::AncestorDiscoveryNotExpanded),
+            scope == Scope::Project
+        );
+        assert_eq!(resolved.discovery[0].location, resolved.preferred_write);
+        assert_eq!(
+            resolved.discovery[1].location.path,
+            root.join(".agents/skills")
+        );
+        for reader in &resolved.discovery {
+            assert_eq!(
+                reader.traversal,
+                if scope == Scope::Project && reader.location.path == root.join(".agents/skills") {
+                    DiscoveryTraversal::AncestorsToRepository
+                } else {
+                    DiscoveryTraversal::Exact
+                }
+            );
+            assert_eq!(
+                reader.location.evidence.source.as_ref().unwrap().url,
+                if reader.location.path == root.join(".agents/skills") {
+                    "https://pi.dev/docs/latest/skills"
+                } else {
+                    "https://pi.dev/docs/latest/configuration"
+                }
+            );
+            assert!(reader.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            resolved
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            resolved
+                .warnings
+                .contains(&ResolutionWarning::PlacementNotExclusive)
+        );
+        assert!(
+            !resolved
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    let project = resolve(&catalog, "pi-cli", Scope::Project, &context).unwrap();
+    let alternate = context
+        .user_home
+        .as_ref()
+        .unwrap()
+        .join("alternate Pi 日本語");
+    context.overrides.insert(
+        "PI_CODING_AGENT_DIR".into(),
+        alternate.clone().into_os_string(),
+    );
+    let user = resolve(&catalog, "pi-cli", Scope::User, &context).unwrap();
+    assert_eq!(user.preferred_write.path, alternate.join("skills"));
+    assert_eq!(
+        user.preferred_write.origin,
+        PathOrigin::Override("PI_CODING_AGENT_DIR".into())
+    );
+    assert_eq!(user.discovery[0].location, user.preferred_write);
+    assert_eq!(
+        user.discovery[1].location.path,
+        context.user_home.as_ref().unwrap().join(".agents/skills")
+    );
+    assert_eq!(
+        project,
+        resolve(&catalog, "pi-cli", Scope::Project, &context).unwrap()
+    );
+    let mut no_home = context.clone();
+    no_home.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "pi-cli", Scope::User, &no_home),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    for value in ["", "relative", "~/.pi/agent"] {
+        context
+            .overrides
+            .insert("PI_CODING_AGENT_DIR".into(), value.into());
+        assert!(matches!(
+            resolve(&catalog, "pi-cli", Scope::User, &context),
+            Err(ResolveError::InvalidOverride { .. })
+        ));
+        assert_eq!(
+            project,
+            resolve(&catalog, "pi-cli", Scope::Project, &context).unwrap()
+        );
+    }
+    context
+        .overrides
+        .remove(&OsString::from("PI_CODING_AGENT_DIR"));
+    assert!(matches!(
+        resolve(&catalog, "pi-cli", Scope::ApplicationWorkspace, &context),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "pi-cli", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "pi-cli", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+    for id in ["pi", "pi-sdk", "pi-ide", "pi-durable", "pi-android"] {
+        assert!(catalog.get(id).is_none());
+    }
+}
