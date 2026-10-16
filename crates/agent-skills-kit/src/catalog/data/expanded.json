@@ -226,6 +226,355 @@
         "Gemini Code Assist IDE, web/cloud experiences, link installation and remote acquisition are separate unverified or excluded capabilities.",
         "Selecting Gemini placement does not prevent other documented readers from seeing shared .agents locations; native .gemini writes remain distinct."
       ]
+    },
+    {
+      "id": "cursor-ide",
+      "aliases": [],
+      "product_id": "cursor",
+      "variant": "ide",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".cursor",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://cursor.com/docs/skills",
+                "section": "Skill directories; Nested skill directories",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling local Cursor IDE documentation; minimum host version and actual discovery untested; CLI and cloud variants not inferred"
+              },
+              "resolver_tests": [
+                "expanded_targets::cursor_ide_scopes_and_variant_boundaries",
+                "expanded_targets::cursor_ide_native_writes_are_not_shared_reader_rewrites"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Only the explicit root is resolved; host recursive and nested-project discovery is not enumerated. Native placement tests do not prove host discovery."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://cursor.com/docs/skills",
+                    "section": "Skill directories; Nested skill directories",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling local Cursor IDE documentation; minimum host version and actual discovery untested; CLI and cloud variants not inferred"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cursor_ide_scopes_and_variant_boundaries",
+                    "expanded_targets::cursor_ide_native_writes_are_not_shared_reader_rewrites"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Only the explicit root is resolved; host recursive and nested-project discovery is not enumerated. Native placement tests do not prove host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".cursor",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://cursor.com/docs/skills",
+                    "section": "Skill directories; Nested skill directories",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling local Cursor IDE documentation; minimum host version and actual discovery untested; CLI and cloud variants not inferred"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cursor_ide_scopes_and_variant_boundaries",
+                    "expanded_targets::cursor_ide_native_writes_are_not_shared_reader_rewrites"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Only the explicit root is resolved; host recursive and nested-project discovery is not enumerated. Native placement tests do not prove host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://cursor.com/docs/skills",
+                    "section": "Skill directories; Nested skill directories",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling local Cursor IDE documentation; minimum host version and actual discovery untested; CLI and cloud variants not inferred"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cursor_ide_scopes_and_variant_boundaries",
+                    "expanded_targets::cursor_ide_native_writes_are_not_shared_reader_rewrites"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Only the explicit root is resolved; host recursive and nested-project discovery is not enumerated. Native placement tests do not prove host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".codex",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://cursor.com/docs/skills",
+                    "section": "Skill directories; Nested skill directories",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling local Cursor IDE documentation; minimum host version and actual discovery untested; CLI and cloud variants not inferred"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cursor_ide_scopes_and_variant_boundaries",
+                    "expanded_targets::cursor_ide_native_writes_are_not_shared_reader_rewrites"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Only the explicit root is resolved; host recursive and nested-project discovery is not enumerated. Native placement tests do not prove host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Discovery descriptors identify explicit roots only, not recursive skill-tree or nested-project enumeration.",
+            "Reader order follows the source table and compatibility list; duplicate-name precedence remains unverified."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".cursor",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://cursor.com/docs/skills",
+                "section": "Skill directories; Nested skill directories",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling local Cursor IDE documentation; minimum host version and actual discovery untested; CLI and cloud variants not inferred"
+              },
+              "resolver_tests": [
+                "expanded_targets::cursor_ide_scopes_and_variant_boundaries",
+                "expanded_targets::cursor_ide_native_writes_are_not_shared_reader_rewrites"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Only the explicit root is resolved; host recursive and nested-project discovery is not enumerated. Native placement tests do not prove host discovery."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://cursor.com/docs/skills",
+                    "section": "Skill directories; Nested skill directories",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling local Cursor IDE documentation; minimum host version and actual discovery untested; CLI and cloud variants not inferred"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cursor_ide_scopes_and_variant_boundaries",
+                    "expanded_targets::cursor_ide_native_writes_are_not_shared_reader_rewrites"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Only the explicit root is resolved; host recursive and nested-project discovery is not enumerated. Native placement tests do not prove host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".cursor",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://cursor.com/docs/skills",
+                    "section": "Skill directories; Nested skill directories",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling local Cursor IDE documentation; minimum host version and actual discovery untested; CLI and cloud variants not inferred"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cursor_ide_scopes_and_variant_boundaries",
+                    "expanded_targets::cursor_ide_native_writes_are_not_shared_reader_rewrites"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Only the explicit root is resolved; host recursive and nested-project discovery is not enumerated. Native placement tests do not prove host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://cursor.com/docs/skills",
+                    "section": "Skill directories; Nested skill directories",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling local Cursor IDE documentation; minimum host version and actual discovery untested; CLI and cloud variants not inferred"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cursor_ide_scopes_and_variant_boundaries",
+                    "expanded_targets::cursor_ide_native_writes_are_not_shared_reader_rewrites"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Only the explicit root is resolved; host recursive and nested-project discovery is not enumerated. Native placement tests do not prove host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".codex",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://cursor.com/docs/skills",
+                    "section": "Skill directories; Nested skill directories",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling local Cursor IDE documentation; minimum host version and actual discovery untested; CLI and cloud variants not inferred"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cursor_ide_scopes_and_variant_boundaries",
+                    "expanded_targets::cursor_ide_native_writes_are_not_shared_reader_rewrites"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Only the explicit root is resolved; host recursive and nested-project discovery is not enumerated. Native placement tests do not prove host discovery."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Discovery descriptors identify explicit roots only, not recursive skill-tree or nested-project enumeration.",
+            "Reader order follows the source table and compatibility list; duplicate-name precedence remains unverified."
+          ]
+        }
+      ],
+      "limitations": [
+        "The host-specific .cursor write is an installer choice among documented locations, not a documented duplicate-name precedence rule.",
+        "No relocation override, additional reserved local name or duplicate-name precedence is established by the reviewed sections; compatibility readers do not inherit other hosts configuration overrides.",
+        "Local personal skills are not automatically copied to cloud, remote SSH or self-hosted workers. This installer does not enable Sync Skills or publish to a team; existing host settings remain host-managed.",
+        "Cursor CLI, cloud and remote variants are separate unverified capabilities; local IDE paths are not evidence for those variants.",
+        "Official downloads (https://cursor.com/download, redirected from /downloads; reviewed 2026-10-16) list macOS, Windows and Linux builds. Native resolver/copy tests do not validate an installed Cursor version on these systems."
+      ]
     }
   ]
 }

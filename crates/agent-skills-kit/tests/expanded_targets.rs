@@ -114,6 +114,13 @@ impl Drop for Fixture {
 }
 #[test]
 fn gemini_reader_alias_does_not_rewrite_native_installation() {
+    native_writes_remain_distinct("gemini-cli");
+}
+#[test]
+fn cursor_ide_native_writes_are_not_shared_reader_rewrites() {
+    native_writes_remain_distinct("cursor-ide");
+}
+fn native_writes_remain_distinct(target: &str) {
     for scope in [Scope::User, Scope::Project] {
         let fixture = Fixture::new();
         let source = fixture.0.join("source/sample");
@@ -136,7 +143,7 @@ fn gemini_reader_alias_does_not_rewrite_native_installation() {
                 &catalog,
                 InstallRequest {
                     skills: &sources,
-                    target_ids: &["gemini-cli", "codex-cli", "gemini-cli"],
+                    target_ids: &[target, "codex-cli", target],
                     scope,
                     context: &context,
                     limits: PlanLimits::default(),
@@ -153,12 +160,14 @@ fn gemini_reader_alias_does_not_rewrite_native_installation() {
                 .all(|row| !row.path().unwrap().exists())
         );
         let codex = resolve(&catalog, "codex", scope, &context).unwrap();
-        let gemini = resolve(&catalog, "gemini-cli", scope, &context).unwrap();
-        assert_eq!(
-            gemini.discovery[0].location.path,
-            codex.preferred_write.path
+        let selected = resolve(&catalog, target, scope, &context).unwrap();
+        assert!(
+            selected
+                .discovery
+                .iter()
+                .any(|reader| reader.location.path == codex.preferred_write.path)
         );
-        assert_ne!(gemini.preferred_write.path, codex.preferred_write.path);
+        assert_ne!(selected.preferred_write.path, codex.preferred_write.path);
         let report = apply_plan(&plan, ApplyOptions::default());
         assert!(report.is_successful(), "{report:?}");
         assert!(
@@ -167,7 +176,7 @@ fn gemini_reader_alias_does_not_rewrite_native_installation() {
                 .iter()
                 .all(|row| row.status == OutcomeStatus::Created)
         );
-        for destination in [gemini.preferred_write.path, codex.preferred_write.path] {
+        for destination in [selected.preferred_write.path, codex.preferred_write.path] {
             assert_eq!(
                 fs::read(destination.join("sample/SKILL.md")).unwrap(),
                 fs::read(source.join("SKILL.md")).unwrap()
@@ -182,4 +191,76 @@ fn gemini_reader_alias_does_not_rewrite_native_installation() {
                 .all(|row| row.status == OutcomeStatus::Unchanged)
         );
     }
+}
+
+#[test]
+fn cursor_ide_scopes_and_variant_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in ["CURSOR_HOME", "CLAUDE_CONFIG_DIR", "CODEX_HOME"] {
+        context
+            .overrides
+            .insert(variable.into(), "unverified override".into());
+    }
+    let target = catalog.get("cursor-ide").unwrap();
+    assert_eq!(target.product_id, "cursor");
+    assert_eq!(target.variant, "ide");
+    for (scope, root) in [
+        (Scope::User, context.user_home.as_ref().unwrap()),
+        (Scope::Project, context.project_root.as_ref().unwrap()),
+    ] {
+        let resolved = resolve(&catalog, "cursor-ide", scope, &context).unwrap();
+        assert_eq!(resolved.preferred_write.path, root.join(".cursor/skills"));
+        assert_eq!(resolved.discovery.len(), 4);
+        for (reader, folder) in resolved
+            .discovery
+            .iter()
+            .zip([".agents", ".cursor", ".claude", ".codex"])
+        {
+            assert_eq!(reader.location.path, root.join(folder).join("skills"));
+            assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+            assert_eq!(
+                reader.location.evidence.source.as_ref().unwrap().url,
+                "https://cursor.com/docs/skills"
+            );
+            assert!(reader.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            resolved
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            resolved
+                .warnings
+                .contains(&ResolutionWarning::PlacementNotExclusive)
+        );
+        assert!(
+            !resolved
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    for id in ["cursor", "cursor-cli", "cursor-cloud"] {
+        assert!(catalog.get(id).is_none());
+    }
+    assert!(matches!(
+        resolve(
+            &catalog,
+            "cursor-ide",
+            Scope::ApplicationWorkspace,
+            &context
+        ),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "cursor-ide", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "cursor-ide", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
 }
