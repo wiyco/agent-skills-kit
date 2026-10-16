@@ -42,6 +42,11 @@ jobs:
       - run: rustc -Vv && cargo -V && rustup show active-toolchain
       - run: cargo check --workspace --all-targets --all-features --locked
       - run: cargo test --workspace --all-features --locked
+      - name: Lint Windows-specific unsafe boundaries
+        if: runner.os == 'Windows'
+        run: |
+          rustup component add clippy --toolchain "$DEV_TOOLCHAIN"
+          cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
   quality:
     name: quality
