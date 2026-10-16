@@ -3731,6 +3731,295 @@
         "Install and setup, Install the CLI (https://docs.mistral.ai/vibe/code/cli/install-setup), reviewed 2026-10-16, documents macOS/Linux and a Windows PowerShell tab. Its Windows tab was reviewed from the page data without executing commands. No host or prerequisites were installed or launched.",
         "General portable validation and strict no-link copying remain required. Host allowed-tools metadata is not installer sandboxing. Actual host activation, discovery and invocation remain untested; scripts and hooks are never executed."
       ]
+    },
+    {
+      "id": "amp-cli",
+      "aliases": [],
+      "product_id": "amp",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://ampcode.com/docs/customize/skills",
+                "section": "Creating and Installing Skills; Skill Sources and Precedence",
+                "accessed": "2026-10-16",
+                "applicability": "Current Amp local CLI on macOS/Linux; Windows documented through WSL only, not native Windows; rolling docs, minimum skills version and host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::amp_local_scopes_readers_and_platform_boundaries",
+                "expanded_targets::amp_shared_project_and_distinct_user_copy"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Explicit default local roots only; searched parent directories, recursive enumeration, optional readers, hosted repositories and effective settings are not evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://ampcode.com/docs/customize/skills",
+                    "section": "Creating and Installing Skills; Skill Sources and Precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Amp local CLI on macOS/Linux; Windows documented through WSL only, not native Windows; rolling docs, minimum skills version and host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::amp_local_scopes_readers_and_platform_boundaries",
+                    "expanded_targets::amp_shared_project_and_distinct_user_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit default local roots only; searched parent directories, recursive enumeration, optional readers, hosted repositories and effective settings are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://ampcode.com/docs/customize/skills",
+                    "section": "Creating and Installing Skills; Skill Sources and Precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Amp local CLI on macOS/Linux; Windows documented through WSL only, not native Windows; rolling docs, minimum skills version and host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::amp_local_scopes_readers_and_platform_boundaries",
+                    "expanded_targets::amp_shared_project_and_distinct_user_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit default local roots only; searched parent directories, recursive enumeration, optional readers, hosted repositories and effective settings are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Machine-local/default readers only; host configuration may disable compatibility/global roots. Native Windows is not a documented CLI host; WSL is not a native Windows path mapping."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".config",
+                "agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://ampcode.com/docs/customize/skills",
+                "section": "Creating and Installing Skills; Skill Sources and Precedence",
+                "accessed": "2026-10-16",
+                "applicability": "Current Amp local CLI on macOS/Linux; Windows documented through WSL only, not native Windows; rolling docs, minimum skills version and host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::amp_local_scopes_readers_and_platform_boundaries",
+                "expanded_targets::amp_shared_project_and_distinct_user_copy"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Explicit default local roots only; searched parent directories, recursive enumeration, optional readers, hosted repositories and effective settings are not evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".config",
+                    "agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://ampcode.com/docs/customize/skills",
+                    "section": "Creating and Installing Skills; Skill Sources and Precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Amp local CLI on macOS/Linux; Windows documented through WSL only, not native Windows; rolling docs, minimum skills version and host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::amp_local_scopes_readers_and_platform_boundaries",
+                    "expanded_targets::amp_shared_project_and_distinct_user_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit default local roots only; searched parent directories, recursive enumeration, optional readers, hosted repositories and effective settings are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://ampcode.com/docs/customize/skills",
+                    "section": "Creating and Installing Skills; Skill Sources and Precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Amp local CLI on macOS/Linux; Windows documented through WSL only, not native Windows; rolling docs, minimum skills version and host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::amp_local_scopes_readers_and_platform_boundaries",
+                    "expanded_targets::amp_shared_project_and_distinct_user_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit default local roots only; searched parent directories, recursive enumeration, optional readers, hosted repositories and effective settings are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".config",
+                    "amp",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://ampcode.com/docs/customize/skills",
+                    "section": "Creating and Installing Skills; Skill Sources and Precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Amp local CLI on macOS/Linux; Windows documented through WSL only, not native Windows; rolling docs, minimum skills version and host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::amp_local_scopes_readers_and_platform_boundaries",
+                    "expanded_targets::amp_shared_project_and_distinct_user_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit default local roots only; searched parent directories, recursive enumeration, optional readers, hosted repositories and effective settings are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://ampcode.com/docs/customize/skills",
+                    "section": "Creating and Installing Skills; Skill Sources and Precedence",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Amp local CLI on macOS/Linux; Windows documented through WSL only, not native Windows; rolling docs, minimum skills version and host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::amp_local_scopes_readers_and_platform_boundaries",
+                    "expanded_targets::amp_shared_project_and_distinct_user_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit default local roots only; searched parent directories, recursive enumeration, optional readers, hosted repositories and effective settings are not evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Machine-local/default readers only; host configuration may disable compatibility/global roots. Native Windows is not a documented CLI host; WSL is not a native Windows path mapping."
+          ]
+        }
+      ],
+      "limitations": [
+        "Getting Started With the CLI (https://ampcode.com/docs/cli), reviewed 2026-10-16, explicitly supports macOS, Linux and Windows through WSL. Native Windows is rejected, despite Windows configuration examples elsewhere; WSL requires a Linux process/context and remains untested as a host.",
+        "Preferred writes follow documented project .agents/skills and machine-local --global ~/.config/agents/skills. User scope means machine-local files, not publishing to the personal hosted skills repository. Project placement can coincide with Codex and must retain both target attributions.",
+        "Ordinary local readers preserve their relative precedence: ~/.config/agents, ~/.agents, ~/.config/amp, project .agents, project .claude and ~/.claude, each with skills suffix. Project parent searches are documented without a precise bound in the reviewed skills page, so exact root descriptors do not assert a repository boundary.",
+        "Claude plugin caches, additional amp.skills.path entries, personal/workspace hosted repositories, active plugins and official built-ins are not enumerated or used as write destinations. Recursive discovery up to five levels is host behavior, not a resolver scan.",
+        "Configuration (https://ampcode.com/docs/cli/settings), reviewed 2026-10-16, documents default-false disableClaudeCodeSkills and disableGlobalAgentsSkills. The installer does not parse settings, grant trust, change enablement or guarantee that a copied skill is active.",
+        "No XDG_CONFIG_HOME, AMP_HOME, AMP_CONFIG_DIR or other host relocation is inferred from generic configuration names or --settings-file. Extra paths are additional configuration, not a native write replacement.",
+        "Skills, MCP Servers in Skills states that Amp connects to skill MCP servers on discovery. Copying does not run or connect anything; later host discovery can execute commands or access networks and is not a safety guarantee. No host was launched.",
+        "General portable validation remains required. No additional reserved local name or minimum skills version is established. IDE, macOS/iOS app, Puck, orb/runner, hosted and remote variants remain separate unverified/excluded capabilities."
+      ]
     }
   ]
 }
