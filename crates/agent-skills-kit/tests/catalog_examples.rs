@@ -19,7 +19,8 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             "gemini-cli",
             "github-copilot-cli",
             "github-copilot-vscode",
-            "opencode"
+            "opencode",
+            "roo-code-vscode"
         ]
     );
     assert_eq!(first.get("codex-cli").unwrap().id, "codex");
