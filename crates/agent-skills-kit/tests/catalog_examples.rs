@@ -15,7 +15,14 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
     assert_eq!(first.get("codex-cli").unwrap().id, "codex");
     for target in first.targets() {
         for scope in &target.scopes {
-            assert_eq!(scope.status, SupportStatus::Unverified);
+            assert_eq!(
+                scope.status,
+                if target.id == "codex" {
+                    SupportStatus::Documented
+                } else {
+                    SupportStatus::Unverified
+                }
+            );
             for rule in scope
                 .preferred_write
                 .iter()
@@ -23,7 +30,10 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             {
                 assert_eq!(rule.evidence.documentation, DocumentationStatus::Reviewed);
                 assert!(rule.evidence.source.is_some());
-                assert!(rule.evidence.resolver_tests.is_empty());
+                assert_eq!(
+                    rule.evidence.resolver_tests.is_empty(),
+                    target.id != "codex"
+                );
                 assert!(rule.evidence.discovery_tests.is_empty());
             }
         }

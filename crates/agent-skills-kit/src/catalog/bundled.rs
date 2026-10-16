@@ -9,19 +9,21 @@ struct Seed {
     user: &'static [&'static str],
     ancestors: bool,
     compatibility: bool,
+    status: SupportStatus,
+    resolver_tests: &'static [&'static str],
 }
 
 impl Catalog {
     /// Load the bundled documentation candidates without filesystem/network access.
     ///
-    /// All scopes remain unverified for installation until resolver/platform
-    /// coverage is implemented. Schema validation is not host discovery testing.
+    /// Documented scopes have adapter resolver coverage, not proof of host
+    /// discovery or safe installation. Other candidates remain unverified.
     ///
     /// ```
     /// use agent_skills_kit::catalog::{Catalog, SupportStatus};
     /// let catalog = Catalog::bundled()?;
     /// let codex = catalog.get("codex-cli").expect("bundled alias");
-    /// assert!(codex.scopes.iter().all(|scope| scope.status == SupportStatus::Unverified));
+    /// assert!(codex.scopes.iter().all(|scope| scope.status == SupportStatus::Documented));
     /// # Ok::<(), agent_skills_kit::catalog::CatalogError>(())
     /// ```
     pub fn bundled() -> Result<Self, CatalogError> {
@@ -35,6 +37,11 @@ impl Catalog {
                 user: &[".agents", "skills"],
                 ancestors: true,
                 compatibility: false,
+                status: SupportStatus::Documented,
+                resolver_tests: &[
+                    "core_targets::codex_explicit_scopes_and_alias",
+                    "core_targets::codex_context_and_variant_boundaries",
+                ],
             },
             Seed {
                 id: "claude-code",
@@ -45,6 +52,8 @@ impl Catalog {
                 user: &[".claude", "skills"],
                 ancestors: false,
                 compatibility: false,
+                status: SupportStatus::Unverified,
+                resolver_tests: &[],
             },
             Seed {
                 id: "opencode",
@@ -55,6 +64,8 @@ impl Catalog {
                 user: &[".config", "opencode", "skills"],
                 ancestors: true,
                 compatibility: true,
+                status: SupportStatus::Unverified,
+                resolver_tests: &[],
             },
         ];
         Self::new(CatalogDocument {
@@ -79,12 +90,13 @@ impl Seed {
                     accessed: "2026-10-16".to_owned(),
                     applicability: "Rolling CLI documentation; exact host version and OS applicability are not established".to_owned(),
                 }),
-                resolver_tests: Vec::new(),
+                resolver_tests: self.resolver_tests.iter().map(|test| (*test).to_owned()).collect(),
                 discovery_tests: Vec::new(),
-                limitations: vec![
-                    "Documentation observations only; no resolver or real-host discovery tests yet".to_owned(),
-                    "Overrides require separate review before enabling an adapter".to_owned(),
-                ],
+                limitations: vec![if self.status == SupportStatus::Documented {
+                    "Native lexical resolution tested; exact host versions, OS-specific discovery and real-host loading remain unverified".to_owned()
+                } else {
+                    "Documentation observations only; overrides and native adapter resolution still require review and testing".to_owned()
+                }],
             },
         }
     }
@@ -110,13 +122,12 @@ impl Seed {
         }
         ScopeDefinition {
             scope,
-            status: SupportStatus::Unverified,
+            status: self.status,
             platforms: vec![Platform::Linux, Platform::Macos, Platform::Windows],
             preferred_write: Some(preferred),
             discovery,
             limitations: vec![
-                "Platform candidates only; adapter review and native tests are still required"
-                    .to_owned(),
+                "Platform lists describe native path resolution candidates; they do not establish host-version or OS discovery support".to_owned(),
             ],
         }
     }
@@ -126,16 +137,28 @@ impl Seed {
             self.scope(Scope::Project, PathBase::Project, self.project),
             self.scope(Scope::User, PathBase::Home, self.user),
         ];
+        let mut limitations = vec![
+            "Only explicit local project/user placements are modeled; admin, bundled, plugin, cloud and nested/additional-directory semantics are not enabled".to_owned(),
+            "Selecting a placement does not imply exclusive host visibility".to_owned(),
+        ];
+        if self.id == "codex" {
+            limitations.extend([
+                "OpenCode documents reading .agents/skills too; selecting Codex does not prevent OpenCode discovery".to_owned(),
+                "Codex keeps duplicate skill names separate and follows skill-folder symlinks; this installer rejects descendant links".to_owned(),
+                "CODEX_HOME is not interpreted as an authoring-path override: its state/skills description does not establish a replacement for $HOME/.agents/skills (environment-variables, Core locations; config-advanced, Config and state locations; learn.chatgpt.com/docs/config-file; reviewed 2026-10-16). Alternate or legacy state skill roots remain unverified".to_owned(),
+            ]);
+        }
         TargetDefinition {
             id: self.id.to_owned(),
-            aliases: self.aliases.iter().map(|alias| (*alias).to_owned()).collect(),
+            aliases: self
+                .aliases
+                .iter()
+                .map(|alias| (*alias).to_owned())
+                .collect(),
             product_id: self.id.to_owned(),
             variant: "cli".to_owned(),
             scopes,
-            limitations: vec![
-                "Only explicit local project/user placements are modeled; admin, bundled, plugin, cloud and nested/additional-directory semantics are not enabled".to_owned(),
-                "Selecting a placement does not imply exclusive host visibility".to_owned(),
-            ],
+            limitations,
         }
     }
 }
