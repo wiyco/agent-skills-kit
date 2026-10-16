@@ -1,7 +1,9 @@
 use agent_skills_kit::planner::*;
+#[cfg(not(windows))]
+use std::path::Path;
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::atomic::{AtomicU64, Ordering},
 };
 
