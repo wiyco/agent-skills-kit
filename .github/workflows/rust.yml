@@ -92,6 +92,12 @@ jobs:
         run: |
           cargo run --quiet -p agent-skills-kit --example catalog_markdown --locked > docs/targets.md
           git diff --exit-code -- docs/targets.md
+      - name: Test offline maintenance evidence audit
+        run: |
+          python --version
+          cargo run --quiet -p agent-skills-kit --example catalog_json --locked > "$RUNNER_TEMP/ask-catalog.json"
+          python -B .github/scripts/catalog_drift.py --catalog "$RUNNER_TEMP/ask-catalog.json" > "$RUNNER_TEMP/ask-evidence-report.json"
+          python -B -m unittest discover -s .github/scripts/tests -v
       - name: Prove formatting and lint gates reject regressions
         run: python .github/scripts/verify-quality-gates.py
 
