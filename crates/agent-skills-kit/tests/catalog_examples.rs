@@ -10,7 +10,13 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             .targets()
             .map(|target| target.id.as_str())
             .collect::<Vec<_>>(),
-        ["claude-code", "codex", "gemini-cli", "opencode"]
+        [
+            "claude-code",
+            "codex",
+            "cursor-ide",
+            "gemini-cli",
+            "opencode"
+        ]
     );
     assert_eq!(first.get("codex-cli").unwrap().id, "codex");
     for target in first.targets() {
