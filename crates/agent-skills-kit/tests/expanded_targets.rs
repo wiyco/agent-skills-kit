@@ -1855,3 +1855,83 @@ fn crush_xdg_native_and_reader_boundaries() {
         assert!(catalog.get(id).is_none());
     }
 }
+
+#[test]
+fn kiro_ide_native_copy_is_not_a_compatibility_rewrite() {
+    native_writes_with_expected_overlap("kiro-ide", None, |_| false);
+}
+
+#[test]
+fn kiro_ide_scopes_and_cli_override_boundary() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "KIRO_HOME",
+        "KIRO_CONFIG_DIR",
+        "XDG_CONFIG_HOME",
+        "CLAUDE_CONFIG_DIR",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "CLI-only or unverified relocation".into());
+    }
+    let target = catalog.get("kiro-ide").unwrap();
+    assert_eq!(target.product_id, "kiro");
+    assert_eq!(target.variant, "ide");
+    assert!(target.aliases.is_empty());
+    assert!(
+        target
+            .limitations
+            .iter()
+            .any(|gap| gap.contains("all skills scopes merge"))
+    );
+    for (scope, root) in [
+        (Scope::User, context.user_home.as_ref().unwrap()),
+        (Scope::Project, context.project_root.as_ref().unwrap()),
+    ] {
+        let result = resolve(&catalog, "kiro-ide", scope, &context).unwrap();
+        assert_eq!(result.preferred_write.path, root.join(".kiro/skills"));
+        assert_eq!(result.discovery.len(), 1);
+        assert_eq!(result.discovery[0].location, result.preferred_write);
+        assert_eq!(result.discovery[0].traversal, DiscoveryTraversal::Exact);
+        assert_eq!(
+            result.preferred_write.evidence.source.as_ref().unwrap().url,
+            "https://kiro.dev/docs/skills/"
+        );
+        assert!(result.preferred_write.evidence.discovery_tests.is_empty());
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            !result
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    for id in [
+        "kiro",
+        "kiro-web",
+        "kiro-mobile",
+        "kiro-crew",
+        "kiro-acp",
+        "kiro-vscode",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+    assert!(matches!(
+        resolve(&catalog, "kiro-ide", Scope::ApplicationWorkspace, &context),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "kiro-ide", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "kiro-ide", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+}

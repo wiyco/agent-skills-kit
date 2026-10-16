@@ -4391,6 +4391,169 @@
         "Host disabled-skills and invocation settings remain unchanged. crushrc is executable Bash configuration; the installer neither reads/evaluates it nor launches Crush. Strict portable validation/no-link copy remains mandatory; copied skill scripts never run.",
         "Android, BSD, IDE, remote and other architecture/filesystem hosts remain outside native validation. Real-host discovery, activation and installed versions are untested; successful copying is not a sandbox or host-discovery guarantee."
       ]
+    },
+    {
+      "id": "kiro-ide",
+      "aliases": [],
+      "product_id": "kiro",
+      "variant": "ide",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".kiro",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://kiro.dev/docs/skills/",
+                "section": "What are skills? capability table; Skill scope",
+                "accessed": "2026-10-16",
+                "applicability": "Current Kiro IDE 1.x local project/global skills; rolling documentation, minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::kiro_ide_scopes_and_cli_override_boundary",
+                "expanded_targets::kiro_ide_native_copy_is_not_a_compatibility_rewrite"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Explicit caller project/home roots only; no IDE process, multi-root selection, cloud configuration or effective discovery evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".kiro",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kiro.dev/docs/skills/",
+                    "section": "What are skills? capability table; Skill scope",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Kiro IDE 1.x local project/global skills; rolling documentation, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kiro_ide_scopes_and_cli_override_boundary",
+                    "expanded_targets::kiro_ide_native_copy_is_not_a_compatibility_rewrite"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller project/home roots only; no IDE process, multi-root selection, cloud configuration or effective discovery evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Default explicit local roots only; CLI override, cloud configuration, custom resources and effective duplicate precedence are not modeled."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".kiro",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://kiro.dev/docs/skills/",
+                "section": "What are skills? capability table; Skill scope",
+                "accessed": "2026-10-16",
+                "applicability": "Current Kiro IDE 1.x local project/global skills; rolling documentation, minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::kiro_ide_scopes_and_cli_override_boundary",
+                "expanded_targets::kiro_ide_native_copy_is_not_a_compatibility_rewrite"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Explicit caller project/home roots only; no IDE process, multi-root selection, cloud configuration or effective discovery evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".kiro",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://kiro.dev/docs/skills/",
+                    "section": "What are skills? capability table; Skill scope",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Kiro IDE 1.x local project/global skills; rolling documentation, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kiro_ide_scopes_and_cli_override_boundary",
+                    "expanded_targets::kiro_ide_native_copy_is_not_a_compatibility_rewrite"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller project/home roots only; no IDE process, multi-root selection, cloud configuration or effective discovery evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Default explicit local roots only; CLI override, cloud configuration, custom resources and effective duplicate precedence are not modeled."
+          ]
+        }
+      ],
+      "limitations": [
+        "Agent Skills capability table explicitly identifies IDE project/global skills, rather than inferring them from the CLI. Native project/home .kiro/skills are the only modeled roots; no agents/Claude compatibility reader is invented.",
+        "Configuration scopes, File paths (https://kiro.dev/docs/configuration/), reviewed 2026-10-16, independently establishes <project-root>/.kiro/skills. Application workspace and IDE multi-root folder selection are not inferred from this explicit project root.",
+        "KIRO_HOME is documented in CLI Settings and V3 CLI release notes; those sources do not establish IDE skill relocation. It is not applied to this variant. Other XDG/Kiro environment relocations remain unverified, not guessed.",
+        "Skills says workspace same-name skills take priority over global; Configuration scopes, Resolving conflicts says all skills scopes merge. The roots agree but exact effective duplicate activation needs clarification/host verification. Reader order is not a precedence guarantee.",
+        "Custom agent skill:// resources, globs, import actions, cloud configuration upload/application, managed stores, trust and activation remain host-managed. No root is inferred for Web/Mobile/Crew/ACP or other IDE integrations.",
+        "Installation, System requirements (https://kiro.dev/docs/getting-started/installation/; updated 2026-10-05, reviewed 2026-10-16) explicitly lists IDE macOS, Windows 10/11 and Linux. Native library Windows Server NTFS tests are not installed IDE, Windows desktop/ARM or distro-version validation.",
+        "General portable metadata/folder matching and strict no-link copying remain required. No additional reserved local name or minimum skills version is established. No host, import/upload, credentials, models or skill scripts were run."
+      ]
     }
   ]
 }
