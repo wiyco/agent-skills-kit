@@ -3286,6 +3286,245 @@
         "Official Quick Start, Installing Qwen Code (https://qwenlm.github.io/qwen-code-docs/en/blog/quickstart/getting-started/; published 2026-07-13, updated 2026-09-04, reviewed 2026-10-16) identifies Windows/macOS/Linux. No host installer or model was run.",
         "IDE/ACP, daemon/browser/cloud, extension and bundled variants remain separate unverified/excluded capabilities. Invocation hooks and scripts are never executed; minimum host version and real discovery remain untested."
       ]
+    },
+    {
+      "id": "pi-cli",
+      "aliases": [],
+      "product_id": "pi",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".pi",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://pi.dev/docs/latest/configuration",
+                "section": "Project .pi directory",
+                "accessed": "2026-10-16",
+                "applicability": "Pi 1.0 current Earendil terminal CLI; latest documentation, minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::pi_current_roots_override_and_reader_boundaries",
+                "expanded_targets::pi_native_and_alternate_writes_remain_distinct"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Explicit caller roots only; no host, recursive filesystem scan, trust or effective configuration evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".pi",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://pi.dev/docs/latest/configuration",
+                    "section": "Project .pi directory",
+                    "accessed": "2026-10-16",
+                    "applicability": "Pi 1.0 current Earendil terminal CLI; latest documentation, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::pi_current_roots_override_and_reader_boundaries",
+                    "expanded_targets::pi_native_and_alternate_writes_remain_distinct"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller roots only; no host, recursive filesystem scan, trust or effective configuration evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://pi.dev/docs/latest/skills",
+                    "section": "Add it to Pi; Write portable frontmatter",
+                    "accessed": "2026-10-16",
+                    "applicability": "Pi 1.0 current Earendil terminal CLI; latest documentation, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::pi_current_roots_override_and_reader_boundaries",
+                    "expanded_targets::pi_native_and_alternate_writes_remain_distinct"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller roots only; no host, recursive filesystem scan, trust or effective configuration evaluated."
+                  ]
+                }
+              },
+              "traversal": "ancestors_to_repository"
+            }
+          ],
+          "limitations": [
+            "Project trust, recursive skill enumeration, extra configured paths and package resources remain host-managed. Reader list order is not a claim of host duplicate precedence."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "environment",
+                "variable": "PI_CODING_AGENT_DIR",
+                "fallback": {
+                  "base": "home",
+                  "components": [
+                    ".pi",
+                    "agent"
+                  ]
+                }
+              },
+              "components": [
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://pi.dev/docs/latest/configuration",
+                "section": "Agent directory",
+                "accessed": "2026-10-16",
+                "applicability": "Pi 1.0 current Earendil terminal CLI; latest documentation, minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::pi_current_roots_override_and_reader_boundaries",
+                "expanded_targets::pi_native_and_alternate_writes_remain_distinct"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Explicit caller roots only; no host, recursive filesystem scan, trust or effective configuration evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "environment",
+                    "variable": "PI_CODING_AGENT_DIR",
+                    "fallback": {
+                      "base": "home",
+                      "components": [
+                        ".pi",
+                        "agent"
+                      ]
+                    }
+                  },
+                  "components": [
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://pi.dev/docs/latest/configuration",
+                    "section": "Agent directory",
+                    "accessed": "2026-10-16",
+                    "applicability": "Pi 1.0 current Earendil terminal CLI; latest documentation, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::pi_current_roots_override_and_reader_boundaries",
+                    "expanded_targets::pi_native_and_alternate_writes_remain_distinct"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller roots only; no host, recursive filesystem scan, trust or effective configuration evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://pi.dev/docs/latest/skills",
+                    "section": "Add it to Pi; Write portable frontmatter",
+                    "accessed": "2026-10-16",
+                    "applicability": "Pi 1.0 current Earendil terminal CLI; latest documentation, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::pi_current_roots_override_and_reader_boundaries",
+                    "expanded_targets::pi_native_and_alternate_writes_remain_distinct"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller roots only; no host, recursive filesystem scan, trust or effective configuration evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Project trust, recursive skill enumeration, extra configured paths and package resources remain host-managed. Reader list order is not a claim of host duplicate precedence."
+          ]
+        }
+      ],
+      "limitations": [
+        "Current Pi 1.0 documentation at pi.dev describes the Earendil terminal CLI. No paths or aliases are inferred from archived/older package variants, SDK options, extensions or remote services.",
+        "Configuration, Agent directory explicitly places user skills under PI_CODING_AGENT_DIR/skills with absent-only ~/.pi/agent fallback; the independent ~/.agents/skills reader stays under explicit home. Empty/relative/tilde overrides are rejected by installer policy, not asserted host behavior.",
+        "Project .pi/skills is independent of user relocation. Only the .agents project reader carries documented ancestor-to-repository semantics; the resolver describes rather than scans ancestors or recursively enumerates skills.",
+        "Project trust, resource settings, packages, standalone Markdown skills and SDK agentDir are not evaluated or changed. No override is inferred from PI_CODING_AGENT_SESSION_DIR, PI_PACKAGE_DIR or XDG_CONFIG_HOME.",
+        "Skills, Write portable frontmatter documents first-discovered name collisions with a warning but not complete location precedence. General stricter portable metadata and folder/frontmatter agreement remain required; no additional reserved local name is established.",
+        "Quickstart, Install Pi (https://pi.dev/docs/latest/quickstart), and Run Pi on Windows, Choose native Windows or WSL (https://pi.dev/docs/latest/windows), reviewed 2026-10-16, identify macOS/Linux and native Windows with Git Bash. No installer, shell prerequisite or model was run. Android, SDK, IDE, Durable and remote variants remain excluded/unverified.",
+        "Successful native library copying is not real-host discovery, invocation or minimum-version validation. Skill payloads and supporting scripts are never executed."
+      ]
     }
   ]
 }
