@@ -52,7 +52,7 @@ pub(super) fn payload(
             &output_label,
             cleanup,
         )?;
-        payload.record(relative, entry.kind, output, &output_label)?;
+        payload.record(relative, entry.kind, output, &output_label, entry.digest)?;
         modes.push((relative.clone(), entry.output_mode));
         if entry.kind == SourceEntryKind::Directory {
             sources.insert(relative.clone(), Arc::new(input));
@@ -132,6 +132,44 @@ pub(super) fn payload(
                 observed,
             )
         })?;
+    }
+    Ok(())
+}
+
+/// Verify original approved bytes immediately before commit; Windows metadata
+/// alone is not proof that a same-length staged write did not happen.
+pub(super) fn verify(record: &Record, file: &File, path: &Path) -> Result<(), ApplyError> {
+    let mut reader = file;
+    reader
+        .seek(SeekFrom::Start(0))
+        .map_err(|observed| io_error(path, "rewind final staged byte verification", observed))?;
+    let mut bytes = 0u64;
+    let mut digest = blake3::Hasher::new();
+    let mut buffer = [0u8; 8192];
+    loop {
+        let allowed = (record.stamp.length - bytes)
+            .saturating_add(1)
+            .min(buffer.len() as u64) as usize;
+        let count = match reader.read(&mut buffer[..allowed]) {
+            Err(observed) if observed.kind() == io::ErrorKind::Interrupted => continue,
+            result => {
+                result.map_err(|observed| io_error(path, "verify final staged bytes", observed))?
+            }
+        };
+        if count == 0 {
+            break;
+        }
+        bytes += count as u64;
+        if bytes > record.stamp.length {
+            return Err(error(path, ApplyErrorKind::StageChanged));
+        }
+        digest.update(&buffer[..count]);
+    }
+    if bytes != record.stamp.length
+        || Some(*digest.finalize().as_bytes()) != record.digest
+        || metadata(file, path)? != record.stamp
+    {
+        return Err(error(path, ApplyErrorKind::StageChanged));
     }
     Ok(())
 }

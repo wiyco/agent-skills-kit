@@ -268,6 +268,7 @@ struct Record {
     identity: Identity,
     stamp: EntryStamp,
     security: Vec<u8>,
+    digest: Option<[u8; 32]>,
 }
 struct Payload {
     records: Vec<Record>,
@@ -281,6 +282,7 @@ impl Payload {
         entry: SourceEntryKind,
         file: File,
         label: &Path,
+        digest: Option<[u8; 32]>,
     ) -> Result<(), ApplyError> {
         let stamp = metadata(&file, label)?;
         let security = descriptor(&file, label)?;
@@ -290,6 +292,7 @@ impl Payload {
             identity: stamp.file_identity(),
             stamp,
             security,
+            digest,
         });
         self.live.insert(relative.to_owned(), Arc::new(file));
         Ok(())
@@ -320,6 +323,9 @@ impl Payload {
             if metadata(file, &path)? != record.stamp || descriptor(file, &path)? != record.security
             {
                 return Err(error(&path, ApplyErrorKind::StageChanged));
+            }
+            if record.entry == SourceEntryKind::File {
+                copy::verify(record, file, &path)?;
             }
             if !record.relative.as_os_str().is_empty() {
                 let parent = &self.live[record.relative.parent().expect("relative entry parent")];
@@ -553,7 +559,13 @@ fn install(
             &label,
             cleanup,
         )?;
-        payload.record(Path::new(""), SourceEntryKind::Directory, root, &label)?;
+        payload.record(
+            Path::new(""),
+            SourceEntryKind::Directory,
+            root,
+            &label,
+            None,
+        )?;
         copy::payload(source, &label, context, &mut payload, cleanup, hook)?;
         payload.capture(&label)?;
         checkpoint(hook, Phase::AfterStage, &stage.path)?;

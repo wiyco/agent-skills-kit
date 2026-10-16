@@ -124,6 +124,70 @@ fn stages(root: &Path) -> Vec<PathBuf> {
     result
 }
 #[test]
+fn windows_candidate_final_byte_check_rejects_same_length_stale_timestamp_tampering() {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_BASIC_INFO, FileBasicInfo, SetFileInformationByHandle,
+    };
+    let fixture = Fixture::new();
+    let plan = fixture.plan(&["codex"], Scope::User);
+    let mut reached = false;
+    let report = apply(&plan, ApplyOptions::default(), &mut |phase, path| {
+        if phase == Phase::AfterStage {
+            reached = true;
+            let resource = path.join("sample/reference café.txt");
+            let file = fs::OpenOptions::new()
+                .access_mode(FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE)
+                .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+                .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT)
+                .open(&resource)?;
+            let before = native::stamp(&file)?;
+            let mut bytes = fs::read(&resource)?;
+            bytes[0] ^= 1;
+            fs::write(&resource, bytes)?;
+            let basic = FILE_BASIC_INFO {
+                LastWriteTime: before.modified,
+                ChangeTime: before.changed,
+                ..Default::default()
+            };
+            // SAFETY: owned stage fixture only, live attribute-writer handle and
+            // exact SDK class/layout. Preserve length and restore observed epochs
+            // deliberately so metadata comparison cannot substitute for byte proof.
+            assert_ne!(
+                unsafe {
+                    SetFileInformationByHandle(
+                        file.as_raw_handle(),
+                        FileBasicInfo,
+                        (&basic as *const FILE_BASIC_INFO).cast(),
+                        std::mem::size_of::<FILE_BASIC_INFO>() as u32,
+                    )
+                },
+                0
+            );
+            assert_eq!(native::stamp(&file)?, before);
+        }
+        Ok(())
+    });
+    assert!(reached);
+    assert!(
+        matches!(
+            report.outcomes[0].status,
+            OutcomeStatus::Failed(ApplyError {
+                kind: ApplyErrorKind::StageChanged,
+                ..
+            })
+        ),
+        "{report:?}"
+    );
+    assert!(!plan.destinations()[0].path().unwrap().exists());
+    assert!(stages(&fixture.root).is_empty(), "{report:?}");
+    assert_eq!(
+        fs::read(fixture.source.join("reference café.txt")).unwrap(),
+        b"original resource bytes"
+    );
+}
+
+#[test]
 fn windows_candidate_copies_original_native_names_and_repeats_unchanged() {
     for scope in [Scope::User, Scope::Project] {
         let fixture = Fixture::new();
