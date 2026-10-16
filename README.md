@@ -49,3 +49,5 @@ Local directory input, project/user scope where documented, copy mode, explicit 
 Original project material is licensed under [MIT](LICENSE-MIT) OR [Apache-2.0](LICENSE-APACHE), at your option. Third-party material retains its own terms; see [attribution](docs/attribution.md). License adoption does not authorize publication. See [ADR 0005](docs/adr/0005-naming-licensing-and-reuse.md) for naming and licensing decisions.
 
 This project is independent of the agent products it targets and makes no affiliation claim.
+
+See the [public API guide](docs/api.md) and [standalone consumer](examples/external-consumer) for library use without the CLI.
