@@ -1,6 +1,6 @@
 # Local-copy threat model
 
-Status: proposed v0.1 contract for ASK-008; maintainer review is required before the executor in ASK-010 begins. This document specifies requirements and regression scenarios, not implemented or tested installation guarantees.
+Status: v0.1 contract accepted by the maintainer on 2026-10-16 in ASK-008, before executor implementation. This document specifies requirements and regression scenarios, not implemented or tested installation guarantees.
 
 ## Assets and trust boundaries
 

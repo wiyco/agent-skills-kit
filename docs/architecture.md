@@ -61,7 +61,7 @@ Default to copying regular files and directories only. Reject untrusted descenda
 
 The exact no-follow/no-replace backend is decided in ASK-008 and tested in ASK-012. Checking that a path is absent and then doing an ordinary rename is not a race-free no-clobber implementation. Fail closed when the selected backend cannot meet the promised guarantee.
 
-The [proposed threat model](threat-model.md) makes caller/root trust, supported concurrency, platform capability gates, cleanup ownership, and unsupported adversarial cases explicit. [ADR 0006](adr/0006-native-copy-safety.md) requires maintainer review before executor work; neither document is proof of a working backend.
+The [reviewed threat model](threat-model.md) makes caller/root trust, supported concurrency, platform capability gates, cleanup ownership, and unsupported adversarial cases explicit. [ADR 0006](adr/0006-native-copy-safety.md) records the maintainer's contract review before executor work; neither document is proof of a working backend.
 
 Stage on the destination filesystem, verify copied data, and apply using the reviewed no-replace strategy. Revalidate source and destination preconditions. Handle concurrent changes and interruptions without deleting unrelated data. Strip privilege-bearing file bits; preserve only documented ordinary file/executable intent.
 

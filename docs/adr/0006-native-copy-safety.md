@@ -1,6 +1,6 @@
 # ADR 0006: Anchored access and native no-replace commits
 
-Status: proposed for explicit maintainer review in ASK-008; required before ASK-010.
+Status: accepted by the maintainer on 2026-10-16 in ASK-008, before ASK-010. This approves the documented contract and limits, not unimplemented runtime guarantees.
 
 Adopt the [local-copy threat model](../threat-model.md) as the v0.1 safety contract. Retain the architecture's plan/apply separation and copy-only policy. Root canonicalization is a caller-authorized trust boundary; every descendant remains subject to anchored no-follow validation.
 

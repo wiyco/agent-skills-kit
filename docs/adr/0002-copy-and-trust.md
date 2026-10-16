@@ -1,8 +1,8 @@
 # ADR 0002: Explicit plans, no-clobber copies, bounded trust
 
-Status: proposed; the concrete platform backend must be reviewed in ASK-008.
+Status: accepted direction; the detailed v0.1 contract was reviewed in ASK-008 and recorded in ADR 0006.
 
-The detailed proposed v0.1 contract, implementation gates, and native regression scenarios are in [the threat model](../threat-model.md) and [ADR 0006](0006-native-copy-safety.md). Their maintainer review must be recorded before executor implementation begins.
+The reviewed v0.1 contract, implementation gates, and native regression scenarios are in [the threat model](../threat-model.md) and [ADR 0006](0006-native-copy-safety.md). The maintainer accepted the contract and limits on 2026-10-16; exact implementations still require native evidence.
 
 Plan and apply are separate. Planning can inspect the filesystem but cannot write. Applying revalidates preconditions and uses reviewed staging/no-replace behavior. Conflicting content fails by default; --yes does not bypass that policy.
 
