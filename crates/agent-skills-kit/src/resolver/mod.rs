@@ -268,6 +268,32 @@ pub fn resolve(
     })
 }
 
+/// Resolve a selection once per canonical target ID, in canonical ID order.
+///
+/// Repeated IDs and aliases select the same target. Distinct target IDs retain
+/// separate attribution even if their physical paths coincide; filesystem
+/// destination deduplication belongs to the planner. An empty selection returns
+/// an empty vector. The first failing input returns an error without any partial
+/// result or side effect. This does not compare installed skill names/content.
+pub fn resolve_targets<'a>(
+    catalog: &Catalog,
+    targets: impl IntoIterator<Item = &'a str>,
+    scope: Scope,
+    context: &InstallContext,
+) -> Result<Vec<ResolvedDestination>, ResolveError> {
+    let mut destinations = BTreeMap::new();
+    for target in targets {
+        let definition = catalog
+            .get(target)
+            .ok_or_else(|| ResolveError::UnknownTarget(target.to_owned()))?;
+        if !destinations.contains_key(&definition.id) {
+            let destination = resolve(catalog, target, scope, context)?;
+            destinations.insert(definition.id.clone(), destination);
+        }
+    }
+    Ok(destinations.into_values().collect())
+}
+
 fn add_evidence_warnings(evidence: &RuleEvidence, warnings: &mut BTreeSet<ResolutionWarning>) {
     if evidence.discovery_tests.is_empty() {
         warnings.insert(ResolutionWarning::HostDiscoveryUntested);
