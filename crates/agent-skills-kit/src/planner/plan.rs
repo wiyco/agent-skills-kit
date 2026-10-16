@@ -119,6 +119,8 @@ pub struct TargetAttribution {
 pub enum PlannedAction {
     /// Destination absent; this records intent, not proven write permission.
     Create,
+    /// Complete existing payload bytes, entry set and ordinary modes match.
+    Unchanged,
     /// Existing or competing content is not approved for replacement.
     Conflict,
     /// Target/backend/host constraint is unsupported.
@@ -135,8 +137,12 @@ pub enum DestinationProblem {
     Host(TargetConstraintError),
     /// Namespace could not be safely inspected; no absence is guessed.
     Namespace(NamespaceError),
-    /// Existing directory has not yet passed full payload equality comparison.
-    ExistingDirectoryUncompared,
+    /// Existing entry set, bytes or modes differ from the intended payload.
+    ExistingContentDiffers,
+    /// Existing payload could not be completely and safely inspected.
+    ExistingInspection(InventoryError),
+    /// Native lookup used an alias of the requested skill directory spelling.
+    ExistingNameMismatch,
     /// Several selected sources request different payloads at one physical path.
     CompetingSources,
     /// An existing name has a different spelling under the portable collision key.
@@ -187,6 +193,7 @@ pub struct PlannedDestination {
     pub(super) source_index: usize,
     pub(super) namespace: Option<DestinationSnapshot>,
     pub(super) writes: Vec<IntendedWrite>,
+    pub(super) existing: Option<ValidatedSkill>,
 }
 impl PlannedDestination {
     /// Canonical observed candidate, or requested spelling when observation failed.
@@ -221,6 +228,12 @@ impl PlannedDestination {
     pub fn intended_writes(&self) -> &[IntendedWrite] {
         &self.writes
     }
+    /// Complete retained existing-payload preconditions for an unchanged result.
+    ///
+    /// Execution must revalidate them; these are observations, not a content lock.
+    pub fn existing_payload(&self) -> Option<&ValidatedSkill> {
+        self.existing.as_ref()
+    }
 }
 
 /// Immutable, non-fabricable read-only preview with owned revalidated sources.
@@ -250,7 +263,10 @@ impl InstallPlan {
     pub fn destinations(&self) -> &[PlannedDestination] {
         &self.destinations
     }
-    /// Bytes actually reread during this preview, excluding prior caller validation.
+    /// Accounted reread bytes, excluding prior caller validation.
+    ///
+    /// Successful inspections charge actual bytes. Failed existing inspections
+    /// reserve their full allowance, so this can be a conservative upper bound.
     pub fn inspected_bytes(&self) -> u64 {
         self.inspected_bytes
     }
@@ -258,13 +274,16 @@ impl InstallPlan {
     pub fn intended_writes(&self) -> &[IntendedWrite] {
         &self.writes
     }
-    /// Whether every requested operation is an eligible create.
+    /// Whether every requested operation is an eligible create or unchanged payload.
     ///
     /// This never authorizes applying a stale plan or replacing existing content.
     pub fn is_applicable(&self) -> bool {
         !self.destinations.is_empty()
             && self.destinations.iter().all(|destination| {
-                destination.action == PlannedAction::Create && destination.problems.is_empty()
+                matches!(
+                    destination.action,
+                    PlannedAction::Create | PlannedAction::Unchanged
+                ) && destination.problems.is_empty()
             })
     }
 }
@@ -314,8 +333,8 @@ impl Error for PlanError {}
 /// Canonical targets and physical source identities are deduplicated; distinct
 /// native host placements stay distinct. Full source snapshots are revalidated.
 /// Root overlaps are rejected using native ancestry and selected component keys.
-/// Existing directories remain conflicts until full equality comparison is
-/// implemented in the dependent layer; no byte identity is guessed here.
+/// Existing directories are unchanged only after complete retained-handle
+/// comparison of bytes, entry sets and intended modes.
 /// Windows fails closed before filesystem access. An applicable preview is intent,
 /// not permission to bypass immediate native apply checks or force an overwrite.
 pub fn plan_install(

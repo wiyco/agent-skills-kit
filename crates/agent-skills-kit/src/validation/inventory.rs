@@ -281,3 +281,19 @@ pub fn inventory_skill(
         ))
     }
 }
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub(crate) fn inventory_retained(
+    root: Arc<File>,
+    label: &Path,
+    name: &str,
+    limits: InventoryLimits,
+) -> Result<ValidatedSkill, InventoryError> {
+    if !limits.validate() {
+        return Err(InventoryError::new(
+            label,
+            InventoryErrorKind::InvalidLimits,
+        ));
+    }
+    unix::inspect_retained(root, label, name, limits)
+}

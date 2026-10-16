@@ -310,7 +310,7 @@ mod native {
     }
 
     #[test]
-    fn existing_directories_are_conservative_conflicts_until_compared() {
+    fn identical_existing_payloads_are_unchanged_after_complete_comparison() {
         let root = Root::new();
         let context = context(&root);
         let sources = [skill(&root, "source", "sample", "fixture")];
@@ -329,14 +329,173 @@ mod native {
             &context,
         )
         .unwrap();
-        assert!(!plan.is_applicable());
-        assert_eq!(plan.destinations()[0].action(), PlannedAction::Conflict);
+        assert!(plan.is_applicable());
+        assert_eq!(plan.destinations()[0].action(), PlannedAction::Unchanged);
+        assert!(plan.destinations()[0].problems().is_empty());
+        assert!(plan.destinations()[0].existing_payload().is_some());
         assert_eq!(
-            plan.destinations()[0].problem(),
-            Some(&DestinationProblem::ExistingDirectoryUncompared)
+            plan.inspected_bytes(),
+            sources[0].inventory().total_bytes() * 2
         );
         assert!(plan.intended_writes().is_empty());
         assert_eq!(tree(&root.0), before);
+    }
+
+    #[test]
+    fn existing_comparison_covers_resources_empty_directories_modes_and_unsafe_entries() {
+        for scenario in [
+            "identical",
+            "bytes",
+            "extra",
+            "missing",
+            "directory",
+            "mode",
+            "root-mode",
+            "privilege",
+            "link",
+            "hardlink",
+            "invalid-metadata",
+        ] {
+            let root = Root::new();
+            let context = context(&root);
+            let source = source_dir(&root, "source", "sample", "fixture");
+            fs::create_dir(source.join("empty")).unwrap();
+            fs::write(source.join("resource"), b"original bytes").unwrap();
+            fs::set_permissions(source.join("resource"), fs::Permissions::from_mode(0o640))
+                .unwrap();
+            let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+            let destination = root.0.join("home/.agents/skills/sample");
+            fs::create_dir_all(destination.join("empty")).unwrap();
+            for name in ["SKILL.md", "resource"] {
+                fs::copy(source.join(name), destination.join(name)).unwrap();
+            }
+            match scenario {
+                "bytes" => fs::write(destination.join("resource"), b"modified bytes").unwrap(),
+                "extra" => fs::write(destination.join("extra"), b"extra").unwrap(),
+                "missing" => fs::remove_file(destination.join("resource")).unwrap(),
+                "directory" => fs::remove_dir(destination.join("empty")).unwrap(),
+                "mode" => fs::set_permissions(
+                    destination.join("resource"),
+                    fs::Permissions::from_mode(0o600),
+                )
+                .unwrap(),
+                "root-mode" => {
+                    fs::set_permissions(&destination, fs::Permissions::from_mode(0o700)).unwrap()
+                }
+                "privilege" => fs::set_permissions(
+                    destination.join("resource"),
+                    fs::Permissions::from_mode(0o4640),
+                )
+                .unwrap(),
+                "link" => symlink(&source, destination.join("outside")).unwrap(),
+                "hardlink" => {
+                    fs::hard_link(destination.join("resource"), destination.join("outside"))
+                        .unwrap()
+                }
+                "invalid-metadata" => fs::write(destination.join("SKILL.md"), b"invalid").unwrap(),
+                "identical" => (),
+                _ => unreachable!(),
+            }
+            if scenario == "privilege" {
+                assert_ne!(
+                    fs::metadata(destination.join("resource")).unwrap().mode() & 0o4000,
+                    0,
+                    "fixture requires retained setuid bit; run outside a sandbox that strips it"
+                );
+            }
+            let before = tree(&root.0);
+            let plan = preview(
+                &Catalog::bundled().unwrap(),
+                &sources,
+                &["codex"],
+                Scope::User,
+                &context,
+            )
+            .unwrap();
+            assert_eq!(
+                plan.destinations()[0].action(),
+                if scenario == "identical" {
+                    PlannedAction::Unchanged
+                } else {
+                    PlannedAction::Conflict
+                },
+                "{scenario}"
+            );
+            assert_eq!(plan.is_applicable(), scenario == "identical", "{scenario}");
+            assert!(plan.intended_writes().is_empty(), "{scenario}");
+            assert_eq!(tree(&root.0), before, "{scenario}");
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn existing_case_alias_is_not_claimed_as_an_identically_named_skill() {
+        let root = Root::new();
+        let context = context(&root);
+        let sources = [skill(&root, "source", "sample", "fixture")];
+        let destination = root.0.join("home/.agents/skills/SAMPLE");
+        fs::create_dir_all(&destination).unwrap();
+        fs::write(
+            destination.join("SKILL.md"),
+            sources[0].metadata().source_bytes(),
+        )
+        .unwrap();
+        let before = tree(&root.0);
+        let plan = preview(
+            &Catalog::bundled().unwrap(),
+            &sources,
+            &["codex"],
+            Scope::User,
+            &context,
+        )
+        .unwrap();
+        assert_eq!(plan.destinations()[0].action(), PlannedAction::Conflict);
+        assert!(matches!(
+            plan.destinations()[0].problem(),
+            Some(
+                DestinationProblem::ExistingNameMismatch
+                    | DestinationProblem::PortableNameCollision { .. }
+            )
+        ));
+        assert_eq!(tree(&root.0), before);
+    }
+
+    #[test]
+    fn existing_comparison_obeys_the_remaining_whole_preview_byte_budget() {
+        let root = Root::new();
+        let context = context(&root);
+        let sources = [skill(&root, "source", "sample", "fixture")];
+        let destination = root.0.join("home/.agents/skills/sample");
+        fs::create_dir_all(&destination).unwrap();
+        fs::copy(
+            sources[0].inventory().requested_root().join("SKILL.md"),
+            destination.join("SKILL.md"),
+        )
+        .unwrap();
+        let total = sources[0].inventory().total_bytes();
+        let before = tree(&root.0);
+        for (allowed, expected) in [
+            (total * 2, PlannedAction::Unchanged),
+            (total * 2 - 1, PlannedAction::Conflict),
+        ] {
+            let plan = plan_install(
+                &Catalog::bundled().unwrap(),
+                InstallRequest {
+                    skills: &sources,
+                    target_ids: &["codex"],
+                    scope: Scope::User,
+                    context: &context,
+                    limits: PlanLimits {
+                        max_read_bytes: allowed,
+                        ..PlanLimits::default()
+                    },
+                },
+            )
+            .unwrap();
+            assert_eq!(plan.destinations()[0].action(), expected);
+            assert!(plan.inspected_bytes() <= allowed);
+            assert_eq!(tree(&root.0), before);
+        }
     }
 
     #[test]
