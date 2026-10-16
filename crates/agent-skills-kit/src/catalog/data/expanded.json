@@ -2355,6 +2355,243 @@
         "Name Matching Rule and Common Errors require folder/name agreement, while Skill Not Loading says otherwise. This installer retains stricter general-spec agreement; exact host acceptance remains unverified. No additional reserved local name is established.",
         "Skill Locations provides Mac/Linux and Windows home examples. Native resolver/copy tests do not establish installed host versions or discovery/activation. Host embedded-shell behavior is not exercised."
       ]
+    },
+    {
+      "id": "kimi-code-cli",
+      "aliases": [],
+      "product_id": "kimi-code",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".kimi-code",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://moonshotai.github.io/kimi-code/en/customization/skills.html",
+                "section": "Skill Locations",
+                "accessed": "2026-10-16",
+                "applicability": "Current TypeScript/npm Kimi Code CLI, distinct from archived Python kimi-cli; rolling documentation, minimum host version and real discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::kimi_code_current_roots_override_and_legacy_boundaries",
+                "expanded_targets::kimi_code_native_and_alternate_writes_remain_distinct"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Explicit caller project/home only; no host process, Git-root discovery, active configuration or extra directories evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".kimi-code",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://moonshotai.github.io/kimi-code/en/customization/skills.html",
+                    "section": "Skill Locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current TypeScript/npm Kimi Code CLI, distinct from archived Python kimi-cli; rolling documentation, minimum host version and real discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kimi_code_current_roots_override_and_legacy_boundaries",
+                    "expanded_targets::kimi_code_native_and_alternate_writes_remain_distinct"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller project/home only; no host process, Git-root discovery, active configuration or extra directories evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://moonshotai.github.io/kimi-code/en/customization/skills.html",
+                    "section": "Skill Locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current TypeScript/npm Kimi Code CLI, distinct from archived Python kimi-cli; rolling documentation, minimum host version and real discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kimi_code_current_roots_override_and_legacy_boundaries",
+                    "expanded_targets::kimi_code_native_and_alternate_writes_remain_distinct"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller project/home only; no host process, Git-root discovery, active configuration or extra directories evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Default explicit roots only; caller context does not evaluate extra_skill_dirs or effective host discovery."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "environment",
+                "variable": "KIMI_CODE_HOME",
+                "fallback": {
+                  "base": "home",
+                  "components": [
+                    ".kimi-code"
+                  ]
+                }
+              },
+              "components": [
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://moonshotai.github.io/kimi-code/en/customization/skills.html",
+                "section": "Skill Locations",
+                "accessed": "2026-10-16",
+                "applicability": "Current TypeScript/npm Kimi Code CLI, distinct from archived Python kimi-cli; rolling documentation, minimum host version and real discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::kimi_code_current_roots_override_and_legacy_boundaries",
+                "expanded_targets::kimi_code_native_and_alternate_writes_remain_distinct"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Explicit caller project/home only; no host process, Git-root discovery, active configuration or extra directories evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "environment",
+                    "variable": "KIMI_CODE_HOME",
+                    "fallback": {
+                      "base": "home",
+                      "components": [
+                        ".kimi-code"
+                      ]
+                    }
+                  },
+                  "components": [
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://moonshotai.github.io/kimi-code/en/customization/skills.html",
+                    "section": "Skill Locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current TypeScript/npm Kimi Code CLI, distinct from archived Python kimi-cli; rolling documentation, minimum host version and real discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kimi_code_current_roots_override_and_legacy_boundaries",
+                    "expanded_targets::kimi_code_native_and_alternate_writes_remain_distinct"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller project/home only; no host process, Git-root discovery, active configuration or extra directories evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://moonshotai.github.io/kimi-code/en/customization/skills.html",
+                    "section": "Skill Locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current TypeScript/npm Kimi Code CLI, distinct from archived Python kimi-cli; rolling documentation, minimum host version and real discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::kimi_code_current_roots_override_and_legacy_boundaries",
+                    "expanded_targets::kimi_code_native_and_alternate_writes_remain_distinct"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Explicit caller project/home only; no host process, Git-root discovery, active configuration or extra directories evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Default explicit roots only; caller context does not evaluate extra_skill_dirs or effective host discovery."
+          ]
+        }
+      ],
+      "limitations": [
+        "The original https://moonshotai.github.io/kimi-cli/en/guides/getting-started.html warns that kimi-cli is archived and directs to current Kimi Code CLI (reviewed 2026-10-16). Old .kimi, generic-group precedence and KIMI_SHARE_DIR rules are not imported or aliased.",
+        "Current native user skills move with KIMI_CODE_HOME; the independent .agents reader stays under OS home. The caller must supply that home explicitly even when native storage is overridden.",
+        "The host defines project root by its nearest .git ancestor. This resolver takes the selected root explicitly, does not search ancestors and does not infer application workspace semantics.",
+        "Project takes precedence over User, Extra and Built-in. extra_skill_dirs and host built-ins are not enumerated or modified; same-tier duplicate precedence and additional reserved local names remain unverified.",
+        "Only canonical directory-form skills are installed; flat Markdown skills, host prompt/flow invocation, placeholders, built-ins and activation are separate capabilities. Stricter general metadata/folder matching remains required.",
+        "Getting started, Installation (https://moonshotai.github.io/kimi-code/en/guides/getting-started.html), reviewed 2026-10-16, documents macOS/Linux and Windows with Git Bash. No host or shell prerequisite was installed or launched.",
+        "IDE/ACP, browser/remote, archived Python and Rust-agent variants are separate unverified or excluded capabilities. Successful native library copying does not validate real-host discovery."
+      ]
     }
   ]
 }

@@ -21,6 +21,7 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             "github-copilot-vscode",
             "kilo-code-cli",
             "kilo-code-vscode",
+            "kimi-code-cli",
             "opencode",
             "roo-code-vscode"
         ]
