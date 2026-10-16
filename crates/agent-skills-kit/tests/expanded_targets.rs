@@ -4,7 +4,7 @@ use agent_skills_kit::{
     executor::{ApplyOptions, OutcomeStatus, apply_plan},
     planner::*,
     resolver::*,
-    validation::{InventoryLimits, inventory_skill},
+    validation::{InventoryLimits, TargetConstraintError, inventory_skill},
 };
 use std::{
     ffi::OsString,
@@ -2920,5 +2920,143 @@ fn devin_cascade_native_and_legacy_preservation() {
             b"legacy preserved"
         );
         assert!(!legacy.join("SKILL.md").exists());
+    }
+}
+
+#[test]
+fn zed_agent_scopes_and_native_name_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "ZED_HOME",
+        "ZED_CONFIG_DIR",
+        "XDG_CONFIG_HOME",
+        "CODEX_HOME",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "unmodeled and ignored".into());
+    }
+    let target = catalog.get("zed-agent").unwrap();
+    assert_eq!(target.product_id, "zed");
+    assert_eq!(target.variant, "agent");
+    assert!(target.aliases.is_empty());
+    for (scope, base, root) in [
+        (
+            Scope::Project,
+            ContextBase::Project,
+            context.project_root.as_ref().unwrap(),
+        ),
+        (
+            Scope::User,
+            ContextBase::Home,
+            context.user_home.as_ref().unwrap(),
+        ),
+    ] {
+        let result = resolve(&catalog, "zed-agent", scope, &context).unwrap();
+        assert_eq!(result.preferred_write.path, root.join(".agents/skills"));
+        assert_eq!(result.preferred_write.origin, PathOrigin::Context(base));
+        assert_eq!(result.discovery.len(), 1);
+        assert_eq!(result.discovery[0].location, result.preferred_write);
+        assert_eq!(result.discovery[0].traversal, DiscoveryTraversal::Exact);
+        assert_eq!(
+            result.preferred_write.evidence.source.as_ref().unwrap().url,
+            "https://zed.dev/docs/ai/skills"
+        );
+        assert!(result.preferred_write.evidence.discovery_tests.is_empty());
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::PlacementNotExclusive)
+        );
+        assert!(
+            !result
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    assert!(matches!(
+        resolve(&catalog, "zed-agent", Scope::ApplicationWorkspace, &context),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.user_home = None;
+    assert!(resolve(&catalog, "zed-agent", Scope::Project, &context).is_ok());
+    assert!(matches!(
+        resolve(&catalog, "zed-agent", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "zed-agent", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+    context.project_root = Some("relative".into());
+    assert!(matches!(
+        resolve(&catalog, "zed-agent", Scope::Project, &context),
+        Err(ResolveError::InvalidContext {
+            base: ContextBase::Project,
+            issue: PathIssue::Relative
+        })
+    ));
+    for id in [
+        "zed",
+        "zed-cli",
+        "zed-external-agent",
+        "zed-terminal",
+        "zed-cloud",
+        "zed-acp",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+}
+
+#[test]
+fn zed_agent_native_shared_copy_and_unicode_refusal() {
+    coincident_writes_preserve_variants(["codex", "zed-agent"], false);
+    let catalog = Catalog::bundled().unwrap();
+    for scope in [Scope::Project, Scope::User] {
+        let fixture = Fixture::new();
+        let source = fixture.0.join("source/日本語");
+        fs::create_dir_all(&source).unwrap();
+        let bytes = "---\nname: 日本語\ndescription: Original inert Unicode name fixture\n---\nData only.\n";
+        fs::write(source.join("SKILL.md"), bytes).unwrap();
+        let home = fixture.0.join("home");
+        let project = fixture.0.join("project");
+        fs::create_dir(&home).unwrap();
+        fs::create_dir(&project).unwrap();
+        fs::write(home.join("sentinel"), b"preserve").unwrap();
+        let mut context = InstallContext::new(native_platform().unwrap());
+        context.user_home = Some(home.clone());
+        context.project_root = Some(project.clone());
+        let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        let plan = plan_install(
+            &catalog,
+            InstallRequest {
+                skills: &sources,
+                target_ids: &["zed-agent"],
+                scope,
+                context: &context,
+                limits: PlanLimits::default(),
+            },
+        )
+        .unwrap();
+        assert!(!plan.is_applicable());
+        assert!(matches!(
+            plan.destinations()[0].problem(),
+            Some(DestinationProblem::Host(
+                TargetConstraintError::AsciiNameRequired
+            ))
+        ));
+        assert!(plan.intended_writes().is_empty());
+        assert!(!apply_plan(&plan, ApplyOptions::default()).is_successful());
+        assert!(!home.join(".agents").exists());
+        assert!(!project.join(".agents").exists());
+        assert_eq!(fs::read(home.join("sentinel")).unwrap(), b"preserve");
+        assert_eq!(fs::read_to_string(source.join("SKILL.md")).unwrap(), bytes);
     }
 }

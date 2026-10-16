@@ -146,7 +146,7 @@ impl SkillMetadata {
         &self.description
     }
 
-    /// Check additional modeled core-host constraints without host invocation.
+    /// Check additional modeled host constraints without host invocation.
     ///
     /// This does not prove loading, configuration enablement or payload safety.
     pub fn validate_for_target(
@@ -174,7 +174,7 @@ impl SkillMetadata {
 pub enum TargetConstraintError {
     /// A documented core-host name reservation applies.
     ReservedName(ReservedSkillName),
-    /// OpenCode's documented name grammar is ASCII, unlike the general Unicode rule.
+    /// The host's documented name grammar is ASCII, unlike the general Unicode rule.
     AsciiNameRequired,
 }
 impl fmt::Display for TargetConstraintError {

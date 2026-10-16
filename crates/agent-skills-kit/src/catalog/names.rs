@@ -11,10 +11,11 @@ pub enum ReservedSkillName {
 }
 
 impl TargetDefinition {
-    // OpenCode's host-owned skills documentation specifies an ASCII regex;
+    // OpenCode's regex and Zed Agent's a-z grammar are explicitly ASCII;
     // this narrows the general specification's Unicode name rule.
     pub(crate) fn requires_ascii_skill_name(&self) -> bool {
-        self.product_id == "opencode" && self.variant == "cli"
+        (self.product_id == "opencode" && self.variant == "cli")
+            || (self.product_id == "zed" && self.variant == "agent")
     }
 
     /// Identify a documented reservation for this local CLI product variant.
