@@ -221,6 +221,33 @@ fn observe_with_hook(
 }
 
 pub(super) fn is_current(snapshot: &DestinationSnapshot) -> Result<bool, NamespaceError> {
+    if !existing_bindings_are_current(snapshot)? {
+        return Ok(false);
+    }
+    if let Some(first_missing) = snapshot.missing.first() {
+        let parent = snapshot.anchors.last().expect("retained root exists");
+        match rustix::fs::statat(
+            &parent.handle,
+            first_missing.as_os_str(),
+            AtFlags::SYMLINK_NOFOLLOW,
+        ) {
+            Ok(_) => return Ok(false),
+            Err(rustix::io::Errno::NOENT) => {}
+            Err(error) => {
+                return Err(NamespaceError::io(
+                    &parent.path.join(first_missing),
+                    "recheck first absent component",
+                    error.into(),
+                ));
+            }
+        }
+    }
+    Ok(true)
+}
+
+pub(super) fn existing_bindings_are_current(
+    snapshot: &DestinationSnapshot,
+) -> Result<bool, NamespaceError> {
     let root = snapshot
         .anchors
         .first()
@@ -269,24 +296,6 @@ pub(super) fn is_current(snapshot: &DestinationSnapshot) -> Result<bool, Namespa
             || !same_directory(&child.stamp, &file_stamp(&child.handle, &child.path)?)
         {
             return Ok(false);
-        }
-    }
-    if let Some(first_missing) = snapshot.missing.first() {
-        let parent = snapshot.anchors.last().expect("retained root exists");
-        match rustix::fs::statat(
-            &parent.handle,
-            first_missing.as_os_str(),
-            AtFlags::SYMLINK_NOFOLLOW,
-        ) {
-            Ok(_) => return Ok(false),
-            Err(rustix::io::Errno::NOENT) => {}
-            Err(error) => {
-                return Err(NamespaceError::io(
-                    &parent.path.join(first_missing),
-                    "recheck first absent component",
-                    error.into(),
-                ));
-            }
         }
     }
     Ok(true)

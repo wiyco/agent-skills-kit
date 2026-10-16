@@ -1,7 +1,7 @@
 //! Foundation for a local Agent Skills installer.
 //!
-//! Installation APIs are not implemented yet. The API remains provisional
-//! pending its implementation and review.
+//! Library APIs remain provisional pending the complete native safety matrix
+//! and external-consumer review. CLI commands are still under development.
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod filesystem;
@@ -12,5 +12,6 @@ pub mod planner;
 pub mod resolver;
 pub mod validation;
 
-/// Describes the current bootstrap capability without claiming install support.
-pub const STATUS: &str = "Agent Skills Kit bootstrap: installation is not implemented yet.";
+/// Describes the development CLI capability without claiming host discovery.
+pub const STATUS: &str =
+    "Agent Skills Kit development build: CLI commands are not implemented yet.";

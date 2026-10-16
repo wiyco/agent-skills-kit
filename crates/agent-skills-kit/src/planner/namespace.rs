@@ -45,6 +45,17 @@ pub struct DestinationSnapshot {
     pub(super) missing: Vec<OsString>,
 }
 impl DestinationSnapshot {
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub(crate) fn retained_anchor(&self) -> (&Arc<File>, &EntryStamp) {
+        let anchor = self.anchors.last().expect("observations retain a root");
+        (&anchor.handle, &anchor.stamp)
+    }
+
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    pub(crate) fn existing_bindings_are_current(&self) -> Result<bool, NamespaceError> {
+        unix::existing_bindings_are_current(self)
+    }
+
     /// Requested root joined with the caller's relative components.
     pub fn requested_path(&self) -> &Path {
         &self.requested
