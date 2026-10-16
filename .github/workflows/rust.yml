@@ -47,6 +47,13 @@ jobs:
         run: |
           rustup component add clippy --toolchain "$DEV_TOOLCHAIN"
           cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Verify the Windows backend on the declared MSRV
+        if: runner.os == 'Windows'
+        run: |
+          WINDOWS_MSRV_TOOLCHAIN=$(python -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["rust-version"])')
+          rustup toolchain install "$WINDOWS_MSRV_TOOLCHAIN" --profile minimal
+          cargo +"$WINDOWS_MSRV_TOOLCHAIN" check --workspace --all-targets --all-features --locked
+          cargo +"$WINDOWS_MSRV_TOOLCHAIN" test --workspace --all-features --locked
 
   quality:
     name: quality
