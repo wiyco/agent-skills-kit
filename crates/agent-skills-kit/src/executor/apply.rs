@@ -151,11 +151,14 @@ impl std::error::Error for ApplyError {}
 /// receipts. Earlier successful destinations survive a later failure. A process
 /// interruption can leave private staging; no crash-durability guarantee is made.
 /// Unknown ownership prevents cleanup rather than authorizing deletion by prefix.
-/// Windows fails preflight before writes; no path-based move fallback exists.
+/// Windows requires a local fixed-drive NTFS root and uses destination ACL
+/// inheritance; source security descriptors are never copied. Permission
+/// finalization may fail after commit; inspect each outcome before retrying.
+/// An unchanged retry does not repair permissions or reclaim orphan staging.
 pub fn apply_plan(plan: &InstallPlan, options: ApplyOptions) -> InstallReport {
     let mut report = initial_report(plan);
     // Read-only verification is a separate capability from native copy execution.
-    if !cfg!(any(target_os = "linux", target_os = "macos")) {
+    if !cfg!(any(target_os = "linux", target_os = "macos", windows)) {
         report.preflight_error = Some(VerificationError {
             path: None,
             kind: super::VerificationErrorKind::UnsupportedPlatform,
@@ -167,6 +170,8 @@ pub fn apply_plan(plan: &InstallPlan, options: ApplyOptions) -> InstallReport {
     }
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     native::apply(plan, options, &mut report);
+    #[cfg(windows)]
+    windows_candidate::apply(plan, options, &mut report);
     report
 }
 
@@ -221,6 +226,6 @@ fn initial_report(plan: &InstallPlan) -> InstallReport {
 #[path = "apply_unix.rs"]
 mod native;
 
-#[cfg(all(windows, test))]
+#[cfg(windows)]
 #[path = "apply_windows.rs"]
 mod windows_candidate;

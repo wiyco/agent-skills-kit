@@ -253,7 +253,6 @@ pub(crate) fn child(parent: &File, name: &OsStr, kind: Kind, create: bool) -> io
     child_impl(parent, name, kind, create, ptr::null_mut(), 0, false)
 }
 
-#[cfg(test)]
 pub(crate) fn create_with_security(
     parent: &File,
     name: &OsStr,
@@ -266,16 +265,13 @@ pub(crate) fn create_with_security(
 /// Reopen an owned post-commit entry for permission finalization. Descendant
 /// copy handles must be closed before directory rename; reacquire these while
 /// every entry is still private, verify identity, and hold them through updates.
-#[cfg(test)]
 pub(crate) fn open_permissions(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
     child_impl(parent, name, kind, false, ptr::null_mut(), WRITE_DAC, false)
 }
 
-#[cfg(test)]
 pub(crate) fn open_binding(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
     child_impl(parent, name, kind, false, ptr::null_mut(), 0, true)
 }
-#[cfg(test)]
 pub(crate) fn open_cleanup(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
     child_impl(
         parent,
@@ -287,7 +283,6 @@ pub(crate) fn open_cleanup(parent: &File, name: &OsStr, kind: Kind) -> io::Resul
         false,
     )
 }
-#[cfg(test)]
 pub(crate) fn set_readonly(file: &File, readonly: bool) -> io::Result<()> {
     let current = stamp(file)?;
     let attributes = if readonly {
@@ -410,7 +405,6 @@ fn child_impl(
 }
 
 /// Move the held object to one child name with replacement disabled in the syscall.
-#[cfg(test)]
 pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::Result<()> {
     let wide = component(name)?;
     if stamp(parent)?.kind != Kind::Directory {
@@ -453,7 +447,6 @@ pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::
 }
 
 /// Delete only the retained, operation-owned object; directories must be empty.
-#[cfg(test)]
 pub(crate) fn delete_owned(file: File) -> io::Result<()> {
     let _ = stamp(&file)?;
     let disposition = FILE_DISPOSITION_INFO { DeleteFile: true };
@@ -476,9 +469,7 @@ pub(crate) fn delete_owned(file: File) -> io::Result<()> {
 #[path = "filesystem_windows_tests.rs"]
 mod tests;
 
-#[cfg(test)]
 use std::mem::offset_of;
-#[cfg(test)]
 use windows_sys::Wdk::Storage::FileSystem::{
     FILE_RENAME_INFORMATION, FileRenameInformation, NtSetInformationFile,
 };

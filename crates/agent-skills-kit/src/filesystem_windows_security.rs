@@ -54,6 +54,5 @@ pub(crate) fn descriptor(file: &File) -> io::Result<Vec<u8>> {
     Ok(unsafe { std::slice::from_raw_parts(owned.0.cast::<u8>(), size) }.to_vec())
 }
 
-#[cfg(test)]
 #[path = "filesystem_windows_creation.rs"]
 pub(crate) mod creation;

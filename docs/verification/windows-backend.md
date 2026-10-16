@@ -4,6 +4,8 @@ The maintainer explicitly requires successful Windows copying and native validat
 
 ## Native primitives
 
+The following sections preserve the staged implementation history. Their references to pending gates describe those revisions, not current public API capability. Current dispatch and evidence are summarized at the end.
+
 The first implementation layer tested the real native primitives before exposing them to library operations. The second enables the read-only subset for Windows NTFS inventory; commit/cleanup primitives remain test-only until executor integration. Public Windows installation remains disabled until all layers are complete and natively verified.
 
 - Root selection permits only fixed local drive prefixes. The drive root is opened with backup-directory/reparse-open flags; every subsequent root component is opened relative to its retained parent and rejects reparse points. Pure prefix checks reject UNC/device paths without network calls. Mapped/non-fixed drives are refused before opening the requested path. Caller-controlled ancestors remain required; Windows root ancestor aliases are explicitly unsupported.
@@ -93,7 +95,7 @@ The initial `SetSecurityInfo` propagation candidate updated the root but left it
 
 A late, actual directory reparse point is inserted into the committed fixture before finalization. Only the known retained root/file handles are updated; outside owner/group/DACL bytes and sentinel content must remain unchanged. This models an unexpected post-commit entry and does not permit reparse inputs. Missing link privileges fail explicitly. The SDK inheritance-allocation destructor receives an address of uniquely mutable pointer storage, consistent with the documented in/out lifetime despite the generated const-pointer parameter.
 
-## Copy backend candidate
+## Copy backend candidate (historical development layers)
 
 The next implementation layer adds a test-only Windows executor under the library. Public `apply_plan` remains unsupported on Windows until final native acceptance coverage and review are complete. It consumes the same immutable plan, whole-plan verification, copy budget and report types as Unix; the CLI owns no second engine or path registry.
 
@@ -121,3 +123,11 @@ Before commit, the final destination must remain absent and the complete private
 Reproduce on Windows with `cargo test -p agent-skills-kit --lib windows_process_kill --locked -- --nocapture`. The `windows_candidate_kill_child` helper returns without child configuration during an ordinary suite; its no-op is not interruption coverage. The supervising test must actually kill and verify all three boundaries to pass. Native results remain pending until final CI/QA records them.
 
 Primary lifecycle contracts reviewed 2026-10-16 UTC: Rust 1.99.1 [`Child::kill`, `try_wait` and `wait`](https://doc.rust-lang.org/std/process/struct.Child.html#method.kill), and Windows [TerminateProcess completion/wait semantics](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess). No parent process environment, HOME, real agent directory, credentials or external model service is modified or used.
+
+## Public dispatch and verified evidence
+
+The public `apply_plan` now selects the same library backend exercised by the private candidate tests. The public API regression `windows_public_apply_copies_then_reports_unchanged_and_preserves_conflicts` must pass on the final enablement SHA before merge. It verifies actual public create, byte/attribute preservation, fresh unchanged and refused conflicts. Earlier pending/test-only descriptions above record implementation history; the capability and trust limits still apply.
+
+Successful independently checked layers: [#69 QA](https://github.com/wiyco/agent-skills-kit/pull/69#issuecomment-6221287735), SHA `5ef1ddf80dc2983efefebe362d1be98686c5a1e4`, [CI 38940870429](https://github.com/wiyco/agent-skills-kit/actions/runs/38940870429), Windows 97 tests; [#70 QA](https://github.com/wiyco/agent-skills-kit/pull/70#issuecomment-6221288781), SHA `b39e48a8729aed4b69b901d3f2b496790af57999`, [CI 38940873072](https://github.com/wiyco/agent-skills-kit/actions/runs/38940873072), Windows 104; [#71 QA](https://github.com/wiyco/agent-skills-kit/pull/71#issuecomment-6221289789), SHA `636f29d925a8085a9039494a6084380ba41db295`, [CI 38940881408](https://github.com/wiyco/agent-skills-kit/actions/runs/38940881408), Windows 106. Each also passes the actual Windows MSRV 1.85 suite with the same count, Linux 141, macOS 137 and all seven required checks. These are self-review records, not independent approval. Final public-enablement results belong to that PR's QA comment.
+
+Tests use Windows Server 2025 x86_64-pc-windows-msvc on NTFS (windows-2025-vs2026 image), development Rust 1.99.1 and MSRV 1.85.0. Successful copying, real ACL denial, thread races and actual forced process termination are distinct evidence from resolver/codec/refusal tests. Desktop Windows, ARM64, other filesystems, real hosts, second-user tokens, SACL/audit/integrity and enterprise policy combinations are unvalidated. No automatic permission repair, orphan cleanup, power-loss durability, global transaction or publication is authorized or claimed.
