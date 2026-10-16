@@ -6,6 +6,13 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 description = "Work-in-progress library-first toolkit for local Agent Skills installation"
+repository = "https://github.com/wiyco/agent-skills-kit"
+homepage = "https://github.com/wiyco/agent-skills-kit"
+documentation = "https://github.com/wiyco/agent-skills-kit/blob/main/docs/api.md"
+readme = "README.md"
+keywords = ["agent-skills", "skills", "installer"]
+categories = ["development-tools"]
+include = ["Cargo.toml", "Cargo.lock", "README.md", "LICENSE-MIT", "LICENSE-APACHE", "third-party/**", "src/**", "tests/**", "examples/**"]
 
 [dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
