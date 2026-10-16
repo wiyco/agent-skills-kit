@@ -157,8 +157,10 @@ mod tests {
         sync::atomic::{AtomicU64, Ordering},
     };
     use windows_sys::Win32::Security::{
-        Authorization::ConvertSecurityDescriptorToStringSecurityDescriptorW,
-        GetSecurityDescriptorControl, SE_DACL_PROTECTED,
+        ACCESS_ALLOWED_ACE, Authorization::ConvertSecurityDescriptorToStringSecurityDescriptorW,
+        CONTAINER_INHERIT_ACE, EqualSid, GetAce, GetSecurityDescriptorControl,
+        GetSecurityDescriptorDacl, GetSecurityDescriptorOwner, INHERITED_ACE, OBJECT_INHERIT_ACE,
+        SE_DACL_PROTECTED,
     };
     struct Root(PathBuf);
     impl Root {
@@ -226,6 +228,70 @@ mod tests {
         drop(owned);
         (text, control & SE_DACL_PROTECTED != 0)
     }
+    fn assert_user_only(file: &File, sid: &str, protected: bool, directory: bool) {
+        let bytes = super::super::descriptor(file).unwrap();
+        let mut aligned = vec![0u64; bytes.len().div_ceil(8)];
+        // SAFETY: aligned storage has sufficient initialized capacity for this SDK descriptor.
+        unsafe {
+            ptr::copy_nonoverlapping(bytes.as_ptr(), aligned.as_mut_ptr().cast(), bytes.len());
+        }
+        let descriptor = aligned.as_mut_ptr().cast();
+        let expected = Descriptor::from_sddl(&format!("O:{sid}D:P")).unwrap();
+        let mut owner = ptr::null_mut();
+        let mut expected_owner = ptr::null_mut();
+        let mut defaulted = 0;
+        let mut present = 0;
+        let mut acl = ptr::null_mut();
+        let mut raw_ace = ptr::null_mut();
+        // SAFETY: both descriptors are valid SDK-produced, aligned and live. The
+        // returned owner/ACL/ACE pointers remain borrowed from those descriptors.
+        unsafe {
+            assert_ne!(
+                GetSecurityDescriptorOwner(descriptor, &mut owner, &mut defaulted),
+                0
+            );
+            assert_ne!(
+                GetSecurityDescriptorOwner(expected.as_ptr(), &mut expected_owner, &mut defaulted),
+                0
+            );
+            // The protected stage explicitly sets its owner. Inherited children
+            // use the token default owner (which may be an owner-capable group).
+            if protected {
+                assert_ne!(EqualSid(owner, expected_owner), 0);
+            }
+            assert_ne!(
+                GetSecurityDescriptorDacl(descriptor, &mut present, &mut acl, &mut defaulted),
+                0
+            );
+            assert_ne!(present, 0);
+            assert!(!acl.is_null());
+            assert_eq!((*acl).AceCount, 1);
+            assert_ne!(GetAce(acl, 0, &mut raw_ace), 0);
+            assert!(!raw_ace.is_null());
+            let ace = raw_ace.cast::<ACCESS_ALLOWED_ACE>();
+            // ACCESS_ALLOWED_ACE_TYPE is the SDK's type 0; no other ACE shape is accepted.
+            assert_eq!((*ace).Header.AceType, 0);
+            assert!((*ace).Header.AceSize as usize >= size_of::<ACCESS_ALLOWED_ACE>());
+            assert_eq!(
+                (*ace).Mask,
+                windows_sys::Win32::Storage::FileSystem::FILE_ALL_ACCESS
+            );
+            let flags = if directory {
+                OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE
+            } else {
+                INHERITED_ACE
+            };
+            assert_eq!(u32::from((*ace).Header.AceFlags), flags);
+            assert_ne!(
+                EqualSid(
+                    ptr::addr_of!((*ace).SidStart).cast_mut().cast(),
+                    expected_owner
+                ),
+                0
+            );
+        }
+        assert_eq!(dacl(file).1, protected);
+    }
     #[test]
     fn private_creation_blocks_inherited_broad_grants_in_the_create_syscall() {
         let root = Root::new();
@@ -255,10 +321,10 @@ mod tests {
             &private,
         )
         .unwrap();
-        assert_eq!(dacl(&stage), (format!("D:P(A;OICI;FA;;;{sid})"), true));
+        assert_user_only(&stage, &sid, true, true);
         let child = native::child(&stage, OsStr::new("inert child"), Kind::File, true).unwrap();
         let inherited = dacl(&child).0;
-        assert!(inherited.contains(&sid));
+        assert_user_only(&child, &sid, false, false);
         assert!(!inherited.contains(";;;WD)"));
         assert_eq!(
             before,
