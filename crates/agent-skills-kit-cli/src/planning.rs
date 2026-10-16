@@ -2,7 +2,8 @@ use crate::{Failure, Output, absolute, args::PlanArgs};
 use agent_skills_kit::{
     catalog::Catalog,
     planner::{
-        InstallPlan, InstallRequest, IntendedWriteKind, PlanLimits, PlannedAction, plan_install,
+        DestinationProblem, InstallPlan, InstallRequest, IntendedWriteKind, PlanLimits,
+        PlannedAction, plan_install,
     },
     receipt::NativePath,
     resolver::{InstallContext, ResolutionWarning, native_platform},
@@ -95,21 +96,57 @@ pub(crate) fn view(plan: &InstallPlan) -> Result<Value, Failure> {
         "targets": targets, "destinations": destinations, "intended_writes": writes, "inspected_bytes": plan.inspected_bytes()}),
     )
 }
+fn problem_message(problem: &DestinationProblem) -> String {
+    match problem {
+        DestinationProblem::ExistingContentDiffers => {
+            "Existing content differs; no overwrite is permitted.".into()
+        }
+        DestinationProblem::Target(error) => format!("Target selection is unsupported: {error}"),
+        DestinationProblem::Host(error) => format!("Skill is unsupported by this host: {error}"),
+        DestinationProblem::Namespace(error) => {
+            format!("Destination cannot be safely inspected: {error}")
+        }
+        DestinationProblem::ExistingInspection(error) => {
+            format!("Existing payload cannot be fully validated: {error}")
+        }
+        DestinationProblem::ExistingNameMismatch => {
+            "Existing directory spelling differs; replacement is refused.".into()
+        }
+        DestinationProblem::CompetingSources => {
+            "Selected sources conflict at one physical destination.".into()
+        }
+        DestinationProblem::PortableNameCollision { first, second } => {
+            format!("Portable names collide: {first:?} and {second:?}")
+        }
+        _ => format!("Unsupported plan condition: {problem:?}"),
+    }
+}
 pub(crate) fn describe(plan: &InstallPlan) -> String {
     let mut human = String::from("Plan placement is not exclusive.\n");
+    let mut groups: Vec<(String, Vec<&str>)> = vec![];
+    let mut positions = std::collections::BTreeMap::new();
     for target in plan.targets() {
         for message in target.warnings() {
-            human.push_str(&format!("{}: {}\n", target.id(), warning(message)));
+            let message = warning(message);
+            let index = *positions.entry(message.clone()).or_insert_with(|| {
+                groups.push((message, vec![]));
+                groups.len() - 1
+            });
+            groups[index].1.push(target.id());
         }
     }
+    for (message, targets) in groups {
+        human.push_str(&format!("{}: {message}\n", targets.join(", ")));
+    }
+    human.push_str("Destinations:\n");
     for destination in plan.destinations() {
-        human.push_str(&format!(
-            "{} {:?}\n",
-            action(destination.action()),
-            destination.path()
-        ));
+        let label = destination.path().map_or_else(
+            || "unresolved destination".into(),
+            |path| format!("{path:?}"),
+        );
+        human.push_str(&format!("{} {label}\n", action(destination.action())));
         for problem in destination.problems() {
-            human.push_str(&format!("  {problem:?}\n"));
+            human.push_str(&format!("  {}\n", problem_message(problem)));
         }
     }
     human

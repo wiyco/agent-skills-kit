@@ -1,6 +1,7 @@
 //! Thin terminal consumer of the reusable library. Skill data is never executed.
 mod args;
 mod installation;
+mod interactive;
 mod planning;
 use agent_skills_kit::{
     catalog::Catalog,
@@ -11,7 +12,7 @@ use args::Command;
 use serde_json::{Value, json};
 use std::{
     ffi::OsString,
-    io::{self, Write},
+    io::{self, IsTerminal, Write},
     process::ExitCode,
 };
 
@@ -23,6 +24,7 @@ Usage:
   agent-skills-kit validate <source> [--json]
   agent-skills-kit plan <source> --target <id>... --scope <user|project> [context] [--json]
   agent-skills-kit install <source> --target <id>... --scope <user|project> [context] [--yes] [--dry-run] [--json]
+  agent-skills-kit interactive [--json]
   agent-skills-kit --help
   agent-skills-kit --version
 
@@ -31,13 +33,16 @@ Use -- before a positional path beginning with a dash.
 Selecting a host means placement, not exclusive visibility to that host.
 Context: --user-home <path> for user scope; --project-root <path> for project scope.
 No HOME or host overrides are inferred. Install requires --yes; --dry-run never writes.
+Interactive selection requires terminal stdin/stderr and confirms its exact plan.
 ";
+#[derive(Debug)]
 struct Output {
     exit_code: u8,
     command: &'static str,
     data: Value,
     human: String,
 }
+#[derive(Debug)]
 struct Failure {
     code: u8,
     message: String,
@@ -86,6 +91,9 @@ fn absolute(path: std::path::PathBuf) -> Result<std::path::PathBuf, Failure> {
 }
 fn execute(command: Command) -> Result<Output, Failure> {
     match command {
+        Command::Interactive => Err(Failure::usage(
+            "interactive requires terminal input and prompts",
+        )),
         Command::Plan(options) => planning::execute(options),
         Command::Install { plan, yes, dry_run } => installation::execute(plan, yes, dry_run),
         Command::Help => Ok(Output {
@@ -159,7 +167,16 @@ fn execute(command: Command) -> Result<Output, Failure> {
 }
 fn run(args: &[OsString], stdout: &mut impl Write, stderr: &mut impl Write) -> io::Result<u8> {
     let json = args::json_requested(args);
-    let result = args::parse(args).map_err(Failure::usage).and_then(execute);
+    let result = args::parse(args).map_err(Failure::usage).and_then(|command| {
+        if matches!(&command, Command::Interactive) {
+            if !io::stdin().is_terminal() || !io::stderr().is_terminal() {
+                return Err(Failure::usage("interactive requires terminal stdin and stderr; use explicit non-interactive commands with --yes or --dry-run"));
+            }
+            interactive::execute(&mut io::stdin().lock(), stderr)
+        } else {
+            execute(command)
+        }
+    });
     match result {
         Ok(output) => {
             if json {
@@ -167,7 +184,7 @@ fn run(args: &[OsString], stdout: &mut impl Write, stderr: &mut impl Write) -> i
                     stdout,
                     "{}",
                     json_line(
-                        json!({"schema_version": 1, "command": output.command, "status": match output.exit_code { 0 => "ok", 3 => "approval_required", 4 => "failed", _ => "blocked" }, "data": output.data})
+                        json!({"schema_version": 1, "command": output.command, "status": match output.exit_code { 0 => "ok", 3 if output.command == "interactive" => "cancelled", 3 => "approval_required", 4 => "failed", _ => "blocked" }, "data": output.data})
                     )
                 )?;
             } else {
