@@ -666,22 +666,26 @@ fn windows_competing_entries_invalidate_absence_without_touching_winners() {
 }
 #[cfg(windows)]
 #[test]
-fn windows_read_only_verification_does_not_enable_copy_execution() {
+fn windows_public_apply_copies_then_reports_unchanged_and_preserves_conflicts() {
     let fixture = Fixture::new();
+    let original = tree(&fixture.source);
     let plan = fixture.plan();
     assert!(verify_plan(&plan, VerificationLimits::default()).is_ok());
-    let before = tree(&fixture.root);
     let report = apply_plan(&plan, ApplyOptions::default());
-    assert_eq!(
-        report.preflight_error.unwrap().kind,
-        VerificationErrorKind::UnsupportedPlatform
-    );
-    assert!(
-        report
-            .outcomes
-            .iter()
-            .all(|outcome| matches!(outcome.status, OutcomeStatus::NotAttempted))
-    );
+    assert!(report.is_successful(), "{report:?}");
+    assert_eq!(report.outcomes[0].status, OutcomeStatus::Created);
+    assert_eq!(original, tree(&fixture.source));
+    assert_eq!(original, tree(&fixture.destination()));
+    let unchanged = apply_plan(&fixture.plan(), ApplyOptions::default());
+    assert!(unchanged.is_successful(), "{unchanged:?}");
+    assert_eq!(unchanged.outcomes[0].status, OutcomeStatus::Unchanged);
+    fs::write(fixture.destination().join("resource"), b"manual edit").unwrap();
+    let conflict = fixture.plan();
+    assert_eq!(conflict.destinations()[0].action(), PlannedAction::Conflict);
+    let before = tree(&fixture.root);
+    let refused = apply_plan(&conflict, ApplyOptions::default());
+    assert!(refused.preflight_error.is_some());
+    assert_eq!(refused.outcomes[0].status, OutcomeStatus::NotAttempted);
     assert_eq!(before, tree(&fixture.root));
 }
 

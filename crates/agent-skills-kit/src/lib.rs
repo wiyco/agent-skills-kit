@@ -6,7 +6,7 @@
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod filesystem;
 
-// Windows read-only inventory is enabled independently of copy execution.
+// Shared retained-handle primitives for Windows inventory, planning and execution.
 #[cfg(windows)]
 mod filesystem_windows;
 

@@ -1,4 +1,4 @@
-//! Candidate Windows copy backend, natively tested before public enablement.
+//! Retained-handle Windows copy backend with bounded native regression coverage.
 use super::*;
 use crate::{
     filesystem_windows::{
@@ -630,6 +630,10 @@ fn install(
     }
     result
 }
+pub(super) fn apply(plan: &InstallPlan, options: ApplyOptions, report: &mut InstallReport) {
+    apply_with_hook(plan, options, report, &mut |_, _| Ok(()));
+}
+
 fn apply_with_hook(
     plan: &InstallPlan,
     options: ApplyOptions,
