@@ -13,6 +13,9 @@ pub(super) fn validate(
     context: &InstallContext,
     origin: &PathOrigin,
 ) -> Result<(), ResolveError> {
+    if target.product_id == "openclaw" && target.variant == "local-gateway" {
+        return validate_openclaw(scope, context);
+    }
     if target.product_id != "kiro" || target.variant != "cli" || scope != Scope::User {
         return Ok(());
     }
@@ -68,4 +71,43 @@ fn folded_components(path: &Path) -> Option<Vec<String>> {
             )
         })
         .collect()
+}
+
+// Personal home skills are excluded by OpenClaw's nondefault-state isolation.
+// These comparisons enforce the default-state precondition; they select no path.
+fn validate_openclaw(scope: Scope, context: &InstallContext) -> Result<(), ResolveError> {
+    if scope != Scope::User {
+        return Ok(());
+    }
+    if context
+        .overrides
+        .contains_key(std::ffi::OsStr::new("OPENCLAW_PROFILE"))
+    {
+        return Err(ResolveError::InvalidOverride {
+            variable: "OPENCLAW_PROFILE".into(),
+            issue: PathIssue::HostOverridePolicy,
+        });
+    }
+    let home = context_root(ContextBase::Home, context)?;
+    for (variable, expected) in [
+        ("OPENCLAW_HOME", home.clone()),
+        ("OPENCLAW_STATE_DIR", home.join(".openclaw")),
+    ] {
+        if let Some(value) = context.overrides.get(std::ffi::OsStr::new(variable)) {
+            let path = Path::new(value);
+            super::native::validate_root(path).map_err(|issue| ResolveError::InvalidOverride {
+                variable: variable.into(),
+                issue,
+            })?;
+            // Exact native component equality deliberately refuses ambiguous
+            // aliases rather than guessing host canonicalization or collation.
+            if path != expected {
+                return Err(ResolveError::InvalidOverride {
+                    variable: variable.into(),
+                    issue: PathIssue::HostOverridePolicy,
+                });
+            }
+        }
+    }
+    Ok(())
 }

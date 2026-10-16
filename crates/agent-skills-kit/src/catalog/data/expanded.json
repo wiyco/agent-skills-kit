@@ -5876,6 +5876,230 @@
         "Plugin-managed ~/.agents/plugins stores, bundled skills, providers, credentials and extension enablement/configuration are outside copy writes. The built-in web-search skill is not silently treated as a reserved local name or permission to execute commands.",
         "Generic portable metadata/folder matching and strict no-link copying remain required. No additional reserved local name, duplicate activation precedence or minimum skills version is established. No installed host, real skill store, credential, model request or embedded skill instructions were used."
       ]
+    },
+    {
+      "id": "openclaw-local",
+      "aliases": [],
+      "product_id": "openclaw",
+      "variant": "local-gateway",
+      "scopes": [
+        {
+          "scope": "application_workspace",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "application_workspace"
+              },
+              "components": [
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.openclaw.ai/tools/skills",
+                "section": "Loading order; Per-agent vs shared skills",
+                "accessed": "2026-10-16",
+                "applicability": "Current local OpenClaw Gateway file-backed skills; personal home scope requires default state; rolling docs, minimum version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::openclaw_workspace_default_state_and_override_boundaries",
+                "expanded_targets::openclaw_native_copy_and_refused_state_preservation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Exact identifies the described root without ancestor expansion; grouped host discovery up to six levels is not enumerated or executed. Only direct skill children are installed."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "application_workspace"
+                  },
+                  "components": [
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.openclaw.ai/tools/skills",
+                    "section": "Loading order; Per-agent vs shared skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current local OpenClaw Gateway file-backed skills; personal home scope requires default state; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::openclaw_workspace_default_state_and_override_boundaries",
+                    "expanded_targets::openclaw_native_copy_and_refused_state_preservation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Exact identifies the described root without ancestor expansion; grouped host discovery up to six levels is not enumerated or executed. Only direct skill children are installed."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "application_workspace"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.openclaw.ai/tools/skills",
+                    "section": "Loading order; Per-agent vs shared skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current local OpenClaw Gateway file-backed skills; personal home scope requires default state; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::openclaw_workspace_default_state_and_override_boundaries",
+                    "expanded_targets::openclaw_native_copy_and_refused_state_preservation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Exact identifies the described root without ancestor expansion; grouped host discovery up to six levels is not enumerated or executed. Only direct skill children are installed."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Workspace is the effective configured local agent workspace, not repository root, cwd or another execution workspace. User personal roots require default state; the managed state skills reader is described but never written."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.openclaw.ai/tools/skills",
+                "section": "Loading order; Per-agent vs shared skills",
+                "accessed": "2026-10-16",
+                "applicability": "Current local OpenClaw Gateway file-backed skills; personal home scope requires default state; rolling docs, minimum version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::openclaw_workspace_default_state_and_override_boundaries",
+                "expanded_targets::openclaw_native_copy_and_refused_state_preservation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Exact identifies the described root without ancestor expansion; grouped host discovery up to six levels is not enumerated or executed. Only direct skill children are installed."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.openclaw.ai/tools/skills",
+                    "section": "Loading order; Per-agent vs shared skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current local OpenClaw Gateway file-backed skills; personal home scope requires default state; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::openclaw_workspace_default_state_and_override_boundaries",
+                    "expanded_targets::openclaw_native_copy_and_refused_state_preservation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Exact identifies the described root without ancestor expansion; grouped host discovery up to six levels is not enumerated or executed. Only direct skill children are installed."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".openclaw",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.openclaw.ai/tools/skills",
+                    "section": "Loading order; Per-agent vs shared skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current local OpenClaw Gateway file-backed skills; personal home scope requires default state; rolling docs, minimum version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::openclaw_workspace_default_state_and_override_boundaries",
+                    "expanded_targets::openclaw_native_copy_and_refused_state_preservation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Exact identifies the described root without ancestor expansion; grouped host discovery up to six levels is not enumerated or executed. Only direct skill children are installed."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Workspace is the effective configured local agent workspace, not repository root, cwd or another execution workspace. User personal roots require default state; the managed state skills reader is described but never written."
+          ]
+        }
+      ],
+      "limitations": [
+        "Skills, Loading order / Per-agent vs shared skills establishes workspace skills above workspace .agents, personal home .agents for default state only, then state-owned managed/local skills. This adapter writes local authoring/personal roots, not managed/shared state, Workshop, bundled/Custodian, plugin or immutable library stores.",
+        "A selected nested workspace does not walk to a parent repository. Configuration, agents.defaults.workspace (https://docs.openclaw.ai/gateway/config-agents/workspace-and-bootstrap; reviewed 2026-10-16) distinguishes workspace from cwd/repoRoot: explicit configuration beats OPENCLAW_WORKSPACE_DIR, otherwise state/profile defaults apply. The caller must supply the effective ApplicationWorkspace; no environment/config/Git search or workspace-default computation occurs.",
+        "Skills states that nondefault OPENCLAW_STATE_DIR excludes home-scoped personal/compatibility roots. User resolution therefore rejects a nondefault state override rather than copying to an unread location. Explicit absolute OPENCLAW_STATE_DIR equal to caller home/.openclaw and OPENCLAW_HOME equal to caller home are accepted; other native spellings are conservatively refused without canonicalizing aliases or links.",
+        "Environment variables, Supported operator-facing variables / Paths and instances / OPENCLAW_HOME (https://docs.openclaw.ai/help/environment; reviewed 2026-10-16) documents state/home relocation and named profiles. Any present OPENCLAW_PROFILE is refused for User scope, including empty values, until profile-specific personal-root evidence is modeled. Present empty/relative/tilde/unsafe home/state paths also fail instead of following the host fallback/expansion behavior. Explicit workspace scope remains independent of these controls.",
+        "User scope is limited to default-state personal placement, with state-owned home/.openclaw/skills described as a lower-priority reader only. Alternate-profile/shared managed destinations remain outside MVP writes, not silently substituted for personal roots. Unknown additional or conditional compatibility readers, configured extraDirs and other execution workspaces are unenumerated.",
+        "Skills documents grouped discovery up to six levels and eligibility, allowlists, state snapshots and remote provenance. The adapter copies a direct validated skill child only and does not determine activation, visibility or total skill inventory. General portable required name/folder agreement and strict no-link copying remain stricter than host folder fallback/link behavior.",
+        "Install, System requirements (https://docs.openclaw.ai/install; reviewed 2026-10-16) documents macOS/Linux/native Windows plus separate WSL/companion choices. Native library CI is not installed Gateway, Windows Hub, Tauri/macOS app, remote node, desktop/ARM, WSL or runtime/version validation.",
+        "No legacy Clawdbot/Moltbot brand alias, cloud/remote identity, model/credential injection or dependency-installer behavior is inferred. Config, metadata.openclaw gating, policy commands, imports and skills are not executed or modified. No additional reserved local name or minimum skills version is established."
+      ]
     }
   ]
 }
