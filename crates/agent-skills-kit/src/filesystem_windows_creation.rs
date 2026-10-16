@@ -135,6 +135,10 @@ impl Descriptor {
         // by files/directories. No inherited broad grant or null DACL interval.
         Self::from_sddl(&format!("O:{sid}D:P(A;OICI;FA;;;{sid})"))
     }
+    /// Payloads start private but use the token's default destination owner/group.
+    pub(crate) fn private_payload(token: &Token) -> io::Result<Self> {
+        Self::from_sddl(&format!("D:P(A;OICI;FA;;;{})", token.user_sid()?))
+    }
 }
 impl Drop for Descriptor {
     fn drop(&mut self) {
@@ -337,6 +341,104 @@ mod tests {
         );
     }
     #[test]
+    fn committed_payload_inherits_the_real_destination_like_native_creation() {
+        use std::io::Write;
+        let root = Root::new();
+        let anchor = native::open_root(&root.0).unwrap();
+        let token = Token::effective().unwrap();
+        let sid = token.user_sid().unwrap();
+        let parent_descriptor = Descriptor::from_sddl(&format!(
+            "O:{sid}D:P(A;OICI;FA;;;{sid})(A;OICI;FR;;;WD)(A;OICI;FA;;;CO)"
+        ))
+        .unwrap();
+        let parent = native::create_with_security(
+            &anchor,
+            OsStr::new("destination parent"),
+            Kind::Directory,
+            &parent_descriptor,
+        )
+        .unwrap();
+        let baseline = native::child(
+            &parent,
+            OsStr::new("native baseline"),
+            Kind::Directory,
+            true,
+        )
+        .unwrap();
+        let baseline_child =
+            native::child(&baseline, OsStr::new("resource"), Kind::File, true).unwrap();
+        let expected_root = dacl(&baseline);
+        let expected_child = dacl(&baseline_child);
+        assert!(expected_root.0.contains(";;;WD)"));
+        let parent_security = super::super::descriptor(&parent).unwrap();
+        let stage_descriptor = Descriptor::private_for(&token).unwrap();
+        let stage = native::create_with_security(
+            &parent,
+            OsStr::new("stage"),
+            Kind::Directory,
+            &stage_descriptor,
+        )
+        .unwrap();
+        let payload_descriptor = Descriptor::private_payload(&token).unwrap();
+        let payload = native::create_with_security(
+            &stage,
+            OsStr::new("payload"),
+            Kind::Directory,
+            &payload_descriptor,
+        )
+        .unwrap();
+        let mut child = native::child(&payload, OsStr::new("resource"), Kind::File, true).unwrap();
+        child.write_all(b"inert original bytes").unwrap();
+        assert_eq!(
+            dacl(&payload),
+            dacl(&stage),
+            "every staged object must remain private despite traversal bypass privileges"
+        );
+        assert_user_only(&child, &sid, false, false);
+        drop(child);
+        native::rename_exclusive(&payload, &parent, OsStr::new("installed")).unwrap();
+        assert_eq!(
+            dacl(&payload),
+            dacl(&stage),
+            "rename must not be assumed to establish destination inheritance"
+        );
+        finalize_inheritance(&payload, &parent, &token).unwrap();
+        assert_eq!(dacl(&payload), expected_root);
+        let child = native::child(&payload, OsStr::new("resource"), Kind::File, false).unwrap();
+        assert_eq!(
+            dacl(&child),
+            expected_child,
+            "real inherited grants must propagate through the complete payload"
+        );
+        assert_eq!(parent_security, super::super::descriptor(&parent).unwrap());
+        assert_eq!(
+            fs::read(root.0.join("destination parent/installed/resource")).unwrap(),
+            b"inert original bytes"
+        );
+    }
+    #[test]
+    fn permission_finalization_failure_retains_the_committed_private_payload() {
+        let root = Root::new();
+        let anchor = native::open_root(&root.0).unwrap();
+        let token = Token::effective().unwrap();
+        let private = Descriptor::private_for(&token).unwrap();
+        let stage =
+            native::create_with_security(&anchor, OsStr::new("stage"), Kind::Directory, &private)
+                .unwrap();
+        // This trusted fixture deliberately holds no WRITE_DAC capability.
+        let payload = native::child(&stage, OsStr::new("payload"), Kind::Directory, true).unwrap();
+        let before = dacl(&payload);
+        native::rename_exclusive(&payload, &anchor, OsStr::new("committed")).unwrap();
+        let error = finalize_inheritance(&payload, &anchor, &token).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::PermissionDenied);
+        assert_eq!(before, dacl(&payload));
+        assert!(
+            root.0.join("committed").is_dir(),
+            "post-commit failure is never rollback authority"
+        );
+        assert!(!root.0.join("stage/payload").exists());
+    }
+    #[test]
     fn private_create_collision_preserves_existing_bytes_and_security() {
         let root = Root::new();
         fs::write(root.0.join("winner"), b"existing winner").unwrap();
@@ -353,5 +455,106 @@ mod tests {
         );
         assert_eq!(fs::read(root.0.join("winner")).unwrap(), b"existing winner");
         assert_eq!(before, super::super::descriptor(&winner).unwrap());
+    }
+}
+
+/// Apply real destination inheritance only after native commit. This can fail or
+/// partially propagate; callers must report a committed payload, never delete it.
+pub(crate) fn finalize_inheritance(file: &File, parent: &File, token: &Token) -> io::Result<()> {
+    use windows_sys::Win32::{
+        Security::{
+            Authorization::SetSecurityInfo, CreatePrivateObjectSecurityEx,
+            DestroyPrivateObjectSecurity, GENERIC_MAPPING, GetSecurityDescriptorDacl,
+            SEF_DACL_AUTO_INHERIT, UNPROTECTED_DACL_SECURITY_INFORMATION,
+        },
+        Storage::FileSystem::{
+            FILE_ALL_ACCESS, FILE_GENERIC_EXECUTE, FILE_GENERIC_READ, FILE_GENERIC_WRITE,
+        },
+    };
+    let bytes = super::descriptor(parent)?;
+    let mut aligned = vec![0u64; bytes.len().div_ceil(8)];
+    // SAFETY: aligned initialized buffer has at least bytes.len() bytes available.
+    unsafe {
+        ptr::copy_nonoverlapping(bytes.as_ptr(), aligned.as_mut_ptr().cast(), bytes.len());
+    }
+    struct Inherited(PSECURITY_DESCRIPTOR);
+    impl Drop for Inherited {
+        fn drop(&mut self) {
+            // SAFETY: uniquely owned output of CreatePrivateObjectSecurityEx below.
+            unsafe {
+                DestroyPrivateObjectSecurity(&mut self.0);
+            }
+        }
+    }
+    let mapping = GENERIC_MAPPING {
+        GenericRead: FILE_GENERIC_READ,
+        GenericWrite: FILE_GENERIC_WRITE,
+        GenericExecute: FILE_GENERIC_EXECUTE,
+        GenericAll: FILE_ALL_ACCESS,
+    };
+    let mut result = ptr::null_mut();
+    // SAFETY: SDK-produced bounded parent descriptor, aligned copy, live query
+    // token and exact file rights mapping. No source/creator descriptor or owner/
+    // privilege bypass flags; the result has its documented distinct destructor.
+    if unsafe {
+        CreatePrivateObjectSecurityEx(
+            aligned.as_mut_ptr().cast(),
+            ptr::null_mut(),
+            &mut result,
+            ptr::null(),
+            1,
+            SEF_DACL_AUTO_INHERIT,
+            token.0,
+            &mapping,
+        )
+    } == 0
+    {
+        return Err(io::Error::last_os_error());
+    }
+    if result.is_null() {
+        return Err(io::Error::other(
+            "no destination inheritance descriptor returned",
+        ));
+    }
+    let inherited = Inherited(result);
+    // SAFETY: successful SDK descriptor; size is checked before extracting its DACL.
+    if !(20..=65536).contains(&unsafe { GetSecurityDescriptorLength(inherited.0) }) {
+        return Err(io::Error::other(
+            "destination inheritance descriptor exceeds bounds",
+        ));
+    }
+    let mut present = 0;
+    let mut defaulted = 0;
+    let mut acl = ptr::null_mut();
+    // SAFETY: descriptor remains live, writable typed outputs, borrowed DACL.
+    if unsafe { GetSecurityDescriptorDacl(inherited.0, &mut present, &mut acl, &mut defaulted) }
+        == 0
+    {
+        return Err(io::Error::last_os_error());
+    }
+    if present == 0 || acl.is_null() {
+        return Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "null destination DACL is not supported",
+        ));
+    }
+    // SAFETY: live committed operation-owned handle with WRITE_DAC and live SDK
+    // DACL. Real final parent inheritance is applied by the OS and propagated;
+    // ownership/group/SACL are not copied or changed. This never acts on a source.
+    let result = unsafe {
+        SetSecurityInfo(
+            file.as_raw_handle(),
+            SE_FILE_OBJECT,
+            DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION,
+            ptr::null_mut(),
+            ptr::null_mut(),
+            acl,
+            ptr::null_mut(),
+        )
+    };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::from_raw_os_error(result as i32))
     }
 }

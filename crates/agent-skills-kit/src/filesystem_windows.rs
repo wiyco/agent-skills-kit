@@ -275,7 +275,7 @@ fn child_impl(
     let mut status = Default::default();
     let access = FILE_GENERIC_READ
         | if create {
-            FILE_GENERIC_WRITE | DELETE
+            FILE_GENERIC_WRITE | DELETE | if descriptor.is_null() { 0 } else { WRITE_DAC }
         } else {
             0
         };
