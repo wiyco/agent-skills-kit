@@ -158,6 +158,11 @@ impl SourceInventory {
         &self.root_handle
     }
 
+    #[cfg(windows)]
+    pub(crate) fn retained_root(&self) -> &Arc<crate::filesystem_windows::reader::Handle> {
+        &self.root_handle
+    }
+
     /// Re-observe the retained root without resolving its pathname.
     ///
     /// Later planning must also revalidate pathname identity and every descendant;
@@ -330,4 +335,20 @@ pub(crate) fn inventory_retained(
         ));
     }
     unix::inspect_retained(root, label, name, limits)
+}
+
+#[cfg(windows)]
+pub(crate) fn inventory_retained(
+    root: Arc<crate::filesystem_windows::reader::Handle>,
+    label: &Path,
+    name: &str,
+    limits: InventoryLimits,
+) -> Result<ValidatedSkill, InventoryError> {
+    if !limits.validate() {
+        return Err(InventoryError::new(
+            label,
+            InventoryErrorKind::InvalidLimits,
+        ));
+    }
+    windows::inspect_retained(root, label, name, limits)
 }

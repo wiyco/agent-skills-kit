@@ -8,7 +8,16 @@ use crate::validation::SourceEntry;
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(super) enum ComponentKey {
     Unicode(String),
+    #[cfg(not(windows))]
     Native(Vec<u8>),
+    #[cfg(windows)]
+    Wide(Vec<WidePart>),
+}
+#[cfg(windows)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub(super) enum WidePart {
+    Text(String),
+    Surrogate(u16),
 }
 
 // A conservative portable collision policy, not a claim to emulate every
@@ -16,7 +25,34 @@ pub(super) enum ComponentKey {
 pub(super) fn component_key(name: &OsStr) -> ComponentKey {
     match name.to_str() {
         Some(text) => ComponentKey::Unicode(text.nfd().default_case_fold().nfd().collect()),
+        #[cfg(not(windows))]
         None => ComponentKey::Native(name.as_encoded_bytes().to_ascii_lowercase()),
+        #[cfg(windows)]
+        None => {
+            use std::os::windows::ffi::OsStrExt;
+            let mut parts = Vec::new();
+            let mut text = String::new();
+            for scalar in char::decode_utf16(name.encode_wide()) {
+                match scalar {
+                    Ok(scalar) => text.push(scalar),
+                    Err(error) => {
+                        if !text.is_empty() {
+                            parts.push(WidePart::Text(
+                                text.nfd().default_case_fold().nfd().collect(),
+                            ));
+                            text.clear();
+                        }
+                        parts.push(WidePart::Surrogate(error.unpaired_surrogate()));
+                    }
+                }
+            }
+            if !text.is_empty() {
+                parts.push(WidePart::Text(
+                    text.nfd().default_case_fold().nfd().collect(),
+                ));
+            }
+            ComponentKey::Wide(parts)
+        }
     }
 }
 pub(super) fn path_key(path: &Path) -> Vec<ComponentKey> {
@@ -54,6 +90,24 @@ mod tests {
         assert_ne!(
             component_key(OsStr::new("alpha")),
             component_key(OsStr::new("beta"))
+        );
+    }
+    #[cfg(windows)]
+    #[test]
+    fn non_unicode_keys_fold_scalar_segments_without_losing_surrogate_identity() {
+        use std::{ffi::OsString, os::windows::ffi::OsStringExt};
+        let name = |letter, surrogate| OsString::from_wide(&[b'r' as u16, letter, surrogate]);
+        assert_eq!(
+            component_key(&name(0xd6, 0xd800)),
+            component_key(&name(0xf6, 0xd800))
+        );
+        assert_ne!(
+            component_key(&name(0xd6, 0xd800)),
+            component_key(&name(0xf6, 0xd801))
+        );
+        assert_ne!(
+            component_key(&name(0xd6, 0xd800)),
+            component_key(OsStr::new("rÖ�"))
         );
     }
 }

@@ -96,7 +96,7 @@ pub(super) fn inspect(
     validated.inventory.canonical_root = canonical;
     Ok(validated)
 }
-fn inspect_retained(
+pub(super) fn inspect_retained(
     root: Arc<reader::Handle>,
     label: &Path,
     name: &str,

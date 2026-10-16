@@ -381,18 +381,31 @@ fn seeded_receipt_properties_round_trip_native_units_and_outcome_states() {
     });
 }
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
 mod native {
     use super::*;
     use agent_skills_kit::{
         planner::*,
         validation::{InventoryLimits, SourceEntry, inventory_skill},
     };
+    #[cfg(unix)]
+    use std::os::unix::fs::MetadataExt;
+    #[cfg(windows)]
+    use std::os::windows::fs::MetadataExt;
     use std::{
         fs,
-        os::unix::fs::MetadataExt,
         sync::atomic::{AtomicU64, Ordering},
     };
+    fn attributes(metadata: &fs::Metadata) -> u32 {
+        #[cfg(unix)]
+        {
+            metadata.mode()
+        }
+        #[cfg(windows)]
+        {
+            metadata.file_attributes()
+        }
+    }
     struct Root(PathBuf);
     impl Root {
         fn new() -> Self {
@@ -427,7 +440,7 @@ mod native {
                 } else {
                     Vec::new()
                 },
-                meta.mode(),
+                attributes(&meta),
             ));
             if meta.is_dir() {
                 for entry in fs::read_dir(path).unwrap() {
