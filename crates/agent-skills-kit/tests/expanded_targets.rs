@@ -361,11 +361,19 @@ fn copilot_variants_keep_independent_readers_and_context() {
 
 #[test]
 fn copilot_coincident_writes_preserve_both_variant_attributions() {
+    coincident_writes_preserve_variants(["github-copilot-cli", "github-copilot-vscode"], false);
+}
+#[test]
+fn cline_coincident_writes_preserve_both_variant_attributions() {
+    coincident_writes_preserve_variants(["cline-cli", "cline-vscode"], false);
+    coincident_writes_preserve_variants(["cline-cli", "cline-vscode"], true);
+}
+fn coincident_writes_preserve_variants(targets: [&str; 2], cline_override: bool) {
     for scope in [Scope::User, Scope::Project] {
         let fixture = Fixture::new();
         let source = fixture.0.join("source/sample");
         fs::create_dir_all(source.join("empty")).unwrap();
-        fs::write(source.join("SKILL.md"), b"---\nname: sample\ndescription: Original inert Copilot variant fixture\n---\nData only.\n").unwrap();
+        fs::write(source.join("SKILL.md"), b"---\nname: sample\ndescription: Original inert coincident-target fixture\n---\nData only.\n").unwrap();
         fs::write(
             source.join("resource café.txt"),
             b"unchanged original bytes",
@@ -376,6 +384,13 @@ fn copilot_coincident_writes_preserve_both_variant_attributions() {
         context.project_root = Some(fixture.0.join("project"));
         fs::create_dir(context.user_home.as_ref().unwrap()).unwrap();
         fs::create_dir(context.project_root.as_ref().unwrap()).unwrap();
+        if cline_override {
+            let alternate = fixture.0.join("alternate config 日本語");
+            fs::create_dir(&alternate).unwrap();
+            context
+                .overrides
+                .insert("CLINE_DIR".into(), alternate.into_os_string());
+        }
         let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
         let catalog = Catalog::bundled().unwrap();
         let preview = || {
@@ -383,11 +398,7 @@ fn copilot_coincident_writes_preserve_both_variant_attributions() {
                 &catalog,
                 InstallRequest {
                     skills: &sources,
-                    target_ids: &[
-                        "github-copilot-cli",
-                        "github-copilot-vscode",
-                        "github-copilot-cli",
-                    ],
+                    target_ids: &[targets[0], targets[1], targets[0]],
                     scope,
                     context: &context,
                     limits: PlanLimits::default(),
@@ -408,7 +419,7 @@ fn copilot_coincident_writes_preserve_both_variant_attributions() {
                     plan.targets()[attribution.target_index].id()
                 })
                 .collect::<Vec<_>>(),
-            ["github-copilot-cli", "github-copilot-vscode"]
+            targets
         );
         assert_eq!(
             plan.intended_writes()
@@ -445,5 +456,120 @@ fn copilot_coincident_writes_preserve_both_variant_attributions() {
             fs::read(destination.join("resource café.txt")).unwrap(),
             b"manual edit must survive approval"
         );
+    }
+}
+
+#[test]
+fn cline_scopes_overrides_and_variant_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    for variant in ["cli", "vscode"] {
+        let id = format!("cline-{variant}");
+        let mut context = context();
+        context
+            .overrides
+            .insert("CLINE_DATA_DIR".into(), "unrelated data root".into());
+        context
+            .overrides
+            .insert("CLAUDE_CONFIG_DIR".into(), "unrelated Claude root".into());
+        assert_eq!(catalog.get(&id).unwrap().variant, variant);
+        assert_eq!(catalog.get(&id).unwrap().product_id, "cline");
+        for (scope, root) in [
+            (Scope::User, context.user_home.as_ref().unwrap()),
+            (Scope::Project, context.project_root.as_ref().unwrap()),
+        ] {
+            let resolved = resolve(&catalog, &id, scope, &context).unwrap();
+            assert_eq!(resolved.preferred_write.path, root.join(".cline/skills"));
+            let folders = if scope == Scope::User {
+                vec![".cline", ".agents"]
+            } else if variant == "cli" {
+                vec![".cline", ".clinerules", ".agents"]
+            } else {
+                vec![".cline", ".clinerules", ".agents", ".claude"]
+            };
+            assert_eq!(resolved.discovery.len(), folders.len());
+            for (reader, folder) in resolved.discovery.iter().zip(folders) {
+                assert_eq!(reader.location.path, root.join(folder).join("skills"));
+                assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+                assert!(reader.location.evidence.discovery_tests.is_empty());
+                assert_eq!(
+                    reader.location.evidence.source.as_ref().unwrap().url,
+                    if folder == ".claude" {
+                        "https://docs.cline.bot/customization/skills"
+                    } else {
+                        "https://docs.cline.bot/getting-started/config"
+                    }
+                );
+            }
+            assert!(
+                resolved
+                    .warnings
+                    .contains(&ResolutionWarning::HostDiscoveryUntested)
+            );
+            assert!(
+                resolved
+                    .warnings
+                    .contains(&ResolutionWarning::PlacementNotExclusive)
+            );
+            assert!(
+                !resolved
+                    .warnings
+                    .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+            );
+        }
+        let project = resolve(&catalog, &id, Scope::Project, &context).unwrap();
+        let alternate = context
+            .user_home
+            .as_ref()
+            .unwrap()
+            .join("alternate config 日本語");
+        context
+            .overrides
+            .insert("CLINE_DIR".into(), alternate.clone().into_os_string());
+        let user = resolve(&catalog, &id, Scope::User, &context).unwrap();
+        assert_eq!(user.preferred_write.path, alternate.join("skills"));
+        assert_eq!(
+            user.preferred_write.origin,
+            PathOrigin::Override("CLINE_DIR".into())
+        );
+        assert_eq!(user.discovery[0].location, user.preferred_write);
+        assert_eq!(
+            user.discovery[1].location.path,
+            context.user_home.as_ref().unwrap().join(".agents/skills")
+        );
+        assert_eq!(
+            project,
+            resolve(&catalog, &id, Scope::Project, &context).unwrap()
+        );
+        for value in ["", "relative", "~/.cline"] {
+            context.overrides.insert("CLINE_DIR".into(), value.into());
+            assert!(matches!(
+                resolve(&catalog, &id, Scope::User, &context),
+                Err(ResolveError::InvalidOverride { .. })
+            ));
+        }
+        context.overrides.remove(&OsString::from("CLINE_DIR"));
+        assert!(matches!(
+            resolve(&catalog, &id, Scope::ApplicationWorkspace, &context),
+            Err(ResolveError::UnsupportedScope { .. })
+        ));
+        context.user_home = None;
+        assert!(matches!(
+            resolve(&catalog, &id, Scope::User, &context),
+            Err(ResolveError::MissingContext(ContextBase::Home))
+        ));
+        context.project_root = None;
+        assert!(matches!(
+            resolve(&catalog, &id, Scope::Project, &context),
+            Err(ResolveError::MissingContext(ContextBase::Project))
+        ));
+    }
+    for id in [
+        "cline",
+        "cline-jetbrains",
+        "cline-desktop",
+        "cline-cloud",
+        "cline-sdk",
+    ] {
+        assert!(catalog.get(id).is_none());
     }
 }

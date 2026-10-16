@@ -12,6 +12,8 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             .collect::<Vec<_>>(),
         [
             "claude-code",
+            "cline-cli",
+            "cline-vscode",
             "codex",
             "cursor-ide",
             "gemini-cli",

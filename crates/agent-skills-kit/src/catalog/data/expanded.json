@@ -1115,6 +1115,570 @@
         "chat.agentSkillsLocations is deprecated and not read by Copilot harness sessions; no such override is implemented. Experimental Codex integration does not alter the Codex CLI adapter.",
         "VS Code Requirements, Platforms (https://code.visualstudio.com/docs/supporting/requirements), reviewed 2026-10-16, lists desktop Windows/macOS/Linux and excludes Windows Server. Native Server CI is library-copy evidence, not VS Code host validation."
       ]
+    },
+    {
+      "id": "cline-cli",
+      "aliases": [],
+      "product_id": "cline",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".cline",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.cline.bot/getting-started/config",
+                "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Cline cli documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".cline",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/getting-started/config",
+                    "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline cli documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".clinerules",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/getting-started/config",
+                    "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline cli documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/getting-started/config",
+                    "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline cli documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Discovery order identifies documented locations only; no same-tier duplicate precedence is inferred."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "environment",
+                "variable": "CLINE_DIR",
+                "fallback": {
+                  "base": "home",
+                  "components": [
+                    ".cline"
+                  ]
+                }
+              },
+              "components": [
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.cline.bot/getting-started/config",
+                "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Cline cli documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "environment",
+                    "variable": "CLINE_DIR",
+                    "fallback": {
+                      "base": "home",
+                      "components": [
+                        ".cline"
+                      ]
+                    }
+                  },
+                  "components": [
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/getting-started/config",
+                    "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline cli documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/getting-started/config",
+                    "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline cli documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Discovery order identifies documented locations only; no same-tier duplicate precedence is inferred."
+          ]
+        }
+      ],
+      "limitations": [
+        "Config documentation explicitly shares .cline configuration across IDE, CLI and SDK. These are distinct selected variants, not independent host-discovery proof.",
+        "CLINE_DIR replaces the configuration root; CLINE_DATA_DIR relocates app state, not skills. The caller supplies overrides explicitly. CLI --config parsing/precedence is not implemented by this resolver.",
+        "Skills, Where Skills Live, gives global-over-project duplicate precedence. Compatibility directory precedence, additional reserved names and minimum skills version are not established.",
+        "No application workspace, JetBrains, desktop, SDK, cloud, remote, plugin or managed store variant is enabled by analogy. Host skill toggles and activation remain untouched.",
+        "Skills, Where Skills Live, explicitly gives macOS/Linux and Windows home-relative examples. Native resolver/copy evidence is not an installed host/version test.",
+        "The CLI Config and CLI Reference pages establish shared roots and CLI options; project .claude discovery from the editor-oriented Skills page is not inferred for CLI."
+      ]
+    },
+    {
+      "id": "cline-vscode",
+      "aliases": [],
+      "product_id": "cline",
+      "variant": "vscode",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".cline",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.cline.bot/getting-started/config",
+                "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Cline vscode documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".cline",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/getting-started/config",
+                    "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline vscode documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".clinerules",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/getting-started/config",
+                    "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline vscode documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/getting-started/config",
+                    "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline vscode documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/customization/skills",
+                    "section": "Where Skills Live",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline vscode documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Discovery order identifies documented locations only; no same-tier duplicate precedence is inferred."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "environment",
+                "variable": "CLINE_DIR",
+                "fallback": {
+                  "base": "home",
+                  "components": [
+                    ".cline"
+                  ]
+                }
+              },
+              "components": [
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.cline.bot/getting-started/config",
+                "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Cline vscode documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "environment",
+                    "variable": "CLINE_DIR",
+                    "fallback": {
+                      "base": "home",
+                      "components": [
+                        ".cline"
+                      ]
+                    }
+                  },
+                  "components": [
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/getting-started/config",
+                    "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline vscode documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.cline.bot/getting-started/config",
+                    "section": "Configuration Directory Layout; What Goes Where?; Environment Variables",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Cline vscode documentation; shared configuration explicitly covers IDE/CLI; minimum host version and real-host discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::cline_scopes_overrides_and_variant_boundaries",
+                    "expanded_targets::cline_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Caller-selected root only; no host was run. Configuration-specific discovery beyond the documented roots remains untested."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Discovery order identifies documented locations only; no same-tier duplicate precedence is inferred."
+          ]
+        }
+      ],
+      "limitations": [
+        "Config documentation explicitly shares .cline configuration across IDE, CLI and SDK. These are distinct selected variants, not independent host-discovery proof.",
+        "CLINE_DIR replaces the configuration root; CLINE_DATA_DIR relocates app state, not skills. The caller supplies overrides explicitly. CLI --config parsing/precedence is not implemented by this resolver.",
+        "Skills, Where Skills Live, gives global-over-project duplicate precedence. Compatibility directory precedence, additional reserved names and minimum skills version are not established.",
+        "No application workspace, JetBrains, desktop, SDK, cloud, remote, plugin or managed store variant is enabled by analogy. Host skill toggles and activation remain untouched.",
+        "Skills, Where Skills Live, explicitly gives macOS/Linux and Windows home-relative examples. Native resolver/copy evidence is not an installed host/version test."
+      ]
     }
   ]
 }
