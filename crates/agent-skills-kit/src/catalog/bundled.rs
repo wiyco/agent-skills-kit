@@ -75,9 +75,14 @@ impl Catalog {
                 ],
             },
         ];
+        // Extended product variants use the same strict public schema. Embed
+        // assets at compile time; there is no runtime repository or network read.
+        let extensions = Self::from_json(include_bytes!("data/expanded.json"))?;
+        let mut targets = seeds.into_iter().map(Seed::target).collect::<Vec<_>>();
+        targets.extend(extensions.document().targets);
         Self::new(CatalogDocument {
             schema_version: SCHEMA_VERSION,
-            targets: seeds.into_iter().map(Seed::target).collect(),
+            targets,
         })
     }
 }

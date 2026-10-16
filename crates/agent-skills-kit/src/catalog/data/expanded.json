@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "targets": [
+    {
+      "id": "gemini-cli",
+      "aliases": [],
+      "product_id": "gemini-cli",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".gemini",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://geminicli.com/docs/cli/skills/",
+                "section": "Discovery tiers",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Gemini CLI documentation (page updated 2026-04-30); project-local workspace scope, not an IDE workspace; minimum host version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::gemini_explicit_scopes_read_aliases_and_configuration_gaps",
+                "expanded_targets::gemini_reader_alias_does_not_rewrite_native_installation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Native lexical resolution is tested separately from actual Gemini CLI discovery; no host process has been run."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://geminicli.com/docs/cli/skills/",
+                    "section": "Discovery tiers",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Gemini CLI documentation (page updated 2026-04-30); project-local workspace scope, not an IDE workspace; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::gemini_explicit_scopes_read_aliases_and_configuration_gaps",
+                    "expanded_targets::gemini_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution is tested separately from actual Gemini CLI discovery; no host process has been run."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".gemini",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://geminicli.com/docs/cli/skills/",
+                    "section": "Discovery tiers",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Gemini CLI documentation (page updated 2026-04-30); project-local workspace scope, not an IDE workspace; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::gemini_explicit_scopes_read_aliases_and_configuration_gaps",
+                    "expanded_targets::gemini_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution is tested separately from actual Gemini CLI discovery; no host process has been run."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "The installer chooses the documented host-specific .gemini location for writes; discovery lists the higher-precedence .agents alias first.",
+            "Workspace means the explicit caller project root; no ancestor scan or application-workspace inference is implemented."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".gemini",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://geminicli.com/docs/cli/skills/",
+                "section": "Discovery tiers",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Gemini CLI documentation (page updated 2026-04-30); project-local workspace scope, not an IDE workspace; minimum host version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::gemini_explicit_scopes_read_aliases_and_configuration_gaps",
+                "expanded_targets::gemini_reader_alias_does_not_rewrite_native_installation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Native lexical resolution is tested separately from actual Gemini CLI discovery; no host process has been run."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://geminicli.com/docs/cli/skills/",
+                    "section": "Discovery tiers",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Gemini CLI documentation (page updated 2026-04-30); project-local workspace scope, not an IDE workspace; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::gemini_explicit_scopes_read_aliases_and_configuration_gaps",
+                    "expanded_targets::gemini_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution is tested separately from actual Gemini CLI discovery; no host process has been run."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".gemini",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://geminicli.com/docs/cli/skills/",
+                    "section": "Discovery tiers",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Gemini CLI documentation (page updated 2026-04-30); project-local workspace scope, not an IDE workspace; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::gemini_explicit_scopes_read_aliases_and_configuration_gaps",
+                    "expanded_targets::gemini_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution is tested separately from actual Gemini CLI discovery; no host process has been run."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "The installer chooses the documented host-specific .gemini location for writes; discovery lists the higher-precedence .agents alias first.",
+            "Workspace means the explicit caller project root; no ancestor scan or application-workspace inference is implemented."
+          ]
+        }
+      ],
+      "limitations": [
+        "The Precedence and aliases section gives workspace precedence over user and .agents precedence over .gemini within each tier; copying does not establish the active skill.",
+        "Built-in and extension skills, enable/disable state and activation consent are managed by the host, not this local-copy installer.",
+        "No skills relocation override or additional reserved local name is established by the reviewed skills pages; unrelated environment variables are not interpreted.",
+        "Creating Agent Skills, Manual creation, provides macOS/Linux and Windows directory examples: https://geminicli.com/docs/cli/creating-skills/ (reviewed 2026-10-16). Native resolver tests are not OS-specific host discovery tests.",
+        "Gemini Code Assist IDE, web/cloud experiences, link installation and remote acquisition are separate unverified or excluded capabilities.",
+        "Selecting Gemini placement does not prevent other documented readers from seeing shared .agents locations; native .gemini writes remain distinct."
+      ]
+    }
+  ]
+}

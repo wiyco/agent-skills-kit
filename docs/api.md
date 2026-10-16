@@ -44,7 +44,7 @@ Native unsafe code remains confined to reviewed filesystem/permission modules; t
 
 ## Package-content review
 
-`cargo package -p agent-skills-kit --list --locked` lists the planned library archive without publishing. The catalog is compiled into `src/catalog/bundled.rs`; it does not depend on a repository-relative runtime JSON file. The list contains the library source, original tests/fixtures, Cargo metadata/lockfile and Cargo-generated VCS metadata. It excludes the CLI, standalone consumer, global/local proto state, `.env`/credentials, `.git`, local build output and unrelated repository files. The consumer's lockfile independently records the same dependency graph.
+`cargo package -p agent-skills-kit --list --locked` lists the planned library archive without publishing. The catalog is compiled from `src/catalog/bundled.rs` and schema-validated embedded `src/catalog/data/expanded.json`; it does not depend on a repository-relative runtime file. Package listings must include both sources. The list contains the library source, original tests/fixtures, Cargo metadata/lockfile and Cargo-generated VCS metadata. It excludes the CLI, standalone consumer, global/local proto state, `.env`/credentials, `.git`, local build output and unrelated repository files. The consumer's lockfile independently records the same dependency graph.
 
 Packaging metadata/license/readme completeness and an extracted-package build are further ASK-024 release rehearsals; this inspection is not publication approval. `publish = false` remains in both project packages and the external example. No registry login, upload, release or visibility change occurs.
 
