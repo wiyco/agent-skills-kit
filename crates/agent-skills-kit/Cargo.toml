@@ -16,3 +16,5 @@ saphyr-parser = { version = "0.2.2", default-features = false }
 rustix = { version = "1.1.5", features = ["fs"] }
 blake3 = { version = "1.8.7", default-features = false, features = ["pure"] }
 libc = "0.2.190"
+unicode-normalization = "0.1.25"
+caseless = "0.2.2"
