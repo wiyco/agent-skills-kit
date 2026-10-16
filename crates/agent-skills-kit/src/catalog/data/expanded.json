@@ -4739,6 +4739,629 @@
         "Installation, System requirements (https://kiro.dev/docs/getting-started/installation/; updated 2026-10-05, reviewed 2026-10-16) documents CLI macOS/Linux and native Windows 11 PowerShell. Native Windows Server NTFS tests prove library behavior, not installed host/desktop/ARM/distro validation.",
         "General portable metadata/folder matching and strict no-link copying remain required. No additional reserved local name or minimum ordinary skills version is established. No host, credentials, model requests, imports or skill scripts were run."
       ]
+    },
+    {
+      "id": "antigravity-app",
+      "aliases": [],
+      "product_id": "antigravity",
+      "variant": "app",
+      "scopes": [
+        {
+          "scope": "application_workspace",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "application_workspace"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://antigravity.google/docs/skills",
+                "section": "Antigravity App skill locations",
+                "accessed": "2026-10-16",
+                "applicability": "current App v2.5+ surface in rolling official docs; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "application_workspace"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://antigravity.google/docs/skills",
+                    "section": "Antigravity App skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "current App v2.5+ surface in rolling official docs; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                    "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "application_workspace"
+                  },
+                  "components": [
+                    ".agent",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://antigravity.google/docs/skills",
+                    "section": "What are skills? compatibility note; Antigravity App skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "current App v2.5+ surface in rolling official docs; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                    "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Reader enumeration order does not establish effective duplicate precedence or ancestor traversal."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".gemini",
+                "config",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://antigravity.google/docs/skills",
+                "section": "Antigravity App skill locations",
+                "accessed": "2026-10-16",
+                "applicability": "current App v2.5+ surface in rolling official docs; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".gemini",
+                    "config",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://antigravity.google/docs/skills",
+                    "section": "Antigravity App skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "current App v2.5+ surface in rolling official docs; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                    "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Reader enumeration order does not establish effective duplicate precedence or ancestor traversal."
+          ]
+        }
+      ],
+      "limitations": [
+        "Official Agent Skills, Skills by surface gives separate App/CLI/standalone IDE paths. Product identity is not evidence that editor extensions, SDK, remote or cloud variants use the same local stores.",
+        "App/IDE workspace-root is an explicitly selected local application workspace folder, not inferred from Project, process CWD, a multi-root project container or application configuration directory. CLI project is the caller-specified working codebase root; no CWD or Git discovery occurs.",
+        "The general .agent/skills compatibility note is modeled only as a local reader beside the documented .agents/skills root. No legacy user-home .agent path is inferred. Only standalone IDE explicitly documents the legacy ~/.gemini/antigravity/skills user reader.",
+        "Native .agents workspace/project writes can be shared with other hosts and preserve attribution. App and IDE user writes coincide; CLI user writes stay in ~/.gemini/antigravity-cli/skills. Compatibility readers never replace preferred writes.",
+        "No documented replacement skills-root override was established by Skills, Settings or CLI settings and tips. GEMINI_CLI_HOME, ANTIGRAVITY_HOME, XDG_CONFIG_HOME and other host variables are not inferred. Configuration files and flags are not read, evaluated or changed.",
+        "Plugin-provided skills and marketplace/import operations are managed stores outside MVP writes. No plugin directory is created. SDK, editor extensions and remote-control behavior require separate evidence.",
+        "Getting Started, Choose your surface / Download and install / Start a project (https://antigravity.google/docs/getting-started/; reviewed 2026-10-16) identifies App v2.5+, agy CLI v1.2+, standalone IDE and native macOS/Linux/Windows availability. Those are surface applicability, not proven minimum skills versions. Native CI does not validate installed hosts, Windows desktop/ARM, distro versions or Googlebook OS.",
+        "The host allows omitted name with folder fallback; the installer retains stricter portable required name/folder validation. No additional reserved local name, duplicate activation priority or minimum skills version is established. No host, credentials, model API or embedded skill instructions were run."
+      ]
+    },
+    {
+      "id": "antigravity-cli",
+      "aliases": [],
+      "product_id": "antigravity",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://antigravity.google/docs/skills",
+                "section": "CLI skill locations",
+                "accessed": "2026-10-16",
+                "applicability": "current agy CLI v1.2+ surface in rolling official docs; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://antigravity.google/docs/skills",
+                    "section": "CLI skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "current agy CLI v1.2+ surface in rolling official docs; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                    "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agent",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://antigravity.google/docs/skills",
+                    "section": "What are skills? compatibility note; CLI skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "current agy CLI v1.2+ surface in rolling official docs; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                    "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Reader enumeration order does not establish effective duplicate precedence or ancestor traversal."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".gemini",
+                "antigravity-cli",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://antigravity.google/docs/skills",
+                "section": "CLI skill locations",
+                "accessed": "2026-10-16",
+                "applicability": "current agy CLI v1.2+ surface in rolling official docs; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".gemini",
+                    "antigravity-cli",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://antigravity.google/docs/skills",
+                    "section": "CLI skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "current agy CLI v1.2+ surface in rolling official docs; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                    "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Reader enumeration order does not establish effective duplicate precedence or ancestor traversal."
+          ]
+        }
+      ],
+      "limitations": [
+        "Official Agent Skills, Skills by surface gives separate App/CLI/standalone IDE paths. Product identity is not evidence that editor extensions, SDK, remote or cloud variants use the same local stores.",
+        "App/IDE workspace-root is an explicitly selected local application workspace folder, not inferred from Project, process CWD, a multi-root project container or application configuration directory. CLI project is the caller-specified working codebase root; no CWD or Git discovery occurs.",
+        "The general .agent/skills compatibility note is modeled only as a local reader beside the documented .agents/skills root. No legacy user-home .agent path is inferred. Only standalone IDE explicitly documents the legacy ~/.gemini/antigravity/skills user reader.",
+        "Native .agents workspace/project writes can be shared with other hosts and preserve attribution. App and IDE user writes coincide; CLI user writes stay in ~/.gemini/antigravity-cli/skills. Compatibility readers never replace preferred writes.",
+        "No documented replacement skills-root override was established by Skills, Settings or CLI settings and tips. GEMINI_CLI_HOME, ANTIGRAVITY_HOME, XDG_CONFIG_HOME and other host variables are not inferred. Configuration files and flags are not read, evaluated or changed.",
+        "Plugin-provided skills and marketplace/import operations are managed stores outside MVP writes. No plugin directory is created. SDK, editor extensions and remote-control behavior require separate evidence.",
+        "Getting Started, Choose your surface / Download and install / Start a project (https://antigravity.google/docs/getting-started/; reviewed 2026-10-16) identifies App v2.5+, agy CLI v1.2+, standalone IDE and native macOS/Linux/Windows availability. Those are surface applicability, not proven minimum skills versions. Native CI does not validate installed hosts, Windows desktop/ARM, distro versions or Googlebook OS.",
+        "The host allows omitted name with folder fallback; the installer retains stricter portable required name/folder validation. No additional reserved local name, duplicate activation priority or minimum skills version is established. No host, credentials, model API or embedded skill instructions were run."
+      ]
+    },
+    {
+      "id": "antigravity-ide",
+      "aliases": [],
+      "product_id": "antigravity",
+      "variant": "ide",
+      "scopes": [
+        {
+          "scope": "application_workspace",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "application_workspace"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://antigravity.google/docs/skills",
+                "section": "Antigravity IDE skill locations",
+                "accessed": "2026-10-16",
+                "applicability": "current standalone IDE surface in rolling official docs; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "application_workspace"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://antigravity.google/docs/skills",
+                    "section": "Antigravity IDE skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "current standalone IDE surface in rolling official docs; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                    "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "application_workspace"
+                  },
+                  "components": [
+                    ".agent",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://antigravity.google/docs/skills",
+                    "section": "What are skills? compatibility note; Antigravity IDE skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "current standalone IDE surface in rolling official docs; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                    "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Reader enumeration order does not establish effective duplicate precedence or ancestor traversal."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".gemini",
+                "config",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://antigravity.google/docs/skills",
+                "section": "Antigravity IDE skill locations",
+                "accessed": "2026-10-16",
+                "applicability": "current standalone IDE surface in rolling official docs; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".gemini",
+                    "config",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://antigravity.google/docs/skills",
+                    "section": "Antigravity IDE skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "current standalone IDE surface in rolling official docs; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                    "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".gemini",
+                    "antigravity",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://antigravity.google/docs/skills",
+                    "section": "Antigravity IDE skill locations",
+                    "accessed": "2026-10-16",
+                    "applicability": "current standalone IDE surface in rolling official docs; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::antigravity_variant_scopes_and_reader_boundaries",
+                    "expanded_targets::antigravity_native_copy_scopes_and_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "The host is not executed. Native resolver/copy evidence is independent of actual discovery or activation."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Reader enumeration order does not establish effective duplicate precedence or ancestor traversal."
+          ]
+        }
+      ],
+      "limitations": [
+        "Official Agent Skills, Skills by surface gives separate App/CLI/standalone IDE paths. Product identity is not evidence that editor extensions, SDK, remote or cloud variants use the same local stores.",
+        "App/IDE workspace-root is an explicitly selected local application workspace folder, not inferred from Project, process CWD, a multi-root project container or application configuration directory. CLI project is the caller-specified working codebase root; no CWD or Git discovery occurs.",
+        "The general .agent/skills compatibility note is modeled only as a local reader beside the documented .agents/skills root. No legacy user-home .agent path is inferred. Only standalone IDE explicitly documents the legacy ~/.gemini/antigravity/skills user reader.",
+        "Native .agents workspace/project writes can be shared with other hosts and preserve attribution. App and IDE user writes coincide; CLI user writes stay in ~/.gemini/antigravity-cli/skills. Compatibility readers never replace preferred writes.",
+        "No documented replacement skills-root override was established by Skills, Settings or CLI settings and tips. GEMINI_CLI_HOME, ANTIGRAVITY_HOME, XDG_CONFIG_HOME and other host variables are not inferred. Configuration files and flags are not read, evaluated or changed.",
+        "Plugin-provided skills and marketplace/import operations are managed stores outside MVP writes. No plugin directory is created. SDK, editor extensions and remote-control behavior require separate evidence.",
+        "Getting Started, Choose your surface / Download and install / Start a project (https://antigravity.google/docs/getting-started/; reviewed 2026-10-16) identifies App v2.5+, agy CLI v1.2+, standalone IDE and native macOS/Linux/Windows availability. Those are surface applicability, not proven minimum skills versions. Native CI does not validate installed hosts, Windows desktop/ARM, distro versions or Googlebook OS.",
+        "The host allows omitted name with folder fallback; the installer retains stricter portable required name/folder validation. No additional reserved local name, duplicate activation priority or minimum skills version is established. No host, credentials, model API or embedded skill instructions were run."
+      ]
     }
   ]
 }

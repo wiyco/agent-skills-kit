@@ -12,6 +12,9 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             .collect::<Vec<_>>(),
         [
             "amp-cli",
+            "antigravity-app",
+            "antigravity-cli",
+            "antigravity-ide",
             "claude-code",
             "cline-cli",
             "cline-vscode",
