@@ -3106,6 +3106,186 @@
         "Droid CLI Reference, Installation (https://docs.factory.com/droid-cli/cli-reference), and Settings, Where settings live (https://docs.factory.com/droid-cli/settings), reviewed 2026-10-16, identify CLI Linux/macOS/Windows candidates and Windows user home. No installer or host was run.",
         "Factory App, IDE integrations, SDK, cloud/remote, mission, automation, plugin and managed variants are separate unverified/excluded capabilities. Selecting placement is not exclusive visibility or host activation."
       ]
+    },
+    {
+      "id": "qwen-code-cli",
+      "aliases": [],
+      "product_id": "qwen-code",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".qwen",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/",
+                "section": "Project Skills; View available Skills",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Qwen Code CLI documentation; settings updated 2026-10-14, skills updated 2026-09-16; minimum host version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::qwen_code_home_override_and_unshared_reader_boundaries",
+                "expanded_targets::qwen_code_native_and_alternate_writes_are_not_fork_readers"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "No active host settings, enablement, trust or discovery are evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".qwen",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/",
+                    "section": "Project Skills; View available Skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Qwen Code CLI documentation; settings updated 2026-10-14, skills updated 2026-09-16; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::qwen_code_home_override_and_unshared_reader_boundaries",
+                    "expanded_targets::qwen_code_native_and_alternate_writes_are_not_fork_readers"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "No active host settings, enablement, trust or discovery are evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Only the documented native default/override root is modeled; no compatibility readers are inferred."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "environment",
+                "variable": "QWEN_HOME",
+                "fallback": {
+                  "base": "home",
+                  "components": [
+                    ".qwen"
+                  ]
+                }
+              },
+              "components": [
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://qwenlm.github.io/qwen-code-docs/en/users/configuration/settings/",
+                "section": "Environment Variables Table, QWEN_HOME",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Qwen Code CLI documentation; settings updated 2026-10-14, skills updated 2026-09-16; minimum host version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::qwen_code_home_override_and_unshared_reader_boundaries",
+                "expanded_targets::qwen_code_native_and_alternate_writes_are_not_fork_readers"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Agent Skills, Personal Skills (https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/; reviewed 2026-10-16) establishes the skills suffix and default home root; the settings table explicitly includes skills in QWEN_HOME state.",
+                "Host expands relative/tilde roots and treats empty QWEN_HOME as unset. This installer requires explicit absolute override values and rejects empty/relative/tilde inputs; callers must normalize or omit them deliberately.",
+                "No active host settings, enablement, trust or discovery are evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "environment",
+                    "variable": "QWEN_HOME",
+                    "fallback": {
+                      "base": "home",
+                      "components": [
+                        ".qwen"
+                      ]
+                    }
+                  },
+                  "components": [
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://qwenlm.github.io/qwen-code-docs/en/users/configuration/settings/",
+                    "section": "Environment Variables Table, QWEN_HOME",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Qwen Code CLI documentation; settings updated 2026-10-14, skills updated 2026-09-16; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::qwen_code_home_override_and_unshared_reader_boundaries",
+                    "expanded_targets::qwen_code_native_and_alternate_writes_are_not_fork_readers"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Agent Skills, Personal Skills (https://qwenlm.github.io/qwen-code-docs/en/users/features/skills/; reviewed 2026-10-16) establishes the skills suffix and default home root; the settings table explicitly includes skills in QWEN_HOME state.",
+                    "Host expands relative/tilde roots and treats empty QWEN_HOME as unset. This installer requires explicit absolute override values and rejects empty/relative/tilde inputs; callers must normalize or omit them deliberately.",
+                    "No active host settings, enablement, trust or discovery are evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Only the documented native default/override root is modeled; no compatibility readers are inferred."
+          ]
+        }
+      ],
+      "limitations": [
+        "Native .qwen/skills is independently documented; no .agents, .claude or Gemini reader is inferred from another product or fork.",
+        "QWEN_HOME relocates user skills; QWEN_RUNTIME_DIR relocates runtime output, not persistent skills. The library takes explicit overrides and does not expand shell syntax or infer current directories.",
+        "Default project/user roots do not enumerate skills.directories, extension, bundled or managed stores. skills.disabledLevels, per-name enable/disable, trust, path gates and bare-mode discovery restrictions remain host-managed.",
+        "The source documents project > user > extension > bundled duplicate precedence. Slash-command collisions and argument-file name folding are separate host behaviors, not installation exclusivity or a tested active-skill guarantee.",
+        "Host names allow syntax beyond the general Agent Skills specification; this installer retains stricter portable names and folder/frontmatter agreement. No additional reserved local skill name is established.",
+        "Host maintenance can archive project auto-skill-* directories marked source: auto-skill. This installer does not author markers, change maintenance settings or guarantee retention by a subsequently run host.",
+        "Official Quick Start, Installing Qwen Code (https://qwenlm.github.io/qwen-code-docs/en/blog/quickstart/getting-started/; published 2026-07-13, updated 2026-09-04, reviewed 2026-10-16) identifies Windows/macOS/Linux. No host installer or model was run.",
+        "IDE/ACP, daemon/browser/cloud, extension and bundled variants remain separate unverified/excluded capabilities. Invocation hooks and scripts are never executed; minimum host version and real discovery remain untested."
+      ]
     }
   ]
 }
