@@ -899,3 +899,100 @@ fn kimi_code_current_roots_override_and_legacy_boundaries() {
         assert!(catalog.get(id).is_none());
     }
 }
+
+#[test]
+fn junie_reader_alias_does_not_rewrite_native_installation() {
+    native_writes_remain_distinct("junie-cli");
+}
+#[test]
+fn junie_cli_default_roots_and_ide_configuration_gaps() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "JUNIE_HOME",
+        "JUNIE_SKILL_LOCATIONS",
+        "CLINE_DIR",
+        "CODEX_HOME",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "unverified or extra location".into());
+    }
+    context
+        .overrides
+        .insert("JUNIE_SKILL_DEFAULT_LOCATIONS".into(), "false".into());
+    let target = catalog.get("junie-cli").unwrap();
+    assert_eq!(target.product_id, "junie");
+    assert_eq!(target.variant, "cli");
+    assert!(
+        target
+            .limitations
+            .iter()
+            .any(|gap| gap.contains("JUNIE_HOME"))
+    );
+    assert!(
+        target
+            .limitations
+            .iter()
+            .any(|gap| gap.contains("Default roots can be disabled"))
+    );
+    for (scope, root) in [
+        (Scope::User, context.user_home.as_ref().unwrap()),
+        (Scope::Project, context.project_root.as_ref().unwrap()),
+    ] {
+        let result = resolve(&catalog, "junie-cli", scope, &context).unwrap();
+        assert_eq!(result.preferred_write.path, root.join(".junie/skills"));
+        assert_eq!(result.discovery.len(), 2);
+        assert_eq!(result.discovery[0].location, result.preferred_write);
+        assert_eq!(
+            result.discovery[1].location.path,
+            root.join(".agents/skills")
+        );
+        for reader in &result.discovery {
+            assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+            assert_eq!(
+                reader.location.evidence.source.as_ref().unwrap().url,
+                "https://junie.jetbrains.com/docs/agent-skills.html"
+            );
+            assert!(reader.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::PlacementNotExclusive)
+        );
+        assert!(
+            !result
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    for id in [
+        "junie",
+        "junie-ide",
+        "junie-plugin",
+        "junie-acp",
+        "junie-cloud",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+    assert!(matches!(
+        resolve(&catalog, "junie-cli", Scope::ApplicationWorkspace, &context),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "junie-cli", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "junie-cli", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+}

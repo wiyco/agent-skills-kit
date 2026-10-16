@@ -2592,6 +2592,232 @@
         "Getting started, Installation (https://moonshotai.github.io/kimi-code/en/guides/getting-started.html), reviewed 2026-10-16, documents macOS/Linux and Windows with Git Bash. No host or shell prerequisite was installed or launched.",
         "IDE/ACP, browser/remote, archived Python and Rust-agent variants are separate unverified or excluded capabilities. Successful native library copying does not validate real-host discovery."
       ]
+    },
+    {
+      "id": "junie-cli",
+      "aliases": [],
+      "product_id": "junie",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".junie",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://junie.jetbrains.com/docs/agent-skills.html",
+                "section": "How Junie CLI uses skills, Skill location; Skill locations and configuration",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Junie CLI documentation, default locations only; native IDE plugin and AI Assistant surface not inferred; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::junie_cli_default_roots_and_ide_configuration_gaps",
+                "expanded_targets::junie_reader_alias_does_not_rewrite_native_installation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Default locations may be disabled and project loading depends on host trust; no host configuration, trust markers or discovery are evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".junie",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://junie.jetbrains.com/docs/agent-skills.html",
+                    "section": "How Junie CLI uses skills, Skill location; Skill locations and configuration",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Junie CLI documentation, default locations only; native IDE plugin and AI Assistant surface not inferred; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::junie_cli_default_roots_and_ide_configuration_gaps",
+                    "expanded_targets::junie_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default locations may be disabled and project loading depends on host trust; no host configuration, trust markers or discovery are evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://junie.jetbrains.com/docs/agent-skills.html",
+                    "section": "How Junie CLI uses skills, Skill location; Skill locations and configuration",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Junie CLI documentation, default locations only; native IDE plugin and AI Assistant surface not inferred; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::junie_cli_default_roots_and_ide_configuration_gaps",
+                    "expanded_targets::junie_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default locations may be disabled and project loading depends on host trust; no host configuration, trust markers or discovery are evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Explicit caller root and documented default configuration only; disabling/custom roots or trust state can change actual discovery."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".junie",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://junie.jetbrains.com/docs/agent-skills.html",
+                "section": "How Junie CLI uses skills, Skill location; Skill locations and configuration",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling Junie CLI documentation, default locations only; native IDE plugin and AI Assistant surface not inferred; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::junie_cli_default_roots_and_ide_configuration_gaps",
+                "expanded_targets::junie_reader_alias_does_not_rewrite_native_installation"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Default locations may be disabled and project loading depends on host trust; no host configuration, trust markers or discovery are evaluated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".junie",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://junie.jetbrains.com/docs/agent-skills.html",
+                    "section": "How Junie CLI uses skills, Skill location; Skill locations and configuration",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Junie CLI documentation, default locations only; native IDE plugin and AI Assistant surface not inferred; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::junie_cli_default_roots_and_ide_configuration_gaps",
+                    "expanded_targets::junie_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default locations may be disabled and project loading depends on host trust; no host configuration, trust markers or discovery are evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://junie.jetbrains.com/docs/agent-skills.html",
+                    "section": "How Junie CLI uses skills, Skill location; Skill locations and configuration",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling Junie CLI documentation, default locations only; native IDE plugin and AI Assistant surface not inferred; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::junie_cli_default_roots_and_ide_configuration_gaps",
+                    "expanded_targets::junie_reader_alias_does_not_rewrite_native_installation"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Default locations may be disabled and project loading depends on host trust; no host configuration, trust markers or discovery are evaluated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Explicit caller root and documented default configuration only; disabling/custom roots or trust state can change actual discovery."
+          ]
+        }
+      ],
+      "limitations": [
+        "CLI native defaults are .junie/skills with separate .agents readers. Project overrides user for duplicate native names; compatibility duplicate precedence remains unverified.",
+        "Project .agents skills require a trusted project. Default roots can be disabled via --skill-default-locations, JUNIE_SKILL_DEFAULT_LOCATIONS or configuration. Additional skill locations, extension/built-in skills and enabled state are not modeled or modified.",
+        "Environment variables, Configuration files (https://junie.jetbrains.com/docs/environment-variables.html; updated 2026-10-15, reviewed 2026-10-16) names JUNIE_HOME as home storage, but the reviewed skills sections do not establish its exact replacement skill roots. JUNIE_HOME relocation remains unverified and is not interpreted as a skills write override.",
+        "Config documentation (https://junie.jetbrains.com/docs/junie-cli-configuration.html; reviewed 2026-10-16), Project trust, describes temporary project storage for untrusted interactive projects. This installer does not grant trust or target transient host-managed storage.",
+        "The skills introduction mentions IDE support, but its path sections specify CLI. AI Assistant 2026.2 Agents (https://www.jetbrains.com/help/ai-assistant/agents.html; updated 2026-10-07, reviewed 2026-10-16) does not list native Junie skills as supported. Native IDE/plugin and CLI-via-ACP discovery remain separate version/surface gaps; no IDE target is enabled.",
+        "Cursor/Claude/Codex directories are described as import candidates, not default readable roots. No import/migration is performed and no fork path or state-home override is inherited.",
+        "Only canonical directory-form skills with general-spec metadata are installed. The host optional-description convenience does not weaken validation. No additional reserved local name or minimum skills version is established.",
+        "Skill location provides macOS/Linux and Windows home examples. Native copying does not prove host discovery, activation, trust or a validated installed version."
+      ]
     }
   ]
 }
