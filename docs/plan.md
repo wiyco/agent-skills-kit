@@ -61,6 +61,10 @@ Catalog expansion is parallel work: maximize documented/tested coverage, not an 
 | [ASK-028](../planning/issues/ASK-028.md) | Design a separate remote skill acquisition layer | M5 | P2 | ASK-008, ASK-012, ASK-013, ASK-023 |
 | [ASK-029](../planning/issues/ASK-029.md) | Design managed upgrades and safe uninstall | M5 | P2 | ASK-011, ASK-012, ASK-013 |
 
+## Autonomous implementation workflow
+
+The maintainer may authorize an agent to work through a complete milestone rather than stopping after each issue. Each dependency-ready issue must still have focused changes, required checks, self-review, and an individually understandable PR. Squash merge is the default, and official `gh stack` is preferred only for linearly dependent PRs. See [Autonomous development policy](autonomous-development.md) for merge eligibility, QA comments, GitHub settings, and the prohibition on publication without explicit approval. M5 remains out of scope for pre-publication milestone runs.
+
 ## Initial execution order
 
 Start ASK-001. ASK-002 and ASK-008 can be researched in parallel. Then establish CI/schema/resolution, complete the core target evidence and validation, and proceed to planner -> executor -> repeatability/tests -> public API -> CLI. Catalog research can proceed once the schema/resolver are ready.

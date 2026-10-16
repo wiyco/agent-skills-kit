@@ -27,7 +27,7 @@ Dependencies are explicit, linked references in issue bodies and the Project Dep
 
 Ready -> In Progress -> In Review -> Done. Use Blocked with a written reason; return it to Ready only after the blocker is resolved. Done requires merged work and satisfied acceptance criteria. Future ideas stay in Backlog.
 
-Use one active implementer per issue. Keep PRs small; split large adapter waves into host-sized PRs when necessary. Prefer distinct branches/worktrees for concurrent agents.
+Use one active implementer per issue. Keep PRs small; split large adapter waves into host-sized PRs when necessary. Prefer distinct branches/worktrees for concurrent agents. Follow `docs/autonomous-development.md` for milestone-level autonomy, conventional PR titles, stacked dependencies, QA evidence comments, and gated squash merges. A single milestone run can complete several issues/PRs sequentially, but cannot bypass acceptance criteria or cross a publication gate.
 
 ## Bootstrap behavior
 

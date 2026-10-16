@@ -1,0 +1,46 @@
+name: Conventional PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  conventional-pr-title:
+    name: conventional-pr-title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          node <<'NODE'
+          const title = process.env.PR_TITLE || '';
+          const conventional = /^(?:feat|fix|docs|test|refactor|chore|ci|build|perf|style|revert)(?:\([a-z][a-z0-9-]*\))?!?: \S[^\r\n]*$/;
+          const valid = value => value.length <= 100 && conventional.test(value) &&
+            value === value.trim() && !value.endsWith('.') && !/\bWIP\b/i.test(value);
+          const cases = [
+            ['feat(resolver): resolve documented project paths', true],
+            ['feat(api)!: change plan encoding', true],
+            ['fix: preserve existing content', true],
+            ['WIP: bootstrap', false],
+            ['feat: WIP implementation', false],
+            ['feat: ', false],
+            ['feat:  spaces', false],
+            ['feat: trailing ', false],
+            ['feat: trailing.', false],
+            ['feat: newline\n', false],
+            ['feat: ' + 'x'.repeat(95), false],
+          ];
+          for (const [value, expected] of cases) {
+            if (valid(value) !== expected) throw new Error('Title validator regression');
+          }
+          if (!valid(title)) {
+            console.error('PR title must be a Conventional Commit subject (max 100 chars, no WIP or trailing period).');
+            console.error('Example: feat(resolver): resolve documented project paths');
+            process.exit(1);
+          }
+          NODE
