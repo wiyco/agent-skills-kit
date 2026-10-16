@@ -45,6 +45,7 @@ fn native_components_reject_traversal_streams_devices_and_preserve_wide_identity
         "a.",
         "a ",
         "NUL.txt",
+        "CON   .txt",
         "com1",
         "lpt²",
         "CON",

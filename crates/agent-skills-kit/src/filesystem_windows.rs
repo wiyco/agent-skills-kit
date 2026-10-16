@@ -66,7 +66,10 @@ pub(crate) fn component(name: &OsStr) -> io::Result<Vec<u16>> {
         return Err(invalid("unsafe native component"));
     }
     let stem = wide.split(|unit| *unit == 46).next().unwrap();
-    let stem = stem.strip_suffix(&[32]).unwrap_or(stem);
+    let stem = &stem[..stem
+        .iter()
+        .rposition(|unit| *unit != 32)
+        .map_or(0, |index| index + 1)];
     let upper = stem
         .iter()
         .map(|unit| {
