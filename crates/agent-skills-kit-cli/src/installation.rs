@@ -1,6 +1,7 @@
 use crate::{Failure, Output, args::PlanArgs, planning};
 use agent_skills_kit::{
     executor::{ApplyOptions, InstallReport, OutcomeStatus, apply_plan},
+    planner::InstallPlan,
     receipt::{NativePath, OperationId, Receipt, ReceiptLimits},
 };
 use serde_json::{Value, json};
@@ -40,6 +41,9 @@ fn report_view(report: &InstallReport) -> Value {
 }
 pub(crate) fn execute(options: PlanArgs, yes: bool, dry_run: bool) -> Result<Output, Failure> {
     let plan = planning::build(&options)?;
+    execute_plan(plan, yes, dry_run)
+}
+pub(crate) fn execute_plan(plan: InstallPlan, yes: bool, dry_run: bool) -> Result<Output, Failure> {
     // Prepare the immutable preview representation before permitting any writes.
     let preview = planning::view(&plan)?;
     let description = planning::describe(&plan);

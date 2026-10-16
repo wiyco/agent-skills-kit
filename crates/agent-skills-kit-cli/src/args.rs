@@ -4,6 +4,7 @@ use std::{ffi::OsString, path::PathBuf};
 #[derive(Debug)]
 pub(crate) enum Command {
     Help,
+    Interactive,
     Version,
     Targets,
     Target(String),
@@ -148,6 +149,7 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
     }
     match positional.as_slice() {
         [] => Ok(Command::Help),
+        [command] if command.as_os_str() == "interactive" => Ok(Command::Interactive),
         [group, sub] if group.as_os_str() == "targets" && sub.as_os_str() == "list" => {
             Ok(Command::Targets)
         }
