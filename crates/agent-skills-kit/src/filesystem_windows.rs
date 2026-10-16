@@ -268,6 +268,7 @@ pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::
             &mut completion,
             info.cast(),
             bytes as u32,
+            FileRenameInformation,
         );
         if status < 0 {
             return Err(io::Error::from_raw_os_error(
