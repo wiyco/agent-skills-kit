@@ -1,8 +1,6 @@
-use rustix::fs::{Dir, Mode, OFlags};
 use std::{
     collections::{BTreeMap, BTreeSet},
     ffi::OsString,
-    fs::File,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -16,12 +14,13 @@ use crate::planner::{
 };
 use crate::{
     catalog::ContextBase,
-    filesystem::{flags, stamp},
     resolver::{PathOrigin, add_evidence_warnings, resolve},
     validation::{SourceEntryKind, inventory_retained, inventory_skill},
 };
 
-type Identity = (u64, u64);
+#[path = "native.rs"]
+mod native;
+use native::{Directory, Identity};
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum DestinationKey {
     Existing(Identity),
@@ -54,7 +53,7 @@ impl Budget {
     fn path(&mut self, path: &Path) -> Result<(), PlanError> {
         self.paths = self
             .paths
-            .checked_add(path.as_os_str().as_encoded_bytes().len())
+            .checked_add(native::path_bytes(path))
             .ok_or(PlanError::Limit("path bytes"))?;
         if self.paths > self.limits.max_path_bytes {
             Err(PlanError::Limit("path bytes"))
@@ -437,28 +436,16 @@ fn compare_existing(
         .expect("skill has a parent");
     let wanted = std::ffi::OsStr::new(source.metadata().name());
     let mut exact_name = false;
-    let reader = Dir::read_from(&parent.handle).map_err(|error| {
-        PlanError::Namespace(NamespaceError::io(
-            &parent.path,
-            "enumerate existing skill spelling",
-            error.into(),
-        ))
-    })?;
-    for entry in reader {
-        let entry = entry.map_err(|error| {
+    for entry in directory_names(parent, budget, "enumerate existing skill spelling")? {
+        let name = entry.map_err(|error| {
             PlanError::Namespace(NamespaceError::io(
                 &parent.path,
                 "read existing skill spelling",
-                error.into(),
+                error,
             ))
         })?;
-        let bytes = entry.file_name().to_bytes();
-        if matches!(bytes, b"." | b"..") {
-            continue;
-        }
         budget.entry()?;
-        use std::os::unix::ffi::OsStrExt;
-        if std::ffi::OsStr::from_bytes(bytes) == wanted {
+        if name == wanted {
             exact_name = true;
         }
     }
@@ -529,13 +516,10 @@ fn context_path(base: ContextBase, context: &InstallContext) -> Option<PathBuf> 
     }
 }
 fn source_id(source: &ValidatedSkill) -> Identity {
-    (
-        source.inventory().root_stamp().device,
-        source.inventory().root_stamp().inode,
-    )
+    source.inventory().root_stamp().file_identity()
 }
 fn anchor_id(anchor: &DirectoryAnchor) -> Identity {
-    (anchor.stamp.device, anchor.stamp.inode)
+    anchor.stamp.file_identity()
 }
 fn destination_key(
     destination: &PlannedDestination,
@@ -570,48 +554,33 @@ fn same_payload(a: &ValidatedSkill, b: &ValidatedSkill) -> bool {
             })
 }
 
-fn ancestors(start: &Arc<File>, label: &Path) -> Result<BTreeSet<Identity>, PlanError> {
+fn ancestors(start: &Arc<Directory>, label: &Path) -> Result<BTreeSet<Identity>, PlanError> {
     let mut result = BTreeSet::new();
     let mut current = Arc::clone(start);
     for _ in 0..256 {
-        let current_stamp = current
-            .metadata()
-            .map(|metadata| stamp(&metadata))
-            .map_err(|error| {
-                PlanError::Namespace(NamespaceError::io(
-                    label,
-                    "inspect native ancestor identity",
-                    error,
-                ))
-            })?;
-        let identity = (current_stamp.device, current_stamp.inode);
+        let identity = native::identity(&current).map_err(|error| {
+            PlanError::Namespace(NamespaceError::io(
+                label,
+                "inspect native ancestor identity",
+                error,
+            ))
+        })?;
         if !result.insert(identity) {
             return Err(PlanError::Namespace(NamespaceError::new(
                 label,
                 NamespaceErrorKind::NamespaceChanged,
             )));
         }
-        // Fixed kernel-parent traversal for containment identity only. No path
-        // component or command is taken from a skill or process environment.
-        let parent = rustix::fs::openat(&current, "..", flags() | OFlags::DIRECTORY, Mode::empty())
-            .map(File::from)
-            .map_err(|error| {
-                PlanError::Namespace(NamespaceError::io(
-                    label,
-                    "open native ancestor",
-                    error.into(),
-                ))
-            })?;
-        let parent_stamp = parent
-            .metadata()
-            .map(|metadata| stamp(&metadata))
-            .map_err(|error| {
-                PlanError::Namespace(NamespaceError::io(label, "inspect native parent", error))
-            })?;
-        if (parent_stamp.device, parent_stamp.inode) == identity {
+        let parent = native::parent(&current).map_err(|error| {
+            PlanError::Namespace(NamespaceError::io(label, "open native ancestor", error))
+        })?;
+        if native::identity(&parent).map_err(|error| {
+            PlanError::Namespace(NamespaceError::io(label, "inspect native parent", error))
+        })? == identity
+        {
             return Ok(result);
         }
-        current = Arc::new(parent);
+        current = parent;
     }
     Err(PlanError::Namespace(NamespaceError::new(
         label,
@@ -689,31 +658,18 @@ fn existing_name_collision(
     };
     let parent = snapshot.anchors.last().expect("retained root");
     let key = component_key(wanted);
-    let reader = Dir::read_from(&parent.handle).map_err(|error| {
-        PlanError::Namespace(NamespaceError::io(
-            &parent.path,
-            "enumerate collision names",
-            error.into(),
-        ))
-    })?;
     let mut collisions = Vec::new();
-    for entry in reader {
-        let entry = entry.map_err(|error| {
+    for entry in directory_names(parent, budget, "enumerate collision names")? {
+        let name = entry.map_err(|error| {
             PlanError::Namespace(NamespaceError::io(
                 &parent.path,
                 "read collision name",
-                error.into(),
+                error,
             ))
         })?;
-        let bytes = entry.file_name().to_bytes();
-        if matches!(bytes, b"." | b"..") {
-            continue;
-        }
         budget.entry()?;
-        use std::os::unix::ffi::OsStrExt;
-        let name = std::ffi::OsStr::from_bytes(bytes);
-        if component_key(name) == key && name != wanted {
-            let path = parent.path.join(name);
+        if component_key(&name) == key && &name != wanted {
+            let path = parent.path.join(&name);
             budget.path(&path)?;
             collisions.push(path);
         }
@@ -838,4 +794,22 @@ fn intended_writes(
     let mut writes = unique.into_values().collect::<Vec<_>>();
     writes.sort_by(|a, b| a.path.cmp(&b.path));
     Ok(writes)
+}
+
+fn directory_names(
+    anchor: &DirectoryAnchor,
+    budget: &Budget,
+    operation: &'static str,
+) -> Result<native::Names, PlanError> {
+    native::names(
+        &anchor.handle,
+        budget.limits.max_inspected_entries - budget.entries,
+    )
+    .map_err(|error| {
+        if error.kind() == std::io::ErrorKind::FileTooLarge {
+            PlanError::Limit("inspected entries")
+        } else {
+            PlanError::Namespace(NamespaceError::io(&anchor.path, operation, error))
+        }
+    })
 }

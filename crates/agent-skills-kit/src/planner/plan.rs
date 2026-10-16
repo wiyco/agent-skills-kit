@@ -11,7 +11,7 @@ use crate::{
     validation::{InventoryError, InventoryLimits, TargetConstraintError, ValidatedSkill},
 };
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
 #[path = "build.rs"]
 mod build;
 
@@ -64,7 +64,7 @@ impl Default for PlanLimits {
     }
 }
 impl PlanLimits {
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(any(target_os = "linux", target_os = "macos", windows))]
     fn valid(self) -> bool {
         (1..=128).contains(&self.max_skills)
             && (1..=256).contains(&self.max_targets)
@@ -335,17 +335,18 @@ impl Error for PlanError {}
 /// Root overlaps are rejected using native ancestry and selected component keys.
 /// Existing directories are unchanged only after complete retained-handle
 /// comparison of bytes, entry sets and intended modes.
-/// Windows fails closed before filesystem access. An applicable preview is intent,
+/// Eligible Windows NTFS observations use the same planning policy. Execution
+/// remains a separate platform capability gate. An applicable preview is intent,
 /// not permission to bypass immediate native apply checks or force an overwrite.
 pub fn plan_install(
     catalog: &Catalog,
     request: InstallRequest<'_>,
 ) -> Result<InstallPlan, PlanError> {
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(any(target_os = "linux", target_os = "macos", windows))]
     {
         build::plan(catalog, request)
     }
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
     {
         let _ = (catalog, request);
         Err(PlanError::UnsupportedPlatform)

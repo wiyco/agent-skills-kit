@@ -2,7 +2,7 @@
 //!
 //! Observations are preconditions, not write authorization or atomic snapshots.
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
 mod names;
 mod namespace;
 mod plan;

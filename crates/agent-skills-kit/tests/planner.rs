@@ -30,7 +30,7 @@ impl Drop for Root {
     }
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 #[test]
 fn planning_without_a_reviewed_native_backend_fails_before_inspection() {
     use agent_skills_kit::{
@@ -828,5 +828,227 @@ mod native {
             ));
         }
         assert_eq!(tree(&root.0), before);
+    }
+}
+
+#[cfg(windows)]
+mod windows {
+    use super::*;
+    use agent_skills_kit::{catalog::*, resolver::*, validation::*};
+    use std::{
+        ffi::OsString,
+        os::windows::{ffi::OsStringExt, fs::MetadataExt},
+        path::Path,
+    };
+
+    fn source(root: &Root) -> PathBuf {
+        let source = root.0.join("source 中").join("sample");
+        fs::create_dir_all(source.join("empty folder")).unwrap();
+        fs::write(source.join("SKILL.md"), b"---\nname: sample\ndescription: Original Windows planning fixture\n---\nInert original bytes.\n").unwrap();
+        fs::write(source.join("reference café.txt"), b"original resource").unwrap();
+        source
+    }
+    fn context(root: &Root) -> InstallContext {
+        let home = root.0.join("home with spaces 中");
+        let project = root.0.join("project");
+        fs::create_dir(&home).unwrap();
+        fs::create_dir(&project).unwrap();
+        let mut context = InstallContext::new(native_platform().unwrap());
+        context.user_home = Some(home);
+        context.project_root = Some(project);
+        context
+    }
+    fn preview(
+        skills: &[ValidatedSkill],
+        targets: &[&str],
+        context: &InstallContext,
+    ) -> Result<InstallPlan, PlanError> {
+        plan_install(
+            &Catalog::bundled().unwrap(),
+            InstallRequest {
+                skills,
+                target_ids: targets,
+                scope: Scope::User,
+                context,
+                limits: PlanLimits::default(),
+            },
+        )
+    }
+    fn tree(root: &Path) -> Vec<(PathBuf, Vec<u8>, u32)> {
+        fn walk(root: &Path, path: &Path, result: &mut Vec<(PathBuf, Vec<u8>, u32)>) {
+            let metadata = fs::symlink_metadata(path).unwrap();
+            result.push((
+                path.strip_prefix(root).unwrap().to_owned(),
+                if metadata.is_file() {
+                    fs::read(path).unwrap()
+                } else {
+                    vec![]
+                },
+                metadata.file_attributes(),
+            ));
+            if metadata.is_dir() {
+                for entry in fs::read_dir(path).unwrap() {
+                    walk(root, &entry.unwrap().path(), result);
+                }
+            }
+        }
+        let mut result = vec![];
+        walk(root, root, &mut result);
+        result.sort_by(|a, b| a.0.cmp(&b.0));
+        result
+    }
+    #[test]
+    fn core_preview_is_read_only_deduplicated_and_preserves_native_resource_names() {
+        let root = Root::new();
+        let source = source(&root);
+        let opaque = OsString::from_wide(&[b'r' as u16, 0xd800]);
+        fs::write(source.join(&opaque), b"opaque native resource").unwrap();
+        let skills = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        let context = context(&root);
+        let before = tree(&root.0);
+        let plan = preview(
+            &skills,
+            &["opencode", "codex-cli", "claude-code", "codex"],
+            &context,
+        )
+        .unwrap();
+        assert!(plan.is_applicable(), "{plan:?}");
+        assert_eq!(plan.targets().len(), 3);
+        assert_eq!(plan.destinations().len(), 3);
+        let home = fs::canonicalize(context.user_home.as_ref().unwrap()).unwrap();
+        for relative in [
+            ".agents/skills/sample",
+            ".claude/skills/sample",
+            ".opencode/skills/sample",
+        ] {
+            assert!(
+                plan.destinations()
+                    .iter()
+                    .any(|row| row.path() == Some(home.join(relative).as_path())
+                        && row.action() == PlannedAction::Create)
+            );
+        }
+        assert_eq!(
+            plan.intended_writes()
+                .iter()
+                .filter(|write| write.path.file_name() == Some(opaque.as_os_str()))
+                .count(),
+            3
+        );
+        let reordered = preview(&skills, &["codex", "claude-code", "opencode"], &context).unwrap();
+        assert_eq!(plan.intended_writes(), reordered.intended_writes());
+        assert_eq!(before, tree(&root.0));
+    }
+    #[test]
+    fn existing_payload_is_unchanged_then_conflicts_without_repairing_manual_edits() {
+        let root = Root::new();
+        let source = source(&root);
+        let skills = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        let context = context(&root);
+        // Trusted fixture setup, not the library's still-gated copy executor.
+        let target = context
+            .user_home
+            .as_ref()
+            .unwrap()
+            .join(".agents/skills/sample");
+        fs::create_dir_all(target.join("empty folder")).unwrap();
+        for name in ["SKILL.md", "reference café.txt"] {
+            fs::write(target.join(name), fs::read(source.join(name)).unwrap()).unwrap();
+        }
+        let before = tree(&root.0);
+        let plan = preview(&skills, &["codex"], &context).unwrap();
+        assert_eq!(
+            plan.destinations()[0].action(),
+            PlannedAction::Unchanged,
+            "{plan:?}"
+        );
+        assert!(plan.intended_writes().is_empty());
+        assert_eq!(before, tree(&root.0));
+        drop(plan);
+        fs::write(target.join("reference café.txt"), b"manual edit").unwrap();
+        let before = tree(&root.0);
+        let plan = preview(&skills, &["codex"], &context).unwrap();
+        assert_eq!(plan.destinations()[0].action(), PlannedAction::Conflict);
+        assert!(
+            plan.destinations()[0]
+                .problems()
+                .contains(&DestinationProblem::ExistingContentDiffers)
+        );
+        assert_eq!(before, tree(&root.0));
+    }
+    #[test]
+    fn native_case_alias_never_becomes_unchanged_or_overwrite_intent() {
+        let root = Root::new();
+        let source = source(&root);
+        let skills = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        let context = context(&root);
+        fs::create_dir_all(
+            context
+                .user_home
+                .as_ref()
+                .unwrap()
+                .join(".agents/skills/SAMPLE"),
+        )
+        .unwrap();
+        let before = tree(&root.0);
+        let plan = preview(&skills, &["codex"], &context).unwrap();
+        assert_eq!(
+            plan.destinations()[0].action(),
+            PlannedAction::Conflict,
+            "{plan:?}"
+        );
+        assert!(
+            plan.destinations()[0]
+                .problems()
+                .iter()
+                .any(|problem| matches!(
+                    problem,
+                    DestinationProblem::ExistingNameMismatch
+                        | DestinationProblem::PortableNameCollision { .. }
+                ))
+        );
+        assert!(plan.intended_writes().is_empty());
+        assert_eq!(before, tree(&root.0));
+    }
+    #[test]
+    fn overlap_normalization_collisions_and_budgets_fail_without_writes() {
+        let root = Root::new();
+        let source = source(&root);
+        let mut context = context(&root);
+        let skills = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        context.user_home = Some(source.clone());
+        let before = tree(&root.0);
+        assert!(matches!(
+            preview(&skills, &["codex"], &context),
+            Err(PlanError::Overlap { .. })
+        ));
+        assert_eq!(before, tree(&root.0));
+        context.user_home = Some(root.0.join("home with spaces 中"));
+        let error = plan_install(
+            &Catalog::bundled().unwrap(),
+            InstallRequest {
+                skills: &skills,
+                target_ids: &["codex"],
+                scope: Scope::User,
+                context: &context,
+                limits: PlanLimits {
+                    max_path_bytes: 1,
+                    ..PlanLimits::default()
+                },
+            },
+        )
+        .unwrap_err();
+        assert_eq!(error, PlanError::Limit("path bytes"));
+        assert_eq!(before, tree(&root.0));
+        drop(skills);
+        fs::write(source.join("café"), b"first").unwrap();
+        fs::write(source.join("cafe\u{301}"), b"second").unwrap();
+        let skills = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        let before = tree(&root.0);
+        assert!(matches!(
+            preview(&skills, &["codex"], &context),
+            Err(PlanError::PortableNameCollision { .. })
+        ));
+        assert_eq!(before, tree(&root.0));
     }
 }
