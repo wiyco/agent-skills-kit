@@ -42,6 +42,10 @@ jobs:
       - run: rustc -Vv && cargo -V && rustup show active-toolchain
       - run: cargo check --workspace --all-targets --all-features --locked
       - run: cargo test --workspace --all-features --locked
+      - name: Test the standalone public API consumer
+        run: cargo test --manifest-path examples/external-consumer/Cargo.toml --locked
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target/external-consumer
       - name: Lint Windows-specific unsafe boundaries
         if: runner.os == 'Windows'
         run: |
@@ -54,6 +58,7 @@ jobs:
           rustup toolchain install "$WINDOWS_MSRV_TOOLCHAIN" --profile minimal
           cargo +"$WINDOWS_MSRV_TOOLCHAIN" check --workspace --all-targets --all-features --locked
           cargo +"$WINDOWS_MSRV_TOOLCHAIN" test --workspace --all-features --locked
+          CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target/external-consumer-msrv" cargo +"$WINDOWS_MSRV_TOOLCHAIN" test --manifest-path examples/external-consumer/Cargo.toml --locked
 
   quality:
     name: quality
@@ -77,6 +82,12 @@ jobs:
       - run: cargo doc --workspace --no-deps --locked
         env:
           RUSTDOCFLAGS: -D warnings
+      - name: Check standalone consumer formatting and lint
+        run: |
+          cargo fmt --manifest-path examples/external-consumer/Cargo.toml -- --check
+          cargo clippy --manifest-path examples/external-consumer/Cargo.toml --all-targets --locked -- -D warnings
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target/external-consumer
       - name: Prove formatting and lint gates reject regressions
         run: python .github/scripts/verify-quality-gates.py
 
@@ -104,3 +115,4 @@ jobs:
           rustc -Vv
           cargo check --workspace --all-targets --all-features --locked
           cargo test --workspace --all-features --locked
+          CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target/external-consumer" cargo test --manifest-path examples/external-consumer/Cargo.toml --locked

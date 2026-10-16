@@ -1,0 +1,14 @@
+[package]
+name = "agent-skills-kit-consumer-example"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85.0"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# Deliberately independent: no workspace dependency inheritance or CLI dependency.
+[workspace]
+resolver = "3"
+
+[dependencies]
+agent-skills-kit = { path = "../../crates/agent-skills-kit" }
