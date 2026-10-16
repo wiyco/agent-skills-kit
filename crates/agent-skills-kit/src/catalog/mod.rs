@@ -1,5 +1,6 @@
 //! Versioned target metadata and offline validation, without path resolution.
 
+mod bundled;
 mod model;
 mod validation;
 

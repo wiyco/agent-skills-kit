@@ -16,6 +16,7 @@ Selecting a tool determines where files are written. It does **not** ensure that
 
 - [Product plan and milestones](docs/plan.md)
 - [Architecture and safety boundaries](docs/architecture.md)
+- [Catalog schema and evidence](docs/catalog.md)
 - [Local development](docs/development.md)
 - [AI agent instructions](AGENTS.md)
 - [Target candidates and evidence](docs/research/target-candidates.md)
