@@ -654,3 +654,102 @@ fn roo_vscode_scopes_and_fork_boundaries() {
         Err(ResolveError::MissingContext(ContextBase::Project))
     ));
 }
+
+#[test]
+fn kilo_coincident_writes_preserve_both_variant_attributions() {
+    coincident_writes_preserve_variants(["kilo-code-cli", "kilo-code-vscode"], false);
+}
+#[test]
+fn kilo_new_platform_scopes_and_configuration_gaps() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    for variable in [
+        "KILO_CONFIG_DIR",
+        "KILO_HOME",
+        "XDG_CONFIG_HOME",
+        "CLINE_DIR",
+        "CLAUDE_CONFIG_DIR",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "unverified relocation".into());
+    }
+    for variant in ["cli", "vscode"] {
+        let id = format!("kilo-code-{variant}");
+        let target = catalog.get(&id).unwrap();
+        assert_eq!(target.product_id, "kilo-code");
+        assert_eq!(target.variant, variant);
+        for (scope, root) in [
+            (Scope::User, context.user_home.as_ref().unwrap()),
+            (Scope::Project, context.project_root.as_ref().unwrap()),
+        ] {
+            let result = resolve(&catalog, &id, scope, &context).unwrap();
+            assert_eq!(result.preferred_write.path, root.join(".kilo/skills"));
+            assert_eq!(result.discovery.len(), 2);
+            assert_eq!(result.discovery[0].location, result.preferred_write);
+            assert_eq!(
+                result.discovery[1].location.path,
+                root.join(".agents/skills")
+            );
+            for reader in &result.discovery {
+                assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+                assert_eq!(
+                    reader.location.evidence.source.as_ref().unwrap().url,
+                    "https://kilo.ai/docs/customize/skills"
+                );
+                assert!(reader.location.evidence.discovery_tests.is_empty());
+            }
+            assert!(
+                result
+                    .warnings
+                    .contains(&ResolutionWarning::HostDiscoveryUntested)
+            );
+            assert!(
+                result
+                    .warnings
+                    .contains(&ResolutionWarning::PlacementNotExclusive)
+            );
+            assert!(
+                !result
+                    .warnings
+                    .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+            );
+        }
+        assert!(
+            target
+                .limitations
+                .iter()
+                .any(|gap| gap.contains("KILO_CONFIG_DIR"))
+        );
+        assert!(
+            target
+                .limitations
+                .iter()
+                .any(|gap| gap.contains("Conditional Claude paths"))
+        );
+        assert!(matches!(
+            resolve(&catalog, &id, Scope::ApplicationWorkspace, &context),
+            Err(ResolveError::UnsupportedScope { .. })
+        ));
+        let empty = InstallContext::new(native_platform().unwrap());
+        assert!(matches!(
+            resolve(&catalog, &id, Scope::User, &empty),
+            Err(ResolveError::MissingContext(ContextBase::Home))
+        ));
+        assert!(matches!(
+            resolve(&catalog, &id, Scope::Project, &empty),
+            Err(ResolveError::MissingContext(ContextBase::Project))
+        ));
+    }
+    for id in [
+        "kilo",
+        "kilocode",
+        "kilo-code",
+        "kilo-code-legacy",
+        "kilo-code-jetbrains",
+        "kilo-code-desktop",
+        "kilo-code-cloud",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+}
