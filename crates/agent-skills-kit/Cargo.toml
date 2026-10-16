@@ -2,5 +2,6 @@
 name = "agent-skills-kit"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 publish.workspace = true
 description = "Library-first toolkit for local Agent Skills installation (bootstrap)"

@@ -88,6 +88,7 @@ jobs:
         env:
           RUSTUP_TOOLCHAIN: ${{ matrix.toolchain }}
         run: |
+          python -c 'import os, tomllib; declared = tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["rust-version"]; tested = os.environ["RUSTUP_TOOLCHAIN"]; assert tested == "stable" or tested == declared, "MSRV job must match Cargo metadata"'
           rustc -Vv
           cargo check --workspace --all-targets --all-features --locked
           cargo test --workspace --all-features --locked

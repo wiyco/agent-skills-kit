@@ -12,7 +12,7 @@ The exact development pin is Rust 1.99.1 in `rust-toolchain.toml`, with rustfmt 
 
 Rust does not need a duplicate pin in `.prototools`. Existing Node.js/pnpm/Terraform entries may remain in local or shared proto configuration. If maintainers later require a Rust entry in `.prototools`, add an automated consistency check or generation step; do not maintain two unrelated pins manually.
 
-The development toolchain pin is not the MSRV. Determine and test the library's minimum supported Rust version separately before declaring it in package metadata. [Cargo rust-version](https://doc.rust-lang.org/cargo/reference/rust-version.html).
+The development toolchain pin is not the MSRV. The bootstrap workspace's measured MSRV is 1.85.0, declared separately in Cargo package metadata after its compatibility job passed. See [the MSRV policy](adr/0004-msrv-policy.md) and [Cargo rust-version](https://doc.rust-lang.org/cargo/reference/rust-version.html).
 
 ## Prerequisites
 
@@ -45,7 +45,7 @@ cargo test --workspace --all-features --locked
 cargo doc --workspace --no-deps --locked
 ```
 
-The provisional packages are `agent-skills-kit` (library) and `skillctl` (CLI). Run `cargo run -p skillctl --locked` to print the library bootstrap status. Command parsing and installation arrive in later issues; names and licensing remain subject to ASK-002. No external Rust dependencies or feature flags are present. No `rust-version` is declared because a lower MSRV has not been measured; ASK-003 owns that measurement and CI.
+The provisional packages are `agent-skills-kit` (library) and `skillctl` (CLI). Run `cargo run -p skillctl --locked` to print the library bootstrap status. Command parsing and installation arrive in later issues; names and licensing remain subject to ASK-002. No external Rust dependencies or feature flags are present. Both packages inherit the measured MSRV from the workspace; the development toolchain remains independently pinned.
 
 The original `crates/skillctl/tests/fixtures/bootstrap.stdout` fixture records the bootstrap output. The integration test launches only the compiled CLI and compares its output; it performs no installation, executes no skill content, and makes no writes to agent stores.
 
@@ -53,6 +53,8 @@ See [ASK-001 verification](verification/ask-001.md) for the tested setup and lim
 
 ## CI policy
 
-Native Linux/macOS/Windows tests; formatting, Clippy, and rustdoc checks; a measured MSRV job; and a latest-stable compatibility check. Pin third-party actions to verified SHAs and update them through reviewed PRs. Keep pull-request permissions read-only and avoid secrets in untrusted jobs. [GitHub Actions security guidance](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions).
+The `Rust` workflow runs native Linux/macOS/Windows check/test jobs on the development pin; Linux formatting, Clippy, and rustdoc checks; a measured MSRV job; and a latest-stable compatibility check. The quality job also proves formatting and lint failures are rejected in temporary copies. There are currently no feature flags; add no-default-features checks when features are introduced.
+
+Checkout and cache actions are pinned to verified release commit SHAs. Dependabot proposes weekly action updates for review. Target cache keys include OS, architecture, the exact development toolchain, Cargo manifests, Cargo.lock, and job purpose, without broad restore fallbacks. Compatibility jobs run without caches. PR permissions are read-only, checkout does not persist credentials, jobs have bounded timeouts, and superseded runs are cancelled. No secrets or `pull_request_target` execution is used. [GitHub Actions security guidance](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions).
 
 Docker/devcontainers and task runners may be added later for a demonstrated need. They do not replace native Windows/macOS filesystem tests. Avoid introducing Node/pnpm/Turbo solely to orchestrate Cargo.
