@@ -5,13 +5,19 @@ use std::{
 };
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-use std::{fs::File, sync::Arc};
+use std::fs::File;
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
+use std::sync::Arc;
 
 use super::{Diagnostic, MetadataLimits, SkillMetadata};
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 #[path = "inventory_unix.rs"]
 mod unix;
+
+#[cfg(windows)]
+#[path = "inventory_windows.rs"]
+mod windows;
 
 /// Finite inventory budgets; no entries are silently excluded.
 #[derive(Clone, Copy, Debug)]
@@ -55,11 +61,15 @@ impl InventoryLimits {
 /// Native identity and mutation stamp, excluding access-time bookkeeping.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EntryStamp {
+    #[cfg(windows)]
+    pub(crate) windows: crate::filesystem_windows::Stamp,
     /// Native device identifier (not a cross-machine persistent identifier).
     pub device: u64,
-    /// Native inode identifier, meaningful only within this device/lifetime.
+    /// Native inode identifier on Unix; low 64 identity bits for Windows diagnostics.
+    /// Windows security comparisons retain the full identifier internally.
     pub inode: u64,
     /// Full observed Unix mode, including type and privilege bits for revalidation.
+    /// Windows records ordinary read-only intent, not a Unix ACL equivalent.
     pub mode: u32,
     /// Observed hard-link count.
     pub links: u64,
@@ -69,6 +79,19 @@ pub struct EntryStamp {
     pub modified: (i64, i64),
     /// Metadata-change seconds/nanoseconds.
     pub changed: (i64, i64),
+}
+impl EntryStamp {
+    /// Volume/device and complete native object identifier for this observation.
+    ///
+    /// Unix inode values are zero-extended; Windows retains all 128 file-ID bits.
+    /// This is an opaque, lifetime-scoped identity, not a persistent ownership token.
+    pub fn file_identity(&self) -> (u64, [u8; 16]) {
+        #[cfg(windows)]
+        let identifier = self.windows.identity;
+        #[cfg(not(windows))]
+        let identifier = u128::from(self.inode).to_le_bytes();
+        (self.device, identifier)
+    }
 }
 
 /// Only these source entry types can enter a successful inventory.
@@ -104,6 +127,8 @@ pub struct SourceInventory {
     pub(super) root_stamp: EntryStamp,
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     pub(super) root_handle: Arc<File>,
+    #[cfg(windows)]
+    pub(super) root_handle: Arc<crate::filesystem_windows::reader::Handle>,
     pub(super) entries: Vec<SourceEntry>,
     pub(super) total_bytes: u64,
 }
@@ -142,7 +167,11 @@ impl SourceInventory {
         {
             unix::root_is_unchanged(self)
         }
-        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        #[cfg(windows)]
+        {
+            windows::root_is_unchanged(self)
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
         {
             Err(InventoryError::new(
                 &self.requested_root,
@@ -184,7 +213,7 @@ impl InventoryError {
             kind,
         }
     }
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(any(target_os = "linux", target_os = "macos", windows))]
     pub(super) fn io(path: &Path, operation: &'static str, error: io::Error) -> Self {
         Self::new(
             path,
@@ -211,7 +240,7 @@ impl Error for InventoryError {}
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum InventoryErrorKind {
-    /// No reviewed native reader is available; Windows fails closed.
+    /// No reviewed native reader is available on this platform.
     UnsupportedPlatform,
     /// A configured budget is zero or above its hard ceiling.
     InvalidLimits,
@@ -253,8 +282,9 @@ pub enum InventoryErrorKind {
 /// The caller must control the root and its ancestors for the operation. Final
 /// root aliases are rejected; canonicalization of trusted ancestors is recorded.
 /// Descendant links/special/multiply linked files and device crossings fail closed.
-/// Only reviewed local Linux/macOS filesystem candidates are accepted. Windows
-/// and other platforms return unsupported before any filesystem access.
+/// Only reviewed local Linux/macOS candidates and local Windows NTFS are eligible.
+/// Windows inventory is read-only and does not enable copy execution. Other
+/// platforms return unsupported before filesystem access.
 ///
 /// No writes, environment mutation or content execution occur. This is not an
 /// atomic snapshot of an arbitrarily mutating tree or an installation guarantee.
@@ -273,7 +303,11 @@ pub fn inventory_skill(
     {
         unix::inspect(source, limits)
     }
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    #[cfg(windows)]
+    {
+        windows::inspect(source, limits)
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
     {
         Err(InventoryError::new(
             source,

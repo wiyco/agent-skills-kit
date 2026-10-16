@@ -6,8 +6,8 @@
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod filesystem;
 
-// Native primitives are tested before the public Windows backend is enabled.
-#[cfg(all(windows, test))]
+// Windows read-only inventory is enabled independently of copy execution.
+#[cfg(windows)]
 mod filesystem_windows;
 
 pub mod catalog;

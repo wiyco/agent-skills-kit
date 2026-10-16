@@ -3,7 +3,7 @@ use std::{
     ffi::OsStr,
     fs::{File, OpenOptions},
     io,
-    mem::{offset_of, size_of},
+    mem::size_of,
     os::windows::{
         ffi::OsStrExt,
         fs::OpenOptionsExt,
@@ -17,13 +17,13 @@ use windows_sys::{
         Foundation::OBJECT_ATTRIBUTES,
         Storage::FileSystem::{
             FILE_CREATE, FILE_DIRECTORY_FILE, FILE_NON_DIRECTORY_FILE, FILE_OPEN,
-            FILE_OPEN_REPARSE_POINT, FILE_RENAME_INFORMATION, FILE_SYNCHRONOUS_IO_NONALERT,
-            FileRenameInformation, NtCreateFile, NtSetInformationFile,
+            FILE_OPEN_REPARSE_POINT, FILE_SYNCHRONOUS_IO_NONALERT, NtCreateFile,
         },
     },
     Win32::{
         Foundation::{OBJ_CASE_INSENSITIVE, RtlNtStatusToDosError, UNICODE_STRING},
         Storage::FileSystem::*,
+        System::WindowsProgramming::DRIVE_FIXED,
     },
 };
 
@@ -49,6 +49,17 @@ fn invalid(message: &'static str) -> io::Error {
 fn unsupported(message: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::Unsupported, message)
 }
+#[derive(Debug)]
+pub(crate) struct UnsupportedRoot(pub(crate) &'static str);
+impl std::fmt::Display for UnsupportedRoot {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.0)
+    }
+}
+impl std::error::Error for UnsupportedRoot {}
+fn unsupported_root(message: &'static str) -> io::Error {
+    io::Error::new(io::ErrorKind::Unsupported, UnsupportedRoot(message))
+}
 
 pub(crate) fn component(name: &OsStr) -> io::Result<Vec<u16>> {
     let wide = name.encode_wide().collect::<Vec<_>>();
@@ -61,7 +72,9 @@ pub(crate) fn component(name: &OsStr) -> io::Result<Vec<u16>> {
         || wide == [46, 46]
         || matches!(wide.last(), Some(32 | 46))
         || wide.iter().any(|unit| {
-            *unit < 32 || *unit == 127 || [47, 92, 58, 42, 63, 34, 60, 62, 124].contains(unit)
+            *unit < 32
+                || (127..=159).contains(unit)
+                || [47, 92, 58, 42, 63, 34, 60, 62, 124].contains(unit)
         })
     {
         return Err(invalid("unsafe native component"));
@@ -112,6 +125,17 @@ fn information<T: Default>(file: &File, class: FILE_INFO_BY_HANDLE_CLASS) -> io:
     }
 }
 
+pub(crate) fn unsupported_attributes(attributes: u32) -> bool {
+    attributes
+        & (FILE_ATTRIBUTE_REPARSE_POINT
+            | FILE_ATTRIBUTE_DEVICE
+            | FILE_ATTRIBUTE_OFFLINE
+            | FILE_ATTRIBUTE_ENCRYPTED
+            | FILE_ATTRIBUTE_RECALL_ON_OPEN
+            | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS)
+        != 0
+}
+
 pub(crate) fn stamp(file: &File) -> io::Result<Stamp> {
     // SAFETY: only inspects the live retained handle and writes no memory.
     if unsafe { GetFileType(file.as_raw_handle()) } != FILE_TYPE_DISK {
@@ -119,10 +143,13 @@ pub(crate) fn stamp(file: &File) -> io::Result<Stamp> {
     }
     let basic: FILE_BASIC_INFO = information(file, FileBasicInfo)?;
     let tag: FILE_ATTRIBUTE_TAG_INFO = information(file, FileAttributeTagInfo)?;
-    if tag.FileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DEVICE) != 0
+    if unsupported_attributes(tag.FileAttributes)
+        || unsupported_attributes(basic.FileAttributes)
         || tag.ReparseTag != 0
     {
-        return Err(unsupported("reparse/device object rejected"));
+        return Err(unsupported(
+            "reparse, device, offline, recall or encrypted object rejected",
+        ));
     }
     let standard: FILE_STANDARD_INFO = information(file, FileStandardInfo)?;
     if standard.DeletePending || standard.EndOfFile < 0 {
@@ -148,8 +175,8 @@ pub(crate) fn stamp(file: &File) -> io::Result<Stamp> {
     })
 }
 
-/// Only caller-trusted ancestors may be resolved through an absolute root open.
-pub(crate) fn open_root(path: &Path) -> io::Result<File> {
+// Pure prefix policy: it can reject UNC/device roots without any filesystem call.
+fn root_drive(path: &Path) -> io::Result<u8> {
     if !path.is_absolute()
         || path.as_os_str().encode_wide().any(|unit| unit == 0)
         || path
@@ -158,13 +185,48 @@ pub(crate) fn open_root(path: &Path) -> io::Result<File> {
     {
         return Err(invalid("explicit native absolute root required"));
     }
-    let file = OpenOptions::new()
+    if path.as_os_str().encode_wide().count() > 32768 {
+        return Err(invalid("native root exceeds path budget"));
+    }
+    match path.components().next() {
+        Some(std::path::Component::Prefix(prefix)) => match prefix.kind() {
+            std::path::Prefix::Disk(drive) | std::path::Prefix::VerbatimDisk(drive) => Ok(drive),
+            _ => Err(unsupported_root(
+                "UNC and device namespace roots are not eligible",
+            )),
+        },
+        _ => Err(invalid("explicit drive root required")),
+    }
+}
+
+/// Open a fixed-drive root component by component, rejecting ancestor reparse points.
+pub(crate) fn open_root(path: &Path) -> io::Result<File> {
+    let drive = root_drive(path)?;
+    let drive_root = [u16::from(drive), 58, 92, 0];
+    // SAFETY: fixed NUL-terminated drive root. Reject mapped network drives before
+    // opening a caller's path; later handle checks still verify local NTFS.
+    if unsafe { GetDriveTypeW(drive_root.as_ptr()) } != DRIVE_FIXED {
+        return Err(unsupported_root(
+            "only fixed local drive roots are eligible",
+        ));
+    }
+    let drive_path = format!("{}:\\", char::from(drive));
+    let mut file = OpenOptions::new()
         .read(true)
         .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
         .custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT)
-        .open(path)?;
+        .open(drive_path)?;
     if stamp(&file)?.kind != Kind::Directory {
         return Err(invalid("directory root required"));
+    }
+    for part in path.components().skip(1) {
+        match part {
+            std::path::Component::Normal(name) => {
+                file = child(&file, name, Kind::Directory, false)?;
+            }
+            std::path::Component::RootDir | std::path::Component::CurDir => (),
+            _ => return Err(invalid("unexpected native root component")),
+        }
     }
     Ok(file)
 }
@@ -238,6 +300,7 @@ pub(crate) fn child(parent: &File, name: &OsStr, kind: Kind, create: bool) -> io
 }
 
 /// Move the held object to one child name with replacement disabled in the syscall.
+#[cfg(test)]
 pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::Result<()> {
     let wide = component(name)?;
     if stamp(parent)?.kind != Kind::Directory {
@@ -280,6 +343,7 @@ pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::
 }
 
 /// Delete only the retained, operation-owned object; directories must be empty.
+#[cfg(test)]
 pub(crate) fn delete_owned(file: File) -> io::Result<()> {
     let _ = stamp(&file)?;
     let disposition = FILE_DISPOSITION_INFO { DeleteFile: true };
@@ -298,5 +362,15 @@ pub(crate) fn delete_owned(file: File) -> io::Result<()> {
     Ok(())
 }
 
+#[cfg(test)]
 #[path = "filesystem_windows_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+use std::mem::offset_of;
+#[cfg(test)]
+use windows_sys::Wdk::Storage::FileSystem::{
+    FILE_RENAME_INFORMATION, FileRenameInformation, NtSetInformationFile,
+};
+#[path = "filesystem_windows_read.rs"]
+pub(crate) mod reader;

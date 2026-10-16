@@ -58,6 +58,35 @@ fn native_components_reject_traversal_streams_devices_and_preserve_wide_identity
         component(&OsString::from_wide(&original)).unwrap(),
         original
     );
+    assert!(component(&OsString::from_wide(&[b'r' as u16, 0xd800, 0x85])).is_err());
+    // Prefix policy is pure: these cases never invoke network/filesystem APIs.
+    for rejected in [
+        r"\\server.invalid\share\sample",
+        r"\\?\UNC\server.invalid\share\sample",
+        r"\\.\C:\sample",
+        r"C:relative",
+        r"C:\source\..\sample",
+    ] {
+        assert!(root_drive(Path::new(rejected)).is_err());
+    }
+    assert_eq!(root_drive(Path::new(r"C:\source\sample")).unwrap(), b'C');
+    assert_eq!(
+        root_drive(Path::new(r"\\?\C:\source\sample")).unwrap(),
+        b'C'
+    );
+    for rejected in [
+        FILE_ATTRIBUTE_REPARSE_POINT,
+        FILE_ATTRIBUTE_DEVICE,
+        FILE_ATTRIBUTE_OFFLINE,
+        FILE_ATTRIBUTE_ENCRYPTED,
+        FILE_ATTRIBUTE_RECALL_ON_OPEN,
+        FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS,
+    ] {
+        assert!(unsupported_attributes(rejected | FILE_ATTRIBUTE_READONLY));
+    }
+    assert!(!unsupported_attributes(
+        FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_READONLY
+    ));
 }
 
 #[test]
