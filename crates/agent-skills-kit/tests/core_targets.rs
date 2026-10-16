@@ -239,3 +239,105 @@ fn claude_reserved_names() {
     custom.product_id = "other".into();
     assert_eq!(custom.reserved_skill_name("synced"), None);
 }
+
+#[test]
+fn opencode_native_writes_and_compatible_readers() {
+    let catalog = Catalog::bundled().unwrap();
+    let context = context();
+    for (scope, root, native, traversal) in [
+        (
+            Scope::Project,
+            context.project_root.as_ref().unwrap(),
+            ".opencode/skills",
+            DiscoveryTraversal::AncestorsToRepository,
+        ),
+        (
+            Scope::User,
+            context.user_home.as_ref().unwrap(),
+            ".config/opencode/skills",
+            DiscoveryTraversal::Exact,
+        ),
+    ] {
+        let result = resolve(&catalog, "opencode", scope, &context).unwrap();
+        assert_eq!(result.preferred_write.path, root.join(native));
+        assert_eq!(result.discovery.len(), 3);
+        assert_eq!(result.discovery[0].location, result.preferred_write);
+        assert!(
+            result
+                .discovery
+                .iter()
+                .all(|read| read.traversal == traversal)
+        );
+        for (index, target, components) in [
+            (1, "claude-code", ".claude/skills"),
+            (2, "codex", ".agents/skills"),
+        ] {
+            let other = resolve(&catalog, target, scope, &context).unwrap();
+            assert_eq!(result.discovery[index].location.path, root.join(components));
+            assert_eq!(
+                result.discovery[index].location.path,
+                other.preferred_write.path
+            );
+            assert_ne!(result.preferred_write.path, other.preferred_write.path);
+        }
+        for read in &result.discovery {
+            assert_eq!(
+                read.location.evidence.source.as_ref().unwrap().url,
+                "https://opencode.ai/docs/skills/"
+            );
+            assert!(!read.location.evidence.resolver_tests.is_empty());
+            assert!(read.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::PlacementNotExclusive)
+        );
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+    }
+}
+
+#[test]
+fn opencode_context_and_configuration_limits() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    let expected = resolve(&catalog, "opencode", Scope::User, &context).unwrap();
+    for variable in [
+        "XDG_CONFIG_HOME",
+        "OPENCODE_CONFIG_DIR",
+        "CLAUDE_CONFIG_DIR",
+    ] {
+        context.overrides.insert(
+            variable.into(),
+            context
+                .user_home
+                .as_ref()
+                .unwrap()
+                .join("alternate")
+                .into_os_string(),
+        );
+    }
+    let result = resolve(&catalog, "opencode", Scope::User, &context).unwrap();
+    assert_eq!(result, expected);
+    assert!(result.warnings.iter().any(|warning| matches!(warning, ResolutionWarning::DocumentedLimitation(text) if text.contains("OPENCODE_CONFIG_DIR") && text.contains("unverified"))));
+    context.user_home = None;
+    assert_eq!(
+        resolve(&catalog, "opencode", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    );
+    context.project_root = None;
+    assert_eq!(
+        resolve(&catalog, "opencode", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    );
+    for variant in ["opencode-ide", "opencode-cloud", "opencode-managed"] {
+        assert!(matches!(
+            resolve(&catalog, variant, Scope::User, &context),
+            Err(ResolveError::UnknownTarget(_))
+        ));
+    }
+}
