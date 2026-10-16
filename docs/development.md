@@ -45,7 +45,7 @@ cargo test --workspace --all-features --locked
 cargo doc --workspace --no-deps --locked
 ```
 
-The packages are `agent-skills-kit` (library) and `agent-skills-kit-cli` (CLI, executable `agent-skills-kit`). Run `cargo run -p agent-skills-kit-cli --locked` to print the library bootstrap status. Command parsing and installation arrive in later issues; names and licensing are recorded in ADR 0005. No external Rust dependencies or feature flags are present. Both packages inherit the measured MSRV from the workspace; the development toolchain remains independently pinned.
+The packages are `agent-skills-kit` (library) and `agent-skills-kit-cli` (CLI, executable `agent-skills-kit`). Run `cargo run -p agent-skills-kit-cli --locked` to print the library bootstrap status. Command parsing and installation arrive in later issues; names and licensing are recorded in ADR 0005. The catalog schema uses reviewed Serde/serde_json dependencies; there are no feature flags. Catalog parsing is offline and does not access the filesystem or process environment. Both packages inherit the measured MSRV from the workspace; the development toolchain remains independently pinned.
 
 The original `crates/agent-skills-kit-cli/tests/fixtures/bootstrap.stdout` fixture records the bootstrap output. The integration test launches only the compiled CLI and compares its output; it performs no installation, executes no skill content, and makes no writes to agent stores.
 
