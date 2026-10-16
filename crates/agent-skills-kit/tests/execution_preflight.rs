@@ -275,3 +275,187 @@ fn explicit_limits_and_inapplicable_plans_fail_without_writes() {
     );
     assert_eq!(tree(&fixture.root), before);
 }
+
+#[test]
+fn native_copy_creates_exact_payload_and_repeat_is_unchanged() {
+    let fixture = Fixture::new();
+    let sentinel = fixture.root.join("must-not-run");
+    fs::write(
+        fixture.source.join("runme.sh"),
+        format!("#!/bin/sh\ntouch '{}'\n", sentinel.display()),
+    )
+    .unwrap();
+    fs::set_permissions(
+        fixture.source.join("runme.sh"),
+        fs::Permissions::from_mode(0o755),
+    )
+    .unwrap();
+    fs::create_dir(fixture.source.join("empty")).unwrap();
+    fs::set_permissions(
+        fixture.source.join("resource"),
+        fs::Permissions::from_mode(0o750),
+    )
+    .unwrap();
+    let plan = fixture.plan();
+    let report = apply_plan(&plan, ApplyOptions::default());
+    assert!(report.is_successful(), "{report:#?}");
+    assert_eq!(report.outcomes[0].status, OutcomeStatus::Created);
+    assert_eq!(
+        fs::read(fixture.destination().join("resource")).unwrap(),
+        b"original resource"
+    );
+    assert!(fixture.destination().join("empty").is_dir());
+    assert_eq!(
+        fs::metadata(fixture.destination().join("resource"))
+            .unwrap()
+            .mode()
+            & 0o7777,
+        0o750
+    );
+    assert!(
+        fs::read_dir(fixture.destination().parent().unwrap())
+            .unwrap()
+            .all(|entry| !entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".ask-stage-"))
+    );
+    let plan = fixture.plan();
+    assert_eq!(plan.destinations()[0].action(), PlannedAction::Unchanged);
+    let before = tree(&fixture.root);
+    let report = apply_plan(&plan, ApplyOptions::default());
+    assert!(report.is_successful(), "{report:#?}");
+    assert_eq!(report.outcomes[0].status, OutcomeStatus::Unchanged);
+    assert_eq!(tree(&fixture.root), before);
+    assert!(!sentinel.exists());
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn native_copy_preserves_non_utf8_resource_identity() {
+    use std::{ffi::OsStr, os::unix::ffi::OsStrExt};
+    let fixture = Fixture::new();
+    let name = OsStr::from_bytes(b"resource-\xff");
+    fs::write(fixture.source.join(name), b"raw native filename").unwrap();
+    let plan = fixture.plan();
+    let report = apply_plan(&plan, ApplyOptions::default());
+    assert!(report.is_successful(), "{report:#?}");
+    assert_eq!(
+        fs::read(fixture.destination().join(name)).unwrap(),
+        b"raw native filename"
+    );
+    assert_eq!(
+        fixture.plan().destinations()[0].action(),
+        PlannedAction::Unchanged
+    );
+}
+
+#[test]
+fn native_batch_keeps_every_attribution_and_shares_only_owned_parents() {
+    let fixture = Fixture::new();
+    let other = fixture.root.join("source/other");
+    fs::create_dir(&other).unwrap();
+    fs::write(
+        other.join("SKILL.md"),
+        b"---\nname: other\ndescription: another inert fixture\n---\n",
+    )
+    .unwrap();
+    let sources = [
+        inventory_skill(&fixture.source, InventoryLimits::default()).unwrap(),
+        inventory_skill(&other, InventoryLimits::default()).unwrap(),
+    ];
+    let plan = plan_install(
+        &Catalog::bundled().unwrap(),
+        InstallRequest {
+            skills: &sources,
+            target_ids: &["codex", "codex-cli", "claude-code", "opencode"],
+            scope: Scope::User,
+            context: &fixture.context,
+            limits: PlanLimits::default(),
+        },
+    )
+    .unwrap();
+    let source_before = tree(&fixture.root.join("source"));
+    let report = apply_plan(&plan, ApplyOptions::default());
+    assert!(report.is_successful(), "{report:#?}");
+    assert_eq!(report.outcomes.len(), 6);
+    assert!(
+        report
+            .outcomes
+            .iter()
+            .all(|outcome| outcome.status == OutcomeStatus::Created
+                && outcome.attributions.len() == 1)
+    );
+    assert_eq!(tree(&fixture.root.join("source")), source_before);
+    for directory in [
+        ".agents/skills",
+        ".claude/skills",
+        ".config/opencode/skills",
+    ] {
+        for name in ["sample", "other"] {
+            assert!(
+                fixture
+                    .root
+                    .join("home")
+                    .join(directory)
+                    .join(name)
+                    .join("SKILL.md")
+                    .is_file()
+            );
+        }
+    }
+}
+
+#[test]
+fn apply_preflight_never_overwrites_new_or_modified_content() {
+    let fixture = Fixture::new();
+    let plan = fixture.plan();
+    fixture.existing();
+    fs::write(fixture.destination().join("resource"), b"manual content").unwrap();
+    let before = tree(&fixture.root);
+    let report = apply_plan(&plan, ApplyOptions::default());
+    assert!(report.preflight_error.is_some());
+    assert!(
+        report
+            .outcomes
+            .iter()
+            .all(|outcome| outcome.status == OutcomeStatus::NotAttempted)
+    );
+    assert_eq!(tree(&fixture.root), before);
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn acl_bearing_parent_is_refused_without_staging_or_permission_changes() {
+    let fixture = Fixture::new();
+    let parent = fixture.destination().parent().unwrap().to_owned();
+    fs::create_dir_all(&parent).unwrap();
+    let status = std::process::Command::new("/bin/chmod")
+        .args([
+            "+a",
+            "everyone allow read,write,execute,file_inherit,directory_inherit",
+        ])
+        .arg(&parent)
+        .status()
+        .unwrap();
+    assert!(
+        status.success(),
+        "owned ACL fixture must actually be created"
+    );
+    let plan = fixture.plan();
+    let before = tree(&fixture.root);
+    let report = apply_plan(&plan, ApplyOptions::default());
+    assert!(!report.is_successful());
+    assert!(
+        matches!(
+            report.outcomes[0].status,
+            OutcomeStatus::Failed(ApplyError {
+                kind: ApplyErrorKind::Unsupported(_),
+                ..
+            })
+        ),
+        "{report:#?}"
+    );
+    assert_eq!(tree(&fixture.root), before);
+}
