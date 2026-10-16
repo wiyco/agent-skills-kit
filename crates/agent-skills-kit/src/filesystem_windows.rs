@@ -72,7 +72,9 @@ pub(crate) fn component(name: &OsStr) -> io::Result<Vec<u16>> {
         || wide == [46, 46]
         || matches!(wide.last(), Some(32 | 46))
         || wide.iter().any(|unit| {
-            *unit < 32 || *unit == 127 || [47, 92, 58, 42, 63, 34, 60, 62, 124].contains(unit)
+            *unit < 32
+                || (127..=159).contains(unit)
+                || [47, 92, 58, 42, 63, 34, 60, 62, 124].contains(unit)
         })
     {
         return Err(invalid("unsafe native component"));

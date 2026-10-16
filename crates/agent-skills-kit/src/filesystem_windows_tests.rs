@@ -58,6 +58,7 @@ fn native_components_reject_traversal_streams_devices_and_preserve_wide_identity
         component(&OsString::from_wide(&original)).unwrap(),
         original
     );
+    assert!(component(&OsString::from_wide(&[b'r' as u16, 0xd800, 0x85])).is_err());
     // Prefix policy is pure: these cases never invoke network/filesystem APIs.
     for rejected in [
         r"\\server.invalid\share\sample",
