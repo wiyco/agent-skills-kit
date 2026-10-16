@@ -26,6 +26,7 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             "kilo-code-cli",
             "kilo-code-vscode",
             "kimi-code-cli",
+            "kiro-cli",
             "kiro-ide",
             "mistral-vibe-cli",
             "opencode",

@@ -1935,3 +1935,53 @@ fn kiro_ide_scopes_and_cli_override_boundary() {
         Err(ResolveError::MissingContext(ContextBase::Project))
     ));
 }
+
+#[test]
+fn kiro_cli_native_copy_and_variant_deduplication() {
+    coincident_writes_preserve_variants(["kiro-cli", "kiro-ide"], false);
+    native_writes_with_expected_overlap("kiro-cli", None, |_| false);
+    native_writes_with_expected_overlap("kiro-cli", Some("KIRO_HOME"), |_| false);
+}
+
+#[test]
+fn kiro_cli_ignored_root_plan_is_rejected_without_writes() {
+    let fixture = Fixture::new();
+    let source = fixture.0.join("source/sample");
+    fs::create_dir_all(&source).unwrap();
+    let manifest = b"---\nname: sample\ndescription: Inert policy regression\n---\nData only.\n";
+    fs::write(source.join("SKILL.md"), manifest).unwrap();
+    let home = fixture.0.join("home");
+    fs::create_dir(&home).unwrap();
+    fs::write(home.join("sentinel"), b"preserve").unwrap();
+    let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+    let catalog = Catalog::bundled().unwrap();
+    for ignored in [&home, &fixture.0] {
+        let mut context = InstallContext::new(native_platform().unwrap());
+        context.user_home = Some(home.clone());
+        context.overrides.insert("KIRO_HOME".into(), ignored.into());
+        let plan = plan_install(
+            &catalog,
+            InstallRequest {
+                skills: &sources,
+                target_ids: &["kiro-cli"],
+                scope: Scope::User,
+                context: &context,
+                limits: PlanLimits::default(),
+            },
+        )
+        .unwrap();
+        assert!(!plan.is_applicable());
+        assert!(matches!(
+            plan.targets()[0].resolution(),
+            Err(ResolveError::InvalidOverride {
+                issue: PathIssue::HostOverridePolicy,
+                ..
+            })
+        ));
+        assert!(!apply_plan(&plan, ApplyOptions::default()).is_successful());
+        assert!(!ignored.join("skills").exists());
+        assert!(!home.join(".kiro").exists());
+        assert_eq!(fs::read(home.join("sentinel")).unwrap(), b"preserve");
+        assert_eq!(fs::read(source.join("SKILL.md")).unwrap(), manifest);
+    }
+}
