@@ -2,9 +2,11 @@
 
 mod bundled;
 mod model;
+mod names;
 mod validation;
 
 pub use model::*;
+pub use names::ReservedSkillName;
 pub use validation::{Catalog, CatalogError};
 
 /// The only catalog document version currently understood.

@@ -50,10 +50,14 @@ impl Catalog {
                 section: "Choose where skills load",
                 project: &[".claude", "skills"],
                 user: &[".claude", "skills"],
-                ancestors: false,
+                ancestors: true,
                 compatibility: false,
-                status: SupportStatus::Unverified,
-                resolver_tests: &[],
+                status: SupportStatus::Documented,
+                resolver_tests: &[
+                    "core_targets::claude_scopes_and_config_override",
+                    "core_targets::claude_missing_and_invalid_context",
+                    "core_targets::claude_reserved_names",
+                ],
             },
             Seed {
                 id: "opencode",
@@ -102,7 +106,23 @@ impl Seed {
     }
 
     fn scope(&self, scope: Scope, base: PathBase, path: &[&str]) -> ScopeDefinition {
-        let preferred = self.rule(base.clone(), path);
+        let mut preferred = self.rule(base.clone(), path);
+        if self.id == "claude-code" && scope == Scope::User {
+            preferred.path = PathRule {
+                base: PathBase::Environment {
+                    variable: "CLAUDE_CONFIG_DIR".to_owned(),
+                    fallback: Some(FallbackPath {
+                        base: ContextBase::Home,
+                        components: vec![".claude".to_owned()],
+                    }),
+                },
+                components: vec!["skills".to_owned()],
+            };
+            let source = preferred.evidence.source.as_mut().expect("seed source");
+            source.url = "https://code.claude.com/docs/en/claude-directory".to_owned();
+            source.section = "Introduction; File reference".to_owned();
+            source.applicability = "Rolling Claude Code CLI documentation; explicitly maps Windows home to USERPROFILE and all user .claude paths through CLAUDE_CONFIG_DIR; minimum host version not established".to_owned();
+        }
         let traversal = if scope == Scope::Project && self.ancestors {
             DiscoveryTraversal::AncestorsToRepository
         } else {
@@ -146,6 +166,14 @@ impl Seed {
                 "OpenCode documents reading .agents/skills too; selecting Codex does not prevent OpenCode discovery".to_owned(),
                 "Codex keeps duplicate skill names separate and follows skill-folder symlinks; this installer rejects descendant links".to_owned(),
                 "CODEX_HOME is not interpreted as an authoring-path override: its state/skills description does not establish a replacement for $HOME/.agents/skills (environment-variables, Core locations; config-advanced, Config and state locations; learn.chatgpt.com/docs/config-file; reviewed 2026-10-16). Alternate or legacy state skill roots remain unverified".to_owned(),
+            ]);
+        }
+        if self.id == "claude-code" {
+            limitations.extend([
+                "OpenCode documents reading .claude/skills; configured alternate Claude user roots are not implied OpenCode readers".to_owned(),
+                "Claude local names synced (case-insensitive) and anthropic-skills or its colon namespace are reserved; check both folder and frontmatter names with reserved_skill_name before planning".to_owned(),
+                "Enterprise overrides personal overrides project for duplicate local names; actual loading and configuration enablement are not tested".to_owned(),
+                "Claude follows skill-folder symlinks; this installer rejects descendant links. Worktree fallback, nested/additional directories and plugin payload semantics are not modeled".to_owned(),
             ]);
         }
         TargetDefinition {

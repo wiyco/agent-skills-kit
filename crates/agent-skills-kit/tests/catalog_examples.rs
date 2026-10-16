@@ -17,7 +17,7 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
         for scope in &target.scopes {
             assert_eq!(
                 scope.status,
-                if target.id == "codex" {
+                if target.id != "opencode" {
                     SupportStatus::Documented
                 } else {
                     SupportStatus::Unverified
@@ -32,7 +32,7 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
                 assert!(rule.evidence.source.is_some());
                 assert_eq!(
                     rule.evidence.resolver_tests.is_empty(),
-                    target.id != "codex"
+                    target.id == "opencode"
                 );
                 assert!(rule.evidence.discovery_tests.is_empty());
             }
