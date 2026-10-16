@@ -455,7 +455,7 @@ mod tests {
             )
             .unwrap();
             let file_descriptor = Descriptor::private_file(&token).unwrap();
-            let mut child = native::create_payload_entry(
+            let mut child = native::create_with_security(
                 &payload,
                 OsStr::new("resource"),
                 Kind::File,
@@ -471,12 +471,18 @@ mod tests {
             assert!(dacl(&child).1);
             assert!(!dacl(&child).0.contains(";;;WD)"));
             let child_private = allow_policy(&child);
+            let identity = native::stamp(&child).unwrap().identity;
+            drop(child);
             native::rename_exclusive(&payload, &parent, OsStr::new("installed")).unwrap();
             assert_eq!(
                 dacl(&payload),
                 dacl(&stage),
                 "rename must not be assumed to establish destination inheritance"
             );
+            let child =
+                native::open_permissions(&payload, OsStr::new("resource"), Kind::File).unwrap();
+            assert_eq!(native::stamp(&child).unwrap().identity, identity);
+            assert_eq!(allow_policy(&child), child_private);
             finalize_inheritance(&payload, &parent, &token).unwrap();
             assert_eq!(
                 allow_policy(&payload),
@@ -490,6 +496,10 @@ mod tests {
                 "root update must not recursively modify descendants"
             );
             finalize_inheritance(&child, &payload, &token).unwrap();
+            assert!(
+                !dacl(&child).1,
+                "finalized children must permit destination inheritance"
+            );
             assert_eq!(
                 allow_policy(&child),
                 expected_child,

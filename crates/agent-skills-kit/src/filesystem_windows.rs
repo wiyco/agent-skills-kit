@@ -246,16 +246,12 @@ pub(crate) fn create_with_security(
     child_impl(parent, name, kind, true, descriptor.as_ptr(), false)
 }
 
-/// Private payload descendants may share deletion while their own handles anchor
-/// security finalization across the directory rename. The root remains held.
+/// Reopen an owned post-commit entry for permission finalization. Descendant
+/// copy handles must be closed before directory rename; reacquire these while
+/// every entry is still private, verify identity, and hold them through updates.
 #[cfg(test)]
-pub(crate) fn create_payload_entry(
-    parent: &File,
-    name: &OsStr,
-    kind: Kind,
-    descriptor: &security::creation::Descriptor,
-) -> io::Result<File> {
-    child_impl(parent, name, kind, true, descriptor.as_ptr(), true)
+pub(crate) fn open_permissions(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
+    child_impl(parent, name, kind, false, ptr::null_mut(), true)
 }
 
 fn child_impl(
@@ -264,7 +260,7 @@ fn child_impl(
     kind: Kind,
     create: bool,
     descriptor: windows_sys::Win32::Security::PSECURITY_DESCRIPTOR,
-    share_delete: bool,
+    permissions: bool,
 ) -> io::Result<File> {
     if stamp(parent)?.kind != Kind::Directory {
         return Err(invalid("directory parent required"));
@@ -289,6 +285,8 @@ fn child_impl(
     let access = FILE_GENERIC_READ
         | if create {
             FILE_GENERIC_WRITE | DELETE | if descriptor.is_null() { 0 } else { WRITE_DAC }
+        } else if permissions {
+            WRITE_DAC
         } else {
             0
         };
@@ -309,7 +307,7 @@ fn child_impl(
             &mut status,
             ptr::null(),
             FILE_ATTRIBUTE_NORMAL,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | if share_delete { FILE_SHARE_DELETE } else { 0 },
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
             if create { FILE_CREATE } else { FILE_OPEN },
             options,
             ptr::null(),
