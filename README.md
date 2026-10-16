@@ -2,7 +2,7 @@
 
 A **planned, library-first Rust toolkit** for installing local Agent Skills into the documented directories of selected AI coding tools.
 
-**Status:** Cargo workspace bootstrap. The library and CLI skeleton compile, but installation is not implemented and there is no released crate or CLI. The repository is private during development and is intended for a future OSS release. The library is `agent-skills-kit`; the CLI package is `agent-skills-kit-cli`, with executable `agent-skills-kit`.
+**Status:** the library provides validated catalog metadata and explicit-context path resolution. The CLI remains a bootstrap stub; installation is not implemented and there is no released crate or CLI. The repository is private during development and is intended for a future OSS release. The library is `agent-skills-kit`; the CLI package is `agent-skills-kit-cli`, with executable `agent-skills-kit`.
 
 ## What it will do
 
@@ -17,6 +17,7 @@ Selecting a tool determines where files are written. It does **not** ensure that
 - [Product plan and milestones](docs/plan.md)
 - [Architecture and safety boundaries](docs/architecture.md)
 - [Catalog schema and evidence](docs/catalog.md)
+- [Explicit-context path resolution](docs/resolution.md)
 - [Local development](docs/development.md)
 - [AI agent instructions](AGENTS.md)
 - [Target candidates and evidence](docs/research/target-candidates.md)
