@@ -828,3 +828,207 @@ fn windows_read_only_stage_fault_preserves_source_and_cleans_recorded_objects() 
     assert!(fs::metadata(&resource).unwrap().permissions().readonly());
     fs::set_permissions(&resource, permissions).unwrap();
 }
+
+const KILL_MODE: &str = "ASK_WINDOWS_CANDIDATE_KILL_MODE";
+const KILL_ROOT: &str = "ASK_WINDOWS_CANDIDATE_KILL_ROOT";
+const KILL_NONCE: &str = "ASK_WINDOWS_CANDIDATE_KILL_NONCE";
+#[test]
+fn windows_candidate_kill_child() {
+    use std::{io::Write, mem::ManuallyDrop, thread};
+    let Some(mode) = std::env::var_os(KILL_MODE) else {
+        return;
+    };
+    let phase = match mode.to_str().unwrap() {
+        "before-commit" => Phase::BeforeCommit,
+        "after-commit" => Phase::AfterCommit,
+        "before-cleanup" => Phase::BeforeCleanup,
+        _ => panic!("unknown trusted child mode"),
+    };
+    let root = PathBuf::from(std::env::var_os(KILL_ROOT).expect("child root"));
+    assert!(
+        !fs::symlink_metadata(&root)
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
+    assert_eq!(
+        fs::canonicalize(root.parent().unwrap()).unwrap(),
+        fs::canonicalize(std::env::temp_dir()).unwrap()
+    );
+    assert!(
+        root.file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .starts_with("ask-win-copy-")
+    );
+    let nonce = std::env::var(KILL_NONCE).expect("parent authorization nonce");
+    assert_eq!(
+        fs::read_to_string(root.join("trusted-kill-parent")).unwrap(),
+        nonce
+    );
+    let mut context = InstallContext::new(native_platform().unwrap());
+    context.user_home = Some(root.join("home with spaces"));
+    context.project_root = Some(root.join("project"));
+    // Only the parent owns teardown authority. An unexpected child return/panic
+    // must not remove the parent's fixture while it collects failure evidence.
+    let fixture = ManuallyDrop::new(Fixture {
+        source: root.join("source 中/sample"),
+        root,
+        context,
+    });
+    let plan = fixture.plan(&["codex"], Scope::User);
+    let report = apply(&plan, ApplyOptions::default(), &mut |current, _| {
+        if current == phase {
+            println!("ASK_WINDOWS_READY");
+            std::io::stdout().flush()?;
+            loop {
+                thread::park();
+            }
+        }
+        Ok(())
+    });
+    panic!("trusted child did not reach requested checkpoint: {report:?}");
+}
+#[test]
+fn windows_process_kill_preserves_owned_orphans_committed_identity_and_unrelated_data() {
+    use std::{
+        io::{BufRead, BufReader},
+        process::{Command, Stdio},
+        sync::mpsc,
+        thread,
+        time::{Duration, SystemTime, UNIX_EPOCH},
+    };
+    for mode in ["before-commit", "after-commit", "before-cleanup"] {
+        let fixture = Fixture::new();
+        let nonce = format!(
+            "{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+        fs::write(fixture.root.join("trusted-kill-parent"), &nonce).unwrap();
+        let unrelated = fixture
+            .context
+            .user_home
+            .as_ref()
+            .unwrap()
+            .join(".ask-stage-unrelated");
+        fs::create_dir(&unrelated).unwrap();
+        fs::write(unrelated.join("sentinel"), b"untouched").unwrap();
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "executor::apply::windows_candidate::tests::windows_candidate_kill_child",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env(KILL_MODE, mode)
+            .env(KILL_ROOT, &fixture.root)
+            .env(KILL_NONCE, &nonce)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .unwrap();
+        let stdout = child.stdout.take().unwrap();
+        let (ready_tx, ready_rx) = mpsc::channel();
+        let reader = thread::spawn(move || {
+            let mut ready = false;
+            for line in BufReader::new(stdout).lines() {
+                match line {
+                    Ok(line) if line.contains("ASK_WINDOWS_READY") => {
+                        let _ = ready_tx.send(Ok(()));
+                        ready = true;
+                        break;
+                    }
+                    Ok(_) => (),
+                    Err(error) => {
+                        let _ = ready_tx.send(Err(error.to_string()));
+                        return;
+                    }
+                }
+            }
+            if !ready {
+                let _ = ready_tx.send(Err("child exited without readiness marker".to_owned()));
+            }
+        });
+        let readiness = ready_rx.recv_timeout(Duration::from_secs(10));
+        let running = child.try_wait();
+        let killed = child.kill();
+        let waited = child.wait();
+        let joined = reader.join();
+        // Always terminate/wait/join before assertions, including failed readiness.
+        assert!(matches!(readiness, Ok(Ok(()))), "{mode}: {readiness:?}");
+        assert!(matches!(running, Ok(None)), "{mode}: {running:?}");
+        assert!(killed.is_ok(), "{mode}: {killed:?}");
+        assert!(!waited.unwrap().success());
+        joined.unwrap();
+        let path = fixture
+            .context
+            .user_home
+            .as_ref()
+            .unwrap()
+            .join(".agents/skills/sample");
+        let mut orphans = stages(&fixture.root);
+        orphans.retain(|path| path != &unrelated);
+        assert_eq!(orphans.len(), 1, "{mode}: {orphans:?}");
+        let orphan = &orphans[0];
+        let before = fs::read_dir(orphan)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect::<Vec<_>>();
+        let identity = if mode == "before-commit" {
+            assert!(!path.exists());
+            assert_eq!(
+                fs::read(orphan.join("sample/SKILL.md")).unwrap(),
+                fs::read(fixture.source.join("SKILL.md")).unwrap()
+            );
+            None
+        } else {
+            assert!(before.is_empty());
+            let file = native::open_root(&path).unwrap();
+            Some(metadata(&file, &path).unwrap().file_identity())
+        };
+        let permissions = identity.map(|_| fixture_dacl(&path));
+        let retry = fixture.plan(&["codex"], Scope::User);
+        let report = apply(&retry, ApplyOptions::default(), &mut |_, _| Ok(()));
+        assert!(report.is_successful(), "{mode}: {report:?}");
+        assert_eq!(
+            report.outcomes[0].status,
+            if identity.is_some() {
+                OutcomeStatus::Unchanged
+            } else {
+                OutcomeStatus::Created
+            }
+        );
+        if let Some(identity) = identity {
+            let file = native::open_root(&path).unwrap();
+            assert_eq!(metadata(&file, &path).unwrap().file_identity(), identity);
+            assert_eq!(
+                fixture_dacl(&path),
+                permissions.unwrap(),
+                "retry must not silently repair committed permissions"
+            );
+        }
+        assert_eq!(
+            fs::read(path.join("SKILL.md")).unwrap(),
+            fs::read(fixture.source.join("SKILL.md")).unwrap()
+        );
+        assert_eq!(
+            fs::read_dir(orphan)
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name())
+                .collect::<Vec<_>>(),
+            before
+        );
+        assert_eq!(fs::read(unrelated.join("sentinel")).unwrap(), b"untouched");
+        assert_eq!(
+            stages(&fixture.root).len(),
+            2,
+            "retry must retain prior orphan and unrelated directory"
+        );
+    }
+}
