@@ -16,6 +16,7 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             "cline-cli",
             "cline-vscode",
             "codex",
+            "crush-cli",
             "cursor-ide",
             "factory-droid-cli",
             "gemini-cli",

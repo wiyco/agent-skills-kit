@@ -4020,6 +4020,377 @@
         "Skills, MCP Servers in Skills states that Amp connects to skill MCP servers on discovery. Copying does not run or connect anything; later host discovery can execute commands or access networks and is not a safety guarantee. No host was launched.",
         "General portable validation remains required. No additional reserved local name or minimum skills version is established. IDE, macOS/iOS app, Puck, orb/runner, hosted and remote variants remain separate unverified/excluded capabilities."
       ]
+    },
+    {
+      "id": "crush-cli",
+      "aliases": [],
+      "product_id": "crush",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".crush",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills",
+                "section": "Agent Skills",
+                "accessed": "2026-10-16",
+                "applicability": "Crush terminal CLI README revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b; macOS/Linux/native Windows candidates, minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::crush_xdg_native_and_reader_boundaries",
+                "expanded_targets::crush_native_and_alternate_copy"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Ordinary explicit roots only; optional CRUSH_SKILLS_DIR, Windows-only LocalAppData readers and configured extra paths are documented but not enumerated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills",
+                    "section": "Agent Skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Crush terminal CLI README revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b; macOS/Linux/native Windows candidates, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::crush_xdg_native_and_reader_boundaries",
+                    "expanded_targets::crush_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Ordinary explicit roots only; optional CRUSH_SKILLS_DIR, Windows-only LocalAppData readers and configured extra paths are documented but not enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".crush",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills",
+                    "section": "Agent Skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Crush terminal CLI README revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b; macOS/Linux/native Windows candidates, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::crush_xdg_native_and_reader_boundaries",
+                    "expanded_targets::crush_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Ordinary explicit roots only; optional CRUSH_SKILLS_DIR, Windows-only LocalAppData readers and configured extra paths are documented but not enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills",
+                    "section": "Agent Skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Crush terminal CLI README revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b; macOS/Linux/native Windows candidates, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::crush_xdg_native_and_reader_boundaries",
+                    "expanded_targets::crush_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Ordinary explicit roots only; optional CRUSH_SKILLS_DIR, Windows-only LocalAppData readers and configured extra paths are documented but not enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".cursor",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills",
+                    "section": "Agent Skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Crush terminal CLI README revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b; macOS/Linux/native Windows candidates, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::crush_xdg_native_and_reader_boundaries",
+                    "expanded_targets::crush_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Ordinary explicit roots only; optional CRUSH_SKILLS_DIR, Windows-only LocalAppData readers and configured extra paths are documented but not enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Common documented local roots only; optional/env/configured and Windows-only additional readers remain explicitly unenumerated. No host discovery or effective enabled-state guarantee."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "environment",
+                "variable": "XDG_CONFIG_HOME",
+                "fallback": {
+                  "base": "home",
+                  "components": [
+                    ".config"
+                  ]
+                }
+              },
+              "components": [
+                "crush",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills",
+                "section": "Agent Skills",
+                "accessed": "2026-10-16",
+                "applicability": "Crush terminal CLI README revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b; macOS/Linux/native Windows candidates, minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::crush_xdg_native_and_reader_boundaries",
+                "expanded_targets::crush_native_and_alternate_copy"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Ordinary explicit roots only; optional CRUSH_SKILLS_DIR, Windows-only LocalAppData readers and configured extra paths are documented but not enumerated."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "environment",
+                    "variable": "XDG_CONFIG_HOME",
+                    "fallback": {
+                      "base": "home",
+                      "components": [
+                        ".config"
+                      ]
+                    }
+                  },
+                  "components": [
+                    "agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills",
+                    "section": "Agent Skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Crush terminal CLI README revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b; macOS/Linux/native Windows candidates, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::crush_xdg_native_and_reader_boundaries",
+                    "expanded_targets::crush_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Ordinary explicit roots only; optional CRUSH_SKILLS_DIR, Windows-only LocalAppData readers and configured extra paths are documented but not enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "environment",
+                    "variable": "XDG_CONFIG_HOME",
+                    "fallback": {
+                      "base": "home",
+                      "components": [
+                        ".config"
+                      ]
+                    }
+                  },
+                  "components": [
+                    "crush",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills",
+                    "section": "Agent Skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Crush terminal CLI README revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b; macOS/Linux/native Windows candidates, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::crush_xdg_native_and_reader_boundaries",
+                    "expanded_targets::crush_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Ordinary explicit roots only; optional CRUSH_SKILLS_DIR, Windows-only LocalAppData readers and configured extra paths are documented but not enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills",
+                    "section": "Agent Skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Crush terminal CLI README revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b; macOS/Linux/native Windows candidates, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::crush_xdg_native_and_reader_boundaries",
+                    "expanded_targets::crush_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Ordinary explicit roots only; optional CRUSH_SKILLS_DIR, Windows-only LocalAppData readers and configured extra paths are documented but not enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://github.com/charmbracelet/crush/blob/d65d6850ca4ed4971e4cb1a3bebd960a79cc167b/README.md#agent-skills",
+                    "section": "Agent Skills",
+                    "accessed": "2026-10-16",
+                    "applicability": "Crush terminal CLI README revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b; macOS/Linux/native Windows candidates, minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::crush_xdg_native_and_reader_boundaries",
+                    "expanded_targets::crush_native_and_alternate_copy"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Ordinary explicit roots only; optional CRUSH_SKILLS_DIR, Windows-only LocalAppData readers and configured extra paths are documented but not enumerated."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Common documented local roots only; optional/env/configured and Windows-only additional readers remain explicitly unenumerated. No host discovery or effective enabled-state guarantee."
+          ]
+        }
+      ],
+      "limitations": [
+        "Host-owned README documentation at revision d65d6850ca4ed4971e4cb1a3bebd960a79cc167b is the authority, not implementation source or a third-party installer. Features and Installation explicitly identify macOS/Linux and native Windows PowerShell.",
+        "Preferred project placement is documented .crush/skills; preferred user placement chooses the documented common XDG_CONFIG_HOME/crush/skills root, falling back only when absent to explicit home/.config/crush/skills. The Windows installation example uses LocalAppData instead; the global-reader list says Windows also reads those paths, not that common roots stop applying.",
+        "Windows-only LOCALAPPDATA agents/crush roots and USERPROFILE/AppData/Local fallbacks are additional readers not enumerated by this adapter. They are not inferred as replacement write roots or applied to Unix. The common documented root is an installer choice, not a claim of platform-preferred host order.",
+        "CRUSH_SKILLS_DIR and options.skills_paths are additional readers, not documented replacements for all global discovery. They are not interpreted as write overrides. CRUSH_GLOBAL_CONFIG and CRUSH_GLOBAL_DATA do not establish a skills relocation rule in the reviewed text.",
+        "XDG relocates the documented agents/crush global readers; independent ~/.agents and ~/.claude readers stay under explicit home, so all-reader resolution still requires home. Empty/relative/tilde XDG values are rejected by strict installer policy, not claimed host behavior.",
+        "Read list order is not evidence of duplicate precedence. Exact root descriptors do not scan ancestors, nested skills or custom configuration; duplicate precedence, extra reserved local skill names and minimum skills version remain unverified.",
+        "Host disabled-skills and invocation settings remain unchanged. crushrc is executable Bash configuration; the installer neither reads/evaluates it nor launches Crush. Strict portable validation/no-link copy remains mandatory; copied skill scripts never run.",
+        "Android, BSD, IDE, remote and other architecture/filesystem hosts remain outside native validation. Real-host discovery, activation and installed versions are untested; successful copying is not a sandbox or host-discovery guarantee."
+      ]
     }
   ]
 }
