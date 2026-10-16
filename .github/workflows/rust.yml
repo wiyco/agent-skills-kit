@@ -100,6 +100,16 @@ jobs:
           python -B -m unittest discover -s .github/scripts/tests -v
       - name: Prove formatting and lint gates reject regressions
         run: python .github/scripts/verify-quality-gates.py
+      - name: Verify pinned dependency policy tool
+        run: |
+          mkdir "$RUNNER_TEMP/ask-cargo-deny"
+          curl --fail --location --proto '=https' --tlsv1.2 --max-time 60 --output "$RUNNER_TEMP/ask-cargo-deny/tool.tar.gz" https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz
+          echo "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f  $RUNNER_TEMP/ask-cargo-deny/tool.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/ask-cargo-deny/tool.tar.gz" -C "$RUNNER_TEMP/ask-cargo-deny" --strip-components=1 cargo-deny-0.20.2-x86_64-unknown-linux-musl/cargo-deny
+      - name: Check dependency policy and controlled failures
+        run: python -B .github/scripts/verify-dependencies.py --cargo-deny "$RUNNER_TEMP/ask-cargo-deny/cargo-deny"
+        env:
+          CARGO_HOME: ${{ runner.temp }}/ask-dependency-cargo
 
   compatibility:
     name: compatibility (${{ matrix.toolchain }})

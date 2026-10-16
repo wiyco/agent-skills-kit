@@ -4,3 +4,20 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: ci
+      include: scope
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+  - package-ecosystem: cargo
+    directory: /examples/external-consumer
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
