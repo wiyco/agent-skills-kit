@@ -10,9 +10,12 @@ use std::os::unix::fs::symlink;
 struct Root(PathBuf);
 impl Root {
     fn new() -> Self {
+        Self::new_in(&std::env::temp_dir())
+    }
+    fn new_in(base: &Path) -> Self {
         static NEXT: AtomicU64 = AtomicU64::new(0);
         for _ in 0..100 {
-            let root = std::env::temp_dir().join(format!(
+            let root = base.join(format!(
                 "ask-copy-race-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
@@ -36,6 +39,11 @@ impl Root {
         std::fs::write(source.join("resource"), b"original").unwrap();
         let home = self.0.join("home");
         std::fs::create_dir_all(home.join(".agents/skills")).unwrap();
+        self.existing_plan(targets)
+    }
+    fn existing_plan(&self, targets: &[&str]) -> InstallPlan {
+        let source = self.0.join("source/sample");
+        let home = self.0.join("home");
         let mut context = InstallContext::new(native_platform().unwrap());
         context.user_home = Some(home);
         let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
@@ -666,4 +674,243 @@ fn changed_private_parent_or_stage_modes_block_commit_and_cleanup() {
             "uncertain private context must be retained"
         );
     }
+}
+
+/// Run only this trusted test executable as a child; skill contents remain inert.
+#[test]
+fn process_kill_at_commit_boundary_preserves_payload_and_unowned_remnants() {
+    use std::{
+        io::{BufRead, Write},
+        mem::ManuallyDrop,
+        os::unix::{fs::MetadataExt, process::ExitStatusExt},
+        process::{Child, Command, Stdio},
+        sync::mpsc,
+        time::Duration,
+    };
+    const CHILD_ROOT: &str = "ASK_TEST_KILL_OWNED_ROOT";
+    const CHILD_PHASE: &str = "ASK_TEST_KILL_PHASE";
+    const READY: &str = "ASK_TEST_KILL_READY";
+    if let Some(path) = std::env::var_os(CHILD_ROOT) {
+        // The parent owns teardown. Child-only variables never mutate this process.
+        let root = ManuallyDrop::new(Root(PathBuf::from(path)));
+        assert!(root.0.starts_with(std::env::temp_dir()));
+        assert!(
+            root.0
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .starts_with("ask-copy-race-")
+        );
+        let phase = match std::env::var(CHILD_PHASE).unwrap().as_str() {
+            "before" => Phase::BeforeCommit,
+            "after" => Phase::BeforeCleanup,
+            _ => panic!("unknown supervised phase"),
+        };
+        let plan = root.existing_plan(&["codex"]);
+        let _ = run(&plan, ApplyOptions::default(), &mut |current, _| {
+            if current == phase {
+                println!("{READY}");
+                std::io::stdout().flush()?;
+                let mut line = String::new();
+                std::io::stdin().read_line(&mut line)?;
+                panic!("supervisor must kill the blocked child");
+            }
+            Ok(())
+        });
+        panic!("supervised checkpoint not reached");
+    }
+    struct Supervised(Child);
+    impl Drop for Supervised {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+    fn snapshot(path: &Path) -> Vec<(PathBuf, u64, u32, Vec<u8>)> {
+        fn visit(root: &Path, path: &Path, result: &mut Vec<(PathBuf, u64, u32, Vec<u8>)>) {
+            let metadata = std::fs::symlink_metadata(path).unwrap();
+            assert!(!metadata.is_symlink());
+            result.push((
+                path.strip_prefix(root).unwrap().into(),
+                metadata.ino(),
+                metadata.mode(),
+                if metadata.is_file() {
+                    std::fs::read(path).unwrap()
+                } else {
+                    vec![]
+                },
+            ));
+            if metadata.is_dir() {
+                for entry in std::fs::read_dir(path).unwrap() {
+                    visit(root, &entry.unwrap().path(), result);
+                }
+            }
+        }
+        let mut result = vec![];
+        visit(path, path, &mut result);
+        result.sort_by(|a, b| a.0.cmp(&b.0));
+        result
+    }
+    for phase in ["before", "after"] {
+        let root = Root::new();
+        let original_plan = root.plan(&["codex"]);
+        let destination = original_plan.destinations()[0].path().unwrap();
+        let parent = destination.parent().unwrap();
+        let unrelated = parent.join(".ask-stage-unrelated");
+        std::fs::create_dir(&unrelated).unwrap();
+        std::fs::write(unrelated.join("sentinel"), b"not operation-owned").unwrap();
+        let unrelated_before = snapshot(&unrelated);
+        let mut child = Supervised(Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "executor::apply::native::tests::process_kill_at_commit_boundary_preserves_payload_and_unowned_remnants", "--nocapture"])
+            .env(CHILD_ROOT, &root.0).env(CHILD_PHASE, phase)
+            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::inherit())
+            .spawn().unwrap());
+        let stdout = child.0.stdout.take().unwrap();
+        let (sender, receiver) = mpsc::channel();
+        let reader = std::thread::spawn(move || {
+            for line in std::io::BufReader::new(stdout).lines() {
+                match line {
+                    Ok(line) if line == READY => {
+                        let _ = sender.send(());
+                        return;
+                    }
+                    Ok(_) => (),
+                    Err(_) => return,
+                }
+            }
+        });
+        receiver
+            .recv_timeout(Duration::from_secs(10))
+            .expect("trusted child must reach bounded commit checkpoint");
+        reader.join().unwrap();
+        assert_eq!(destination.exists(), phase == "after");
+        child.0.kill().unwrap();
+        let status = child.0.wait().unwrap();
+        assert_eq!(status.signal(), Some(libc::SIGKILL));
+        let orphan = std::fs::read_dir(parent)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .find(|path| {
+                path != &unrelated
+                    && path
+                        .file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .starts_with(".ask-stage-")
+            })
+            .expect("killed child leaves a private stage without cleanup");
+        let orphan_before = snapshot(&orphan);
+        if phase == "before" {
+            assert_eq!(
+                std::fs::read(orphan.join("sample/resource")).unwrap(),
+                b"original"
+            );
+        } else {
+            assert_eq!(std::fs::read_dir(&orphan).unwrap().count(), 0);
+        }
+        let installed_inode = std::fs::metadata(destination).ok().map(|meta| meta.ino());
+        let fresh = root.existing_plan(&["codex"]);
+        let report = super::super::apply_plan(&fresh, ApplyOptions::default());
+        assert!(report.is_successful(), "{report:#?}");
+        assert_eq!(
+            report.outcomes[0].status,
+            if phase == "before" {
+                OutcomeStatus::Created
+            } else {
+                OutcomeStatus::Unchanged
+            }
+        );
+        assert_eq!(
+            std::fs::read(destination.join("resource")).unwrap(),
+            b"original"
+        );
+        assert_eq!(
+            std::fs::read(destination.join("SKILL.md")).unwrap(),
+            std::fs::read(root.0.join("source/sample/SKILL.md")).unwrap()
+        );
+        if let Some(inode) = installed_inode {
+            assert_eq!(std::fs::metadata(destination).unwrap().ino(), inode);
+        }
+        assert_eq!(
+            snapshot(&orphan),
+            orphan_before,
+            "fresh retry must not adopt orphan cleanup authority"
+        );
+        assert_eq!(snapshot(&unrelated), unrelated_before);
+    }
+}
+
+#[test]
+fn native_copy_preserves_unicode_spaces_and_read_only_source_intent() {
+    use std::os::unix::fs::PermissionsExt;
+    let root = Root::new();
+    let _ = root.plan(&["codex"]);
+    let source = root.0.join("source/sample");
+    let resource = source.join("reference café 中.txt");
+    std::fs::write(&resource, b"inert original Unicode resource").unwrap();
+    std::fs::set_permissions(&resource, std::fs::Permissions::from_mode(0o444)).unwrap();
+    let directory = source.join("empty directory 中");
+    std::fs::create_dir(&directory).unwrap();
+    std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o555)).unwrap();
+    let plan = root.existing_plan(&["codex"]);
+    let report = super::super::apply_plan(&plan, ApplyOptions::default());
+    assert!(report.is_successful(), "{report:#?}");
+    let destination = plan.destinations()[0].path().unwrap();
+    assert_eq!(
+        std::fs::read(destination.join(resource.file_name().unwrap())).unwrap(),
+        b"inert original Unicode resource"
+    );
+    assert_eq!(
+        std::fs::metadata(destination.join(resource.file_name().unwrap()))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o7777,
+        0o444
+    );
+    assert_eq!(
+        std::fs::metadata(destination.join(directory.file_name().unwrap()))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o7777,
+        0o555
+    );
+    let fresh = root.existing_plan(&["codex"]);
+    let unchanged = super::super::apply_plan(&fresh, ApplyOptions::default());
+    assert_eq!(unchanged.outcomes[0].status, OutcomeStatus::Unchanged);
+    // Restore only fixture-owned directories so ordinary teardown can remove them.
+    for path in [directory, destination.join("empty directory 中")] {
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn linux_tmpfs_copy_unchanged_and_conflict_use_real_native_filesystem() {
+    let root = Root::new_in(Path::new("/dev/shm"));
+    let descriptor = std::fs::File::open(&root.0).unwrap();
+    assert_eq!(
+        rustix::fs::fstatfs(&descriptor).unwrap().f_type as u64,
+        0x0102_1994,
+        "required /dev/shm fixture must actually be tmpfs; no silent substitute"
+    );
+    let plan = root.plan(&["codex"]);
+    let destination = plan.destinations()[0].path().unwrap();
+    let created = super::super::apply_plan(&plan, ApplyOptions::default());
+    assert!(created.is_successful(), "{created:#?}");
+    assert_eq!(created.outcomes[0].status, OutcomeStatus::Created);
+    let fresh = root.existing_plan(&["codex"]);
+    let unchanged = super::super::apply_plan(&fresh, ApplyOptions::default());
+    assert_eq!(unchanged.outcomes[0].status, OutcomeStatus::Unchanged);
+    std::fs::write(destination.join("resource"), b"manual edit survives").unwrap();
+    let conflict = root.existing_plan(&["codex"]);
+    assert!(!conflict.is_applicable());
+    let refused = super::super::apply_plan(&conflict, ApplyOptions::default());
+    assert!(refused.preflight_error.is_some());
+    assert_eq!(
+        std::fs::read(destination.join("resource")).unwrap(),
+        b"manual edit survives"
+    );
+    no_stages(destination.parent().unwrap());
 }

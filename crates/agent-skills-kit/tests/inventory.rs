@@ -457,3 +457,46 @@ mod native {
         assert_eq!(snapshot(&root.0), before);
     }
 }
+
+#[cfg(windows)]
+#[test]
+fn windows_real_directory_reparse_fixture_is_refused_without_touching_target() {
+    use std::os::windows::fs::{MetadataExt, symlink_dir};
+    let root = Root::new();
+    let source = root.source();
+    let outside = root.0.join("outside with spaces 中");
+    fs::create_dir(&outside).unwrap();
+    fs::write(outside.join("sentinel"), b"unrelated original bytes").unwrap();
+    let link = source.join("directory-link");
+    symlink_dir(&outside, &link).unwrap_or_else(|error| {
+        panic!("required native Windows reparse fixture unavailable: {error}; link privilege/Developer Mode must be available; this is not a passing support test")
+    });
+    assert_ne!(
+        fs::symlink_metadata(&link).unwrap().file_attributes() & 0x400,
+        0,
+        "fixture must actually carry FILE_ATTRIBUTE_REPARSE_POINT"
+    );
+    assert_eq!(
+        inventory_skill(&source, InventoryLimits::default())
+            .unwrap_err()
+            .kind,
+        InventoryErrorKind::UnsupportedPlatform
+    );
+    assert_eq!(
+        inventory_skill(&link, InventoryLimits::default())
+            .unwrap_err()
+            .kind,
+        InventoryErrorKind::UnsupportedPlatform
+    );
+    assert_eq!(
+        fs::read(outside.join("sentinel")).unwrap(),
+        b"unrelated original bytes"
+    );
+    assert_eq!(
+        fs::canonicalize(&link).unwrap(),
+        fs::canonicalize(&outside).unwrap()
+    );
+    // Remove the directory link itself before ordinary owned-root teardown.
+    fs::remove_dir(&link).unwrap();
+    assert!(outside.join("sentinel").is_file());
+}
