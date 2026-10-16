@@ -8,7 +8,7 @@ The official proto Rust plugin delegates to rustup, references rustup toolchains
 
 ## Single source of truth
 
-ASK-001 creates an exact version pin in `rust-toolchain.toml` with rustfmt and Clippy. Do not copy an unverified numeric Rust version from earlier discussion. `rust-toolchain.toml` is checked in and used by both proto users and plain-rustup contributors. [Rustup overrides](https://rust-lang.github.io/rustup/overrides.html).
+The exact development pin is Rust 1.99.1 in `rust-toolchain.toml`, with rustfmt and Clippy. The installed components were already available at bootstrap; no installation or global default change was needed. `rust-toolchain.toml` is checked in and used by both proto users and plain-rustup contributors. [Rustup overrides](https://rust-lang.github.io/rustup/overrides.html).
 
 Rust does not need a duplicate pin in `.prototools`. Existing Node.js/pnpm/Terraform entries may remain in local or shared proto configuration. If maintainers later require a Rust entry in `.prototools`, add an automated consistency check or generation step; do not maintain two unrelated pins manually.
 
@@ -22,7 +22,9 @@ GitHub CLI is useful for issue/PR work. Node.js is only required to run the sepa
 
 ## Fresh checkout
 
-Before ASK-001 is merged, this is a planning-only repository. After the workspace exists:
+Ensure the Cargo bin directory (normally `$HOME/.cargo/bin`, or the bin directory of a custom `CARGO_HOME`) is on PATH. Proto delegates Rust management to rustup; no proto command is required to build. Plain rustup users use the same commands. With rustup installed, the repository toolchain file selects the exact version and required components when Cargo runs. An offline checkout requires that toolchain and components to be installed already.
+
+From the checkout:
 
 ```sh
 rustup show active-toolchain
@@ -43,7 +45,11 @@ cargo test --workspace --all-features --locked
 cargo doc --workspace --no-deps --locked
 ```
 
-The final workspace package/executable names are selected in ASK-002. Add precise `cargo run -p ...` examples once those packages exist, rather than publishing non-working examples.
+The provisional packages are `agent-skills-kit` (library) and `skillctl` (CLI). Run `cargo run -p skillctl --locked` to print the library bootstrap status. Command parsing and installation arrive in later issues; names and licensing remain subject to ASK-002. No external Rust dependencies or feature flags are present. No `rust-version` is declared because a lower MSRV has not been measured; ASK-003 owns that measurement and CI.
+
+The original `crates/skillctl/tests/fixtures/bootstrap.stdout` fixture records the bootstrap output. The integration test launches only the compiled CLI and compares its output; it performs no installation, executes no skill content, and makes no writes to agent stores.
+
+See [ASK-001 verification](verification/ask-001.md) for the tested setup and limitations.
 
 ## CI policy
 

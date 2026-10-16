@@ -2,7 +2,7 @@
 
 A **planned, library-first Rust toolkit** for installing local Agent Skills into the documented directories of selected AI coding tools.
 
-**Status:** design and implementation backlog. There is no released crate or CLI yet. The repository is private during development and is intended for a future OSS release. Project, crate, and executable names remain provisional until the naming review.
+**Status:** Cargo workspace bootstrap. The library and CLI skeleton compile, but installation is not implemented and there is no released crate or CLI. The repository is private during development and is intended for a future OSS release. Project, crate, and executable names remain provisional until the naming review.
 
 ## What it will do
 
@@ -24,7 +24,7 @@ Selecting a tool determines where files are written. It does **not** ensure that
 
 The task catalog is in [planning/manifest.json](planning/manifest.json); individual task specifications are in [planning/issues](planning/issues). GitHub Issues become the execution source of truth after import. Stable `ASK-###` keys are not GitHub issue numbers.
 
-## Planned layout
+## Workspace layout
 
 ```text
 crates/
@@ -32,7 +32,7 @@ crates/
   skillctl/          # thin CLI; provisional executable name
 ```
 
-These directories are created by ASK-001. This initial repository intentionally contains planning documents rather than an untested Rust implementation.
+Run `cargo check --workspace --locked` and `cargo test --workspace --locked` from the checkout. `cargo run -p skillctl --locked` prints the library bootstrap status. See [local development](docs/development.md) for setup and verification.
 
 ## Development direction
 

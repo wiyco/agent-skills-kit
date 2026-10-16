@@ -1,0 +1,9 @@
+[package]
+name = "skillctl"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "Thin CLI for Agent Skills Kit (bootstrap)"
+
+[dependencies]
+agent-skills-kit = { path = "../agent-skills-kit" }
