@@ -53,3 +53,10 @@ Fixed-drive selection additionally follows [GetDriveTypeW return values](https:/
 
 
 The evaluated `ReOpenFile` directory-cursor candidate failed with access denied in Windows native CI (run 38917013663/job 117026966407). Enumeration instead uses the retained directory handle directly with a per-handle mutex and explicit restart. Every Arc clone shares the same lock; there is no global state, path fallback or new root lookup. Native repeated/concurrent scan tests and finite entry budgets gate this choice. The earlier candidate failure is not counted as passing evidence.
+
+
+## Namespace observation layer
+
+Read-only destination observation retains actual root/descendant identities, missing components and owner/group/DACL preconditions, with finite SDK descriptor-size checks and matching LocalFree ownership. Source inventory and namespace observations share the same native stamp/stream validation. Windows install planning and execution remain gated.
+
+Primary security APIs reviewed 2026-10-16: [GetSecurityInfo](https://learn.microsoft.com/en-us/windows/win32/api/aclapi/nf-aclapi-getsecurityinfo), [GetSecurityDescriptorLength](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-getsecuritydescriptorlength), and [LocalFree](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-localfree). The fixture-only ACL mutation uses [SetSecurityInfo](https://learn.microsoft.com/en-us/windows/win32/api/aclapi/nf-aclapi-setsecurityinfo), [GetSecurityDescriptorDacl](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-getsecuritydescriptordacl), and [GetSecurityDescriptorControl](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-getsecuritydescriptorcontrol). It toggles inheritance with the original non-null DACL and restores that DACL/mode before asserting, without replacing it with an everyone-access descriptor or altering real user stores.

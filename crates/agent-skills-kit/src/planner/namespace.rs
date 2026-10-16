@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
 use std::{fs::File, sync::Arc};
 
 use crate::validation::EntryStamp;
@@ -13,6 +13,10 @@ use crate::validation::EntryStamp;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 #[path = "namespace_unix.rs"]
 mod unix;
+
+#[cfg(windows)]
+#[path = "namespace_windows.rs"]
+mod windows;
 
 /// The only successful namespace states; unsafe/non-directory entries are errors.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -31,8 +35,12 @@ pub(super) struct DirectoryAnchor {
     pub(super) stamp: EntryStamp,
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     pub(super) handle: Arc<File>,
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(windows)]
+    pub(super) handle: Arc<crate::filesystem_windows::reader::Handle>,
+    #[cfg(any(target_os = "linux", target_os = "macos", windows))]
     pub(super) name: Option<OsString>,
+    #[cfg(windows)]
+    pub(super) security: Vec<u8>,
 }
 
 /// Bounded read-only namespace observation, retaining every opened directory.
@@ -99,7 +107,11 @@ impl DestinationSnapshot {
         {
             unix::is_current(self)
         }
-        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        #[cfg(windows)]
+        {
+            windows::is_current(self)
+        }
+        #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
         {
             Err(NamespaceError::new(
                 &self.requested,
@@ -124,7 +136,7 @@ impl NamespaceError {
             kind,
         }
     }
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(any(target_os = "linux", target_os = "macos", windows))]
     pub(super) fn io(path: &Path, operation: &'static str, error: io::Error) -> Self {
         Self::new(
             path,
@@ -188,7 +200,9 @@ pub enum NamespaceErrorKind {
 /// payloads. Limits: 32 KiB root bytes, 8 KiB relative bytes, 64 relative components
 /// and 64 missing root components. Empty relative paths observe the root itself.
 ///
-/// Windows fails closed before filesystem access. There are no writes, locks,
+/// Windows uses retained no-reparse handles on fixed local NTFS drives and
+/// records owner/group/DACL preconditions. This does not enable copy execution.
+/// There are no writes, locks,
 /// temporary files, environment discovery or payload execution. This observation
 /// alone is not an install plan, case-collision check or proof of safe execution.
 pub fn observe_destination(
@@ -199,7 +213,11 @@ pub fn observe_destination(
     {
         unix::observe(root, relative)
     }
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    #[cfg(windows)]
+    {
+        windows::observe(root, relative)
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
     {
         let _ = relative;
         Err(NamespaceError::new(
