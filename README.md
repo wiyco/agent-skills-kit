@@ -2,7 +2,7 @@
 
 A **planned, library-first Rust toolkit** for installing local Agent Skills into the documented directories of selected AI coding tools.
 
-**Status:** the library provides validated catalog metadata, explicit-context path resolution and bounded inert skill frontmatter validation. The CLI remains a bootstrap stub; installation is not implemented and there is no released crate or CLI. The repository is private during development and is intended for a future OSS release. The library is `agent-skills-kit`; the CLI package is `agent-skills-kit-cli`, with executable `agent-skills-kit`.
+**Status:** the library provides validated catalog metadata, explicit-context path resolution and bounded inert skill frontmatter validation and read-only source inventory on reviewed Linux/macOS filesystem candidates (Windows inventory is unsupported). The CLI remains a bootstrap stub; installation is not implemented and there is no released crate or CLI. The repository is private during development and is intended for a future OSS release. The library is `agent-skills-kit`; the CLI package is `agent-skills-kit-cli`, with executable `agent-skills-kit`.
 
 ## What it will do
 

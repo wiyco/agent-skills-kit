@@ -11,3 +11,8 @@ description = "Library-first toolkit for local Agent Skills installation (bootst
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 saphyr-parser = { version = "0.2.2", default-features = false }
+
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+rustix = { version = "1.1.5", features = ["fs"] }
+blake3 = { version = "1.8.7", default-features = false, features = ["pure"] }
+libc = "0.2.190"
