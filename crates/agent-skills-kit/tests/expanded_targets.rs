@@ -1480,3 +1480,243 @@ fn mistral_vibe_scopes_override_and_reader_boundaries() {
         assert!(catalog.get(id).is_none());
     }
 }
+
+#[test]
+fn amp_local_scopes_readers_and_platform_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    let target = catalog.get("amp-cli").unwrap();
+    assert_eq!(target.product_id, "amp");
+    assert_eq!(target.variant, "cli");
+    for scope in &target.scopes {
+        assert_eq!(scope.platforms, vec![Platform::Linux, Platform::Macos]);
+    }
+    for id in [
+        "amp",
+        "amp-ide",
+        "amp-app",
+        "amp-orb",
+        "amp-runner",
+        "amp-ios",
+        "amp-puck",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+    if context.platform == Platform::Windows {
+        for scope in [Scope::User, Scope::Project] {
+            assert!(matches!(
+                resolve(&catalog, "amp-cli", scope, &context),
+                Err(ResolveError::UnsupportedPlatform(Platform::Windows))
+            ));
+        }
+        return;
+    }
+    for variable in [
+        "XDG_CONFIG_HOME",
+        "AMP_HOME",
+        "AMP_CONFIG_DIR",
+        "CLAUDE_CONFIG_DIR",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "unverified relocation".into());
+    }
+    for (scope, root, folders) in [
+        (
+            Scope::User,
+            context.user_home.as_ref().unwrap(),
+            vec![".config/agents", ".agents", ".config/amp", ".claude"],
+        ),
+        (
+            Scope::Project,
+            context.project_root.as_ref().unwrap(),
+            vec![".agents", ".claude"],
+        ),
+    ] {
+        let result = resolve(&catalog, "amp-cli", scope, &context).unwrap();
+        assert_eq!(
+            result.preferred_write.path,
+            root.join(folders[0]).join("skills")
+        );
+        assert_eq!(result.discovery.len(), folders.len());
+        for (reader, folder) in result.discovery.iter().zip(folders) {
+            assert_eq!(reader.location.path, root.join(folder).join("skills"));
+            assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+            assert_eq!(
+                reader.location.evidence.source.as_ref().unwrap().url,
+                "https://ampcode.com/docs/customize/skills"
+            );
+            assert!(reader.location.evidence.discovery_tests.is_empty());
+        }
+        assert!(
+            result
+                .warnings
+                .contains(&ResolutionWarning::HostDiscoveryUntested)
+        );
+        assert!(
+            !result
+                .warnings
+                .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+        );
+    }
+    assert!(matches!(
+        resolve(&catalog, "amp-cli", Scope::ApplicationWorkspace, &context),
+        Err(ResolveError::UnsupportedScope { .. })
+    ));
+    context.user_home = None;
+    assert!(matches!(
+        resolve(&catalog, "amp-cli", Scope::User, &context),
+        Err(ResolveError::MissingContext(ContextBase::Home))
+    ));
+    context.project_root = None;
+    assert!(matches!(
+        resolve(&catalog, "amp-cli", Scope::Project, &context),
+        Err(ResolveError::MissingContext(ContextBase::Project))
+    ));
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[test]
+fn amp_shared_project_and_distinct_user_copy() {
+    for scope in [Scope::Project, Scope::User] {
+        let fixture = Fixture::new();
+        let source = fixture.0.join("source/sample");
+        fs::create_dir_all(source.join("empty")).unwrap();
+        fs::write(
+            source.join("SKILL.md"),
+            b"---\nname: sample\ndescription: Original inert local Amp fixture\n---\nData only.\n",
+        )
+        .unwrap();
+        fs::write(
+            source.join("resource café.txt"),
+            b"original Amp fixture bytes",
+        )
+        .unwrap();
+        let mut context = InstallContext::new(native_platform().unwrap());
+        context.user_home = Some(fixture.0.join("home space"));
+        context.project_root = Some(fixture.0.join("project 日本語"));
+        fs::create_dir(context.user_home.as_ref().unwrap()).unwrap();
+        fs::create_dir(context.project_root.as_ref().unwrap()).unwrap();
+        let catalog = Catalog::bundled().unwrap();
+        let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        let preview = || {
+            plan_install(
+                &catalog,
+                InstallRequest {
+                    skills: &sources,
+                    target_ids: &["amp-cli", "codex-cli", "amp-cli"],
+                    scope,
+                    context: &context,
+                    limits: PlanLimits::default(),
+                },
+            )
+            .unwrap()
+        };
+        let plan = preview();
+        assert!(plan.is_applicable());
+        assert_eq!(plan.targets().len(), 2);
+        assert_eq!(
+            plan.destinations().len(),
+            if scope == Scope::Project { 1 } else { 2 }
+        );
+        let amp = resolve(&catalog, "amp-cli", scope, &context).unwrap();
+        let codex = resolve(&catalog, "codex", scope, &context).unwrap();
+        assert_eq!(
+            amp.preferred_write.path == codex.preferred_write.path,
+            scope == Scope::Project
+        );
+        assert!(
+            amp.discovery
+                .iter()
+                .any(|reader| reader.location.path == codex.preferred_write.path)
+        );
+        if scope == Scope::Project {
+            assert_eq!(
+                plan.destinations()[0]
+                    .attributions()
+                    .iter()
+                    .map(|a| {
+                        assert_eq!(a.source_index, 0);
+                        plan.targets()[a.target_index].id()
+                    })
+                    .collect::<Vec<_>>(),
+                ["amp-cli", "codex"]
+            );
+        }
+        assert!(
+            plan.destinations()
+                .iter()
+                .all(|d| !d.path().unwrap().exists())
+        );
+        let report = apply_plan(&plan, ApplyOptions::default());
+        assert!(report.is_successful(), "{report:?}");
+        assert!(
+            report
+                .outcomes
+                .iter()
+                .all(|o| o.status == OutcomeStatus::Created)
+        );
+        for destination in plan.destinations() {
+            let path = destination.path().unwrap();
+            for name in ["SKILL.md", "resource café.txt"] {
+                assert_eq!(
+                    fs::read(path.join(name)).unwrap(),
+                    fs::read(source.join(name)).unwrap()
+                );
+            }
+            assert!(path.join("empty").is_dir());
+        }
+        let repeated = apply_plan(&preview(), ApplyOptions::default());
+        assert!(repeated.is_successful(), "{repeated:?}");
+        assert!(
+            repeated
+                .outcomes
+                .iter()
+                .all(|o| o.status == OutcomeStatus::Unchanged)
+        );
+        let resource = plan.destinations()[0]
+            .path()
+            .unwrap()
+            .join("resource café.txt");
+        fs::write(&resource, b"manual edit must remain").unwrap();
+        let conflict = preview();
+        assert!(!conflict.is_applicable());
+        assert!(!apply_plan(&conflict, ApplyOptions::default()).is_successful());
+        assert_eq!(fs::read(resource).unwrap(), b"manual edit must remain");
+    }
+}
+
+#[cfg(target_os = "windows")]
+#[test]
+fn amp_native_windows_plan_is_rejected_without_writes() {
+    let fixture = Fixture::new();
+    let source = fixture.0.join("source/sample");
+    fs::create_dir_all(&source).unwrap();
+    fs::write(
+        source.join("SKILL.md"),
+        b"---\nname: sample\ndescription: Inert unsupported-host fixture\n---\nData only.\n",
+    )
+    .unwrap();
+    let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+    let mut context = InstallContext::new(Platform::Windows);
+    context.user_home = Some(fixture.0.join("home must remain absent"));
+    context.project_root = Some(fixture.0.join("project must remain absent"));
+    let catalog = Catalog::bundled().unwrap();
+    for scope in [Scope::Project, Scope::User] {
+        let plan = plan_install(
+            &catalog,
+            InstallRequest {
+                skills: &sources,
+                target_ids: &["amp-cli"],
+                scope,
+                context: &context,
+                limits: PlanLimits::default(),
+            },
+        )
+        .unwrap();
+        assert!(!plan.is_applicable());
+        assert!(!apply_plan(&plan, ApplyOptions::default()).is_successful());
+        assert!(!context.user_home.as_ref().unwrap().exists());
+        assert!(!context.project_root.as_ref().unwrap().exists());
+    }
+}

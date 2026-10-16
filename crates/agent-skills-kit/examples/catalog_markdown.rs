@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Roots are explicit caller context, not discovered HOME or current directories. Scope status describes documentation classification; platform arrays/test IDs are resolver evidence, not actual host discovery or universal OS/version support. Exact native CI results belong to each final-SHA QA record.\n"
     );
     println!(
-        "| Target / product / variant | Scope status | Preferred write | Readable locations (declared order) | Primary review / resolver evidence | Real-host discovery |"
+        "| Target / product / variant | Scope status / resolver platforms | Preferred write | Readable locations (declared order) | Primary review / resolver evidence | Real-host discovery |"
     );
     println!("| --- | --- | --- | --- | --- | --- |");
     for target in catalog.targets() {
@@ -96,12 +96,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "unverified"
                 };
             println!(
-                "| `{}` / `{}` / `{}` | {:?} / {:?} | {} | {} | {} | {} |",
+                "| `{}` / `{}` / `{}` | {:?} / {:?} / {:?} | {} | {} | {} | {} |",
                 target.id,
                 target.product_id,
                 target.variant,
                 scope.scope,
                 scope.status,
+                scope.platforms,
                 write,
                 reads,
                 review,

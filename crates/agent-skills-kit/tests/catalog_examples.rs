@@ -11,6 +11,7 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             .map(|target| target.id.as_str())
             .collect::<Vec<_>>(),
         [
+            "amp-cli",
             "claude-code",
             "cline-cli",
             "cline-vscode",
