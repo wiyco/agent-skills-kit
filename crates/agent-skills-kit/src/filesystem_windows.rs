@@ -123,6 +123,17 @@ fn information<T: Default>(file: &File, class: FILE_INFO_BY_HANDLE_CLASS) -> io:
     }
 }
 
+pub(crate) fn unsupported_attributes(attributes: u32) -> bool {
+    attributes
+        & (FILE_ATTRIBUTE_REPARSE_POINT
+            | FILE_ATTRIBUTE_DEVICE
+            | FILE_ATTRIBUTE_OFFLINE
+            | FILE_ATTRIBUTE_ENCRYPTED
+            | FILE_ATTRIBUTE_RECALL_ON_OPEN
+            | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS)
+        != 0
+}
+
 pub(crate) fn stamp(file: &File) -> io::Result<Stamp> {
     // SAFETY: only inspects the live retained handle and writes no memory.
     if unsafe { GetFileType(file.as_raw_handle()) } != FILE_TYPE_DISK {
@@ -130,10 +141,13 @@ pub(crate) fn stamp(file: &File) -> io::Result<Stamp> {
     }
     let basic: FILE_BASIC_INFO = information(file, FileBasicInfo)?;
     let tag: FILE_ATTRIBUTE_TAG_INFO = information(file, FileAttributeTagInfo)?;
-    if tag.FileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DEVICE) != 0
+    if unsupported_attributes(tag.FileAttributes)
+        || unsupported_attributes(basic.FileAttributes)
         || tag.ReparseTag != 0
     {
-        return Err(unsupported("reparse/device object rejected"));
+        return Err(unsupported(
+            "reparse, device, offline, recall or encrypted object rejected",
+        ));
     }
     let standard: FILE_STANDARD_INFO = information(file, FileStandardInfo)?;
     if standard.DeletePending || standard.EndOfFile < 0 {

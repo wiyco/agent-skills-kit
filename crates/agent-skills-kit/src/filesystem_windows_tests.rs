@@ -73,6 +73,19 @@ fn native_components_reject_traversal_streams_devices_and_preserve_wide_identity
         root_drive(Path::new(r"\\?\C:\source\sample")).unwrap(),
         b'C'
     );
+    for rejected in [
+        FILE_ATTRIBUTE_REPARSE_POINT,
+        FILE_ATTRIBUTE_DEVICE,
+        FILE_ATTRIBUTE_OFFLINE,
+        FILE_ATTRIBUTE_ENCRYPTED,
+        FILE_ATTRIBUTE_RECALL_ON_OPEN,
+        FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS,
+    ] {
+        assert!(unsupported_attributes(rejected | FILE_ATTRIBUTE_READONLY));
+    }
+    assert!(!unsupported_attributes(
+        FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_READONLY
+    ));
 }
 
 #[test]

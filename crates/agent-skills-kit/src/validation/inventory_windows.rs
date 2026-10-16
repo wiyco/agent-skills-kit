@@ -9,9 +9,7 @@ use std::{
     os::windows::ffi::OsStrExt,
     sync::Arc,
 };
-use windows_sys::Win32::Storage::FileSystem::{
-    FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_READONLY, FILE_ATTRIBUTE_REPARSE_POINT,
-};
+use windows_sys::Win32::Storage::FileSystem::{FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_READONLY};
 
 fn failure(path: &Path, operation: &'static str, error: io::Error) -> InventoryError {
     if let Some(reason) = error
@@ -221,7 +219,7 @@ impl Walker<'_> {
             if depth + 1 > self.limits.max_depth {
                 return Err(self.error(&child, InventoryErrorKind::Limit("entry depth")));
             }
-            if entry.attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+            if native::unsupported_attributes(entry.attributes) {
                 return Err(self.error(&child, InventoryErrorKind::UnsafeEntry));
             }
             let kind = if entry.attributes & FILE_ATTRIBUTE_DIRECTORY != 0 {
