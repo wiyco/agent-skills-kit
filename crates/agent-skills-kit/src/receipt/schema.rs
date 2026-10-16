@@ -145,6 +145,18 @@ pub struct ReceiptAttribution {
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ReceiptFailureCode {
+    /// Catalog resolution could not produce an eligible destination.
+    TargetResolution,
+    /// Metadata violates a selected host's separate constraints.
+    HostConstraint,
+    /// Existing payload differs from the approved intended payload.
+    ExistingContentDiffers,
+    /// Existing skill root spelling differs from the requested raw name.
+    ExistingNameMismatch,
+    /// Several sources request different payloads at one physical location.
+    CompetingSources,
+    /// Portable case/normalization keys collide.
+    NameCollision,
     /// No reviewed native platform capability.
     UnsupportedPlatform,
     /// Known conflicting or unsupported preview.
@@ -202,6 +214,21 @@ pub enum ReceiptStatus {
     NotAttempted,
 }
 
+/// Preview classification recorded independently of actual execution outcome.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum ReceiptPlanAction {
+    /// Approved absent destination.
+    Create,
+    /// Approved preexisting identical payload, without acquired ownership.
+    Unchanged,
+    /// Unmanaged/different/unsafe content blocks this request.
+    Conflict,
+    /// Target/context/backend/host constraint blocks this request.
+    Unsupported,
+}
+
 /// One physical destination and every requested attribution.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -210,6 +237,10 @@ pub struct ReceiptDestination {
     pub path: Option<NativePath>,
     /// Every requested source/target pair represented by this operation.
     pub attributions: Vec<ReceiptAttribution>,
+    /// Original preview decision, not a claim about current filesystem state.
+    pub planned_action: ReceiptPlanAction,
+    /// Every known preview blocker; empty for create/unchanged previews.
+    pub plan_diagnostics: Vec<ReceiptDiagnostic>,
     /// Actual outcome; unchanged never means created by this operation.
     pub status: ReceiptStatus,
     /// Present exactly for Failed status.

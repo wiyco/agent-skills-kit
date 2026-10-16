@@ -19,7 +19,7 @@ pub struct ReceiptLimits {
     pub max_path_units: usize,
     /// Aggregate native path units; default 16 Mi, ceiling 64 Mi, positive only.
     pub max_total_path_units: usize,
-    /// Cleanup diagnostic count; default 4096, ceiling 131072, positive only.
+    /// Combined preview/outcome/preflight/cleanup diagnostics; default 4096, ceiling 131072.
     pub max_diagnostics: usize,
 }
 impl Default for ReceiptLimits {
@@ -209,6 +209,17 @@ fn validate(document: &ReceiptDocument, limits: ReceiptLimits) -> Result<(), Rec
     if document.cleanup_diagnostics.len() > limits.max_diagnostics {
         return Err(ReceiptError::Limit("cleanup diagnostics"));
     }
+    let mut diagnostics =
+        document.cleanup_diagnostics.len() + usize::from(document.preflight_failure.is_some());
+    for destination in &document.destinations {
+        diagnostics = diagnostics
+            .checked_add(destination.plan_diagnostics.len())
+            .and_then(|count| count.checked_add(usize::from(destination.failure.is_some())))
+            .ok_or(ReceiptError::Limit("diagnostics"))?;
+        if diagnostics > limits.max_diagnostics {
+            return Err(ReceiptError::Limit("diagnostics"));
+        }
+    }
     let mut paths = Paths {
         platform: document.platform,
         limits,
@@ -279,6 +290,25 @@ fn validate(document: &ReceiptDocument, limits: ReceiptLimits) -> Result<(), Rec
     let mut attributions = BTreeSet::new();
     let mut attempted_paths = BTreeSet::new();
     for destination in &document.destinations {
+        let blocked = matches!(
+            destination.planned_action,
+            ReceiptPlanAction::Conflict | ReceiptPlanAction::Unsupported
+        );
+        if blocked == destination.plan_diagnostics.is_empty() {
+            return Err(ReceiptError::InvalidDocument("preview diagnostic mismatch"));
+        }
+        let consistent = match destination.status {
+            ReceiptStatus::Created => destination.planned_action == ReceiptPlanAction::Create,
+            ReceiptStatus::Unchanged => destination.planned_action == ReceiptPlanAction::Unchanged,
+            ReceiptStatus::Failed => !blocked,
+            ReceiptStatus::NotAttempted => true,
+        };
+        if !consistent {
+            return Err(ReceiptError::InvalidDocument("preview/outcome mismatch"));
+        }
+        for diagnostic in &destination.plan_diagnostics {
+            paths.diagnostic(diagnostic)?;
+        }
         if let Some(path) = &destination.path {
             paths.check(path)?;
         }

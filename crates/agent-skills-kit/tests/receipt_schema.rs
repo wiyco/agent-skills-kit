@@ -44,6 +44,8 @@ fn document() -> ReceiptDocument {
                 source: 0,
                 target: 0,
             }],
+            planned_action: ReceiptPlanAction::Create,
+            plan_diagnostics: vec![],
             status: ReceiptStatus::Created,
             failure: None,
         }],
@@ -236,6 +238,7 @@ fn invalid_inventory_references_and_status_relationships_are_rejected() {
 fn unchanged_records_preexisting_content_without_creation_or_cleanup_authority() {
     let mut doc = document();
     doc.destinations[0].status = ReceiptStatus::Unchanged;
+    doc.destinations[0].planned_action = ReceiptPlanAction::Unchanged;
     let receipt = Receipt::new(doc, ReceiptLimits::default()).unwrap();
     let bytes = receipt.to_json(ReceiptLimits::default()).unwrap();
     let parsed = Receipt::from_json(&bytes, ReceiptLimits::default()).unwrap();
@@ -397,4 +400,50 @@ fn identifier_and_source_count_boundaries_are_explicit() {
         Receipt::new(doc, ReceiptLimits::default()).unwrap_err(),
         ReceiptError::Limit("source/target/destination count")
     );
+}
+
+#[test]
+fn blocked_previews_remain_visible_in_not_attempted_receipts() {
+    let mut doc = document();
+    doc.destinations[0].planned_action = ReceiptPlanAction::Conflict;
+    let location = doc.destinations[0].path.clone();
+    doc.destinations[0]
+        .plan_diagnostics
+        .push(ReceiptDiagnostic {
+            code: ReceiptFailureCode::ExistingContentDiffers,
+            path: location,
+            operation: None,
+            os_error: None,
+        });
+    doc.destinations[0].status = ReceiptStatus::NotAttempted;
+    doc.preflight_failure = Some(ReceiptDiagnostic {
+        code: ReceiptFailureCode::InapplicablePlan,
+        path: None,
+        operation: None,
+        os_error: None,
+    });
+    let receipt = Receipt::new(doc.clone(), ReceiptLimits::default()).unwrap();
+    let value: serde_json::Value =
+        serde_json::from_slice(&receipt.to_json(ReceiptLimits::default()).unwrap()).unwrap();
+    assert_eq!(value["destinations"][0]["planned_action"], "conflict");
+    assert_eq!(value["destinations"][0]["status"], "not_attempted");
+    assert_eq!(
+        value["destinations"][0]["plan_diagnostics"][0]["code"],
+        "existing_content_differs"
+    );
+    assert_eq!(
+        Receipt::new(
+            doc.clone(),
+            ReceiptLimits {
+                max_diagnostics: 1,
+                ..ReceiptLimits::default()
+            }
+        )
+        .unwrap_err(),
+        ReceiptError::Limit("diagnostics")
+    );
+    doc.preflight_failure = None;
+    doc.destinations[0].status = ReceiptStatus::Created;
+    assert!(Receipt::new(doc, ReceiptLimits::default()).is_err());
+    rejects(|doc| doc.destinations[0].planned_action = ReceiptPlanAction::Unchanged);
 }
