@@ -9,6 +9,27 @@ body:
       description: Distinguish CLI, IDE, cloud, fork, and renamed products.
     validations:
       required: true
+  - type: input
+    id: discovered
+    attributes:
+      label: Discovery date and bounded review window
+      description: Use YYYY-MM-DD; state the most recent 180-day window reviewed. Discovery is not a launch date.
+    validations:
+      required: true
+  - type: textarea
+    id: event
+    attributes:
+      label: Actual launch or relevant release date
+      description: Give the dated official announcement/release URL and distinguish its event date from page update/access dates. Say unknown when not established; do not claim new or trending without evidence.
+    validations:
+      required: true
+  - type: textarea
+    id: identity
+    attributes:
+      label: Canonical identity, forks, renames, and related proposals
+      description: Link existing IDs/issues and official rename/fork evidence. Avoid counting aliases twice; preserve variants with different behavior. Identify web/import-only or unsupported surfaces separately.
+    validations:
+      required: true
   - type: textarea
     id: official_sources
     attributes:
@@ -33,4 +54,5 @@ body:
   - type: textarea
     id: limitations
     attributes:
-      label: Limitations and open questions
+      label: Limitations and tracked evidence gaps
+      description: Identify missing official rules and a concrete follow-up. Reachability alone does not prove path correctness; no guessed .brand/skills defaults.
