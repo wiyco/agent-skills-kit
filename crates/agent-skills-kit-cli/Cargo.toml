@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
-description = "Thin CLI for Agent Skills Kit (bootstrap)"
+description = "Thin CLI for local Agent Skills inspection and installation"
 
 [[bin]]
 name = "agent-skills-kit"
@@ -14,3 +14,4 @@ doc = false
 
 [dependencies]
 agent-skills-kit = { path = "../agent-skills-kit" }
+serde_json = "1.0.154"
