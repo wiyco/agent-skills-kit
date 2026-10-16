@@ -19,6 +19,7 @@ Source visibility can precede completion of M3/M4, provided unfinished capabilit
 - Inspect packaged files and ensure catalog assets are included and local data excluded.
 - Review dependency advisories, licenses, and exceptions.
 - Rehearse packaging in an isolated copy. `publish = false` stays in the development workspace until approved.
+- Follow the [unpublished library rehearsal](verification/library-package.md); inspect the actual archive and test an independent consumer against its unpacked contents. A successful rehearsal does not authorize the upload step.
 - Verify the current registry authentication/publishing mechanism from official documentation. Do not assume trusted publishing supports every initial-publication case.
 - Approve the exact release commit/version and the dependency order for the library and CLI crates.
 

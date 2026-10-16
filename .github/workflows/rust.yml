@@ -46,6 +46,10 @@ jobs:
         run: cargo test --manifest-path examples/external-consumer/Cargo.toml --locked
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/target/external-consumer
+      - name: Rehearse the packaged library on the native development toolchain
+        run: python -B .github/scripts/rehearse-library.py --toolchain "$DEV_TOOLCHAIN"
+        env:
+          RUSTDOCFLAGS: -D warnings -D missing-docs
       - name: Lint Windows-specific unsafe boundaries
         if: runner.os == 'Windows'
         run: |
@@ -59,6 +63,16 @@ jobs:
           cargo +"$WINDOWS_MSRV_TOOLCHAIN" check --workspace --all-targets --all-features --locked
           cargo +"$WINDOWS_MSRV_TOOLCHAIN" test --workspace --all-features --locked
           CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target/external-consumer-msrv" cargo +"$WINDOWS_MSRV_TOOLCHAIN" test --manifest-path examples/external-consumer/Cargo.toml --locked
+      - name: Rehearse the packaged library on the native macOS or Windows MSRV
+        if: runner.os == 'macOS' || runner.os == 'Windows'
+        run: |
+          PACKAGE_MSRV_TOOLCHAIN=$(python -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["rust-version"])')
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            rustup toolchain install "$PACKAGE_MSRV_TOOLCHAIN" --profile minimal
+          fi
+          python -B .github/scripts/rehearse-library.py --toolchain "$PACKAGE_MSRV_TOOLCHAIN"
+        env:
+          RUSTDOCFLAGS: -D warnings -D missing-docs
 
   quality:
     name: quality
@@ -136,3 +150,9 @@ jobs:
           cargo check --workspace --all-targets --all-features --locked
           cargo test --workspace --all-features --locked
           CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target/external-consumer" cargo test --manifest-path examples/external-consumer/Cargo.toml --locked
+      - name: Rehearse the packaged library on the Linux MSRV
+        if: matrix.toolchain == '1.85.0'
+        run: python -B .github/scripts/rehearse-library.py --toolchain "$PACKAGE_TOOLCHAIN"
+        env:
+          PACKAGE_TOOLCHAIN: ${{ matrix.toolchain }}
+          RUSTDOCFLAGS: -D warnings -D missing-docs
