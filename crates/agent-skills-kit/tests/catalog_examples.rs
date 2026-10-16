@@ -39,7 +39,8 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             "opencode",
             "pi-cli",
             "qwen-code-cli",
-            "roo-code-vscode"
+            "roo-code-vscode",
+            "zed-agent"
         ]
     );
     assert_eq!(first.get("codex-cli").unwrap().id, "codex");

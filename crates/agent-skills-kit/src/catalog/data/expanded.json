@@ -6391,6 +6391,170 @@
         "Official Releases (https://docs.devin.ai/desktop/releases; reviewed 2026-10-16) explicitly lists stable macOS/Windows/Linux builds and current 3.10.67 dated 2026-10-12. This is a release reference, not minimum skills-version or installed-host/desktop/ARM/distro verification. Native CI tests library behavior only.",
         "The page requests lowercase letters, numbers and hyphens and required name/description. Generic portable validation/folder agreement and no-link copying remain mandatory; no additional reserved local name or undocumented ASCII-only regex is inferred. No host, credential, model request, migration, skill script or settings mutation was used."
       ]
+    },
+    {
+      "id": "zed-agent",
+      "aliases": [],
+      "product_id": "zed",
+      "variant": "agent",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://zed.dev/docs/ai/skills",
+                "section": "Adding Skills; Where Skills Live; Name Validation; Agent Path Boundaries; Limitations",
+                "accessed": "2026-10-16",
+                "applicability": "Current Zed built-in Agent rolling documentation; not External Agents or Terminal Threads; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::zed_agent_scopes_and_native_name_boundaries",
+                "expanded_targets::zed_agent_native_shared_copy_and_unicode_refusal"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Direct-child skill placement only; project worktree trust and aggregate 50KB catalog admission are host decisions not evaluated by this installer."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://zed.dev/docs/ai/skills",
+                    "section": "Adding Skills; Where Skills Live; Name Validation; Agent Path Boundaries; Limitations",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Zed built-in Agent rolling documentation; not External Agents or Terminal Threads; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::zed_agent_scopes_and_native_name_boundaries",
+                    "expanded_targets::zed_agent_native_shared_copy_and_unicode_refusal"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Direct-child skill placement only; project worktree trust and aggregate 50KB catalog admission are host decisions not evaluated by this installer."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Project is the caller-selected worktree folder, not an application multi-root container or discovered Git root. Skills are direct children; no nested skill-group or ancestor discovery is inferred."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".agents",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://zed.dev/docs/ai/skills",
+                "section": "Adding Skills; Where Skills Live; Name Validation; Agent Path Boundaries; Limitations",
+                "accessed": "2026-10-16",
+                "applicability": "Current Zed built-in Agent rolling documentation; not External Agents or Terminal Threads; minimum skills version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::zed_agent_scopes_and_native_name_boundaries",
+                "expanded_targets::zed_agent_native_shared_copy_and_unicode_refusal"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Direct-child skill placement only; project worktree trust and aggregate 50KB catalog admission are host decisions not evaluated by this installer."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://zed.dev/docs/ai/skills",
+                    "section": "Adding Skills; Where Skills Live; Name Validation; Agent Path Boundaries; Limitations",
+                    "accessed": "2026-10-16",
+                    "applicability": "Current Zed built-in Agent rolling documentation; not External Agents or Terminal Threads; minimum skills version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::zed_agent_scopes_and_native_name_boundaries",
+                    "expanded_targets::zed_agent_native_shared_copy_and_unicode_refusal"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Direct-child skill placement only; project worktree trust and aggregate 50KB catalog admission are host decisions not evaluated by this installer."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Project is the caller-selected worktree folder, not an application multi-root container or discovered Git root. Skills are direct children; no nested skill-group or ancestor discovery is inferred."
+          ]
+        }
+      ],
+      "limitations": [
+        "Skills explicitly applies to the built-in Zed Agent. External Agents and Terminal Threads have their own native instruction/skills systems; IDE extension, CLI, ACP, remote and hosted behavior are not aliases to this adapter.",
+        "Preferred/read project .agents/skills and user ~/.agents/skills are documented direct-child locations. Project root is the explicit selected worktree folder. No application-workspace, CWD, Git or multi-root inference occurs.",
+        "Name Validation explicitly restricts letters to a-z, alongside numbers/hyphens and 1-64 characters without edge/consecutive hyphens. Existing general portable validation handles structure/length; separate host validation requires ASCII and returns AsciiNameRequired for general-valid Unicode names. No additional reserved local name is invented from the built-in create-skill command.",
+        "Project skills load only from trusted worktrees; project same-name skills take priority over global. Host permissions, invocation, live reload and the 50KB aggregate name/description catalog budget are not evaluated or changed, so successful copying cannot promise admission or activation.",
+        "The host warns but may load descriptions over 1024 characters; this installer retains the stricter general specification limit. Bodies under 500 lines are host guidance, not a new hard rejection rule. Portable name/folder matching and no-link copying remain mandatory despite host conventions and symlink suggestions.",
+        "Limitations states that custom search paths are unsupported. ZED_HOME, ZED_CONFIG_DIR, XDG_CONFIG_HOME and CODEX_HOME are not modeled as skills-root relocations. Shared .agents placement may be read by other hosts and preserves canonical attributions.",
+        "Installation, Download Zed / System Requirements (https://zed.dev/docs/installation; reviewed 2026-10-16) explicitly documents macOS/Linux/native Windows builds. Native CI is library behavior only, not installed GUI/driver, Windows desktop/ARM, distro, FreeBSD, web, remote machine or minimum host-version validation.",
+        "No host process, trust modification, credential, model API, registry download/import, share-link execution, built-in command or embedded skill script is used. Rolling documentation establishes no minimum skills version; actual host discovery remains untested."
+      ]
     }
   ]
 }

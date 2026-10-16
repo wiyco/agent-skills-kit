@@ -48,3 +48,7 @@ Copy-only support is not universal. Cloud/import-only or configuration-required 
 ## Discovery cadence
 
 Use an explicit review task or a low-frequency reporting workflow, not runtime catalog downloads. Scan recent official announcements/releases, record actual event dates separately from document update dates, deduplicate aliases/forks, and ask for human review before shipping new rules.
+
+## ASK-020 reviewed outcomes
+
+The initial leads above are retained as research routing context. Current implemented variants, primary sources, verification and precise deferred capabilities are reconciled in [ASK-020 outcomes](ask-020-outcomes.md); use that disposition and the generated target matrix rather than treating the original intake notes as current implementation status.

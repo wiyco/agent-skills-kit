@@ -439,3 +439,30 @@ fn hard_budget_ceilings_and_empty_documents_remain_bounded() {
         }
     );
 }
+
+#[test]
+fn zed_ascii_names_do_not_narrow_general_or_other_variant_validation() {
+    let catalog = Catalog::bundled().unwrap();
+    let target = catalog.get("zed-agent").unwrap();
+    for name in ["a", "skill-9", &"a".repeat(64)] {
+        assert!(named(name).unwrap().validate_for_target(target).is_ok());
+    }
+    for name in ["café", "日本語", "é9"] {
+        let metadata = named(name).unwrap();
+        assert_eq!(
+            metadata.validate_for_target(target),
+            Err(TargetConstraintError::AsciiNameRequired)
+        );
+        assert!(
+            metadata
+                .validate_for_target(catalog.get("codex").unwrap())
+                .is_ok()
+        );
+        let mut other_variant = target.clone();
+        other_variant.variant = "unmodeled-external-agent".into();
+        assert!(metadata.validate_for_target(&other_variant).is_ok());
+    }
+    for name in ["-edge", "edge-", "two--hyphens", "UPPER", &"a".repeat(65)] {
+        assert!(named(name).is_err());
+    }
+}
