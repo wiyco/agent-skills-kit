@@ -51,3 +51,5 @@ Original project material is licensed under [MIT](LICENSE-MIT) OR [Apache-2.0](L
 This project is independent of the agent products it targets and makes no affiliation claim.
 
 See the [public API guide](docs/api.md) and [standalone consumer](examples/external-consumer) for library use without the CLI.
+
+The [generated target matrix](docs/targets.md) separates documented rules/resolver evidence from unverified real-host discovery. Product-specific source and variant limits are in the [catalog review](docs/catalog.md).

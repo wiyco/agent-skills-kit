@@ -88,6 +88,10 @@ jobs:
           cargo clippy --manifest-path examples/external-consumer/Cargo.toml --all-targets --locked -- -D warnings
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/target/external-consumer
+      - name: Verify generated bundled catalog documentation
+        run: |
+          cargo run --quiet -p agent-skills-kit --example catalog_markdown --locked > docs/targets.md
+          git diff --exit-code -- docs/targets.md
       - name: Prove formatting and lint gates reject regressions
         run: python .github/scripts/verify-quality-gates.py
 
