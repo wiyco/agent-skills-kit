@@ -268,7 +268,7 @@ fn child_impl(
         RootDirectory: parent.as_raw_handle(),
         ObjectName: &native_name,
         Attributes: OBJ_CASE_INSENSITIVE,
-        SecurityDescriptor: descriptor,
+        SecurityDescriptor: descriptor.cast(),
         ..Default::default()
     };
     let mut handle = ptr::null_mut();
