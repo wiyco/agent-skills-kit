@@ -575,6 +575,546 @@
         "Cursor CLI, cloud and remote variants are separate unverified capabilities; local IDE paths are not evidence for those variants.",
         "Official downloads (https://cursor.com/download, redirected from /downloads; reviewed 2026-10-16) list macOS, Windows and Linux builds. Native resolver/copy tests do not validate an installed Cursor version on these systems."
       ]
+    },
+    {
+      "id": "github-copilot-cli",
+      "aliases": [],
+      "product_id": "github-copilot",
+      "variant": "cli",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".github",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills",
+                "section": "Creating and adding a skill; Adding a skill that someone else has created",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling GitHub Copilot cli documentation; minimum host version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".github",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills",
+                    "section": "Creating and adding a skill; Adding a skill that someone else has created",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot cli documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills",
+                    "section": "Creating and adding a skill; Adding a skill that someone else has created",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot cli documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills",
+                    "section": "Creating and adding a skill; Adding a skill that someone else has created",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot cli documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Explicit caller root only; reader order follows source presentation, not an inferred cross-directory duplicate precedence."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".copilot",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills",
+                "section": "Creating and adding a skill; Adding a skill that someone else has created",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling GitHub Copilot cli documentation; minimum host version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".copilot",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills",
+                    "section": "Creating and adding a skill; Adding a skill that someone else has created",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot cli documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills",
+                    "section": "Creating and adding a skill; Adding a skill that someone else has created",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot cli documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Explicit caller root only; reader order follows source presentation, not an inferred cross-directory duplicate precedence."
+          ]
+        }
+      ],
+      "limitations": [
+        "Preferred writes choose documented .github project and .copilot personal locations; compatibility readers do not replace native writes or guarantee exclusive visibility.",
+        "No additional reserved local name, relocation override or minimum host version is established by the reviewed sections. Host configuration and activation remain host-managed.",
+        "CLI, VS Code, desktop app, cloud agent, extension-provided and experimental third-party harness variants are separate; only this explicitly named local variant is modeled.",
+        "Personal .claude discovery is not established by this CLI source and is not inferred from VS Code. Alternative locations added through host skill commands are not enumerated.",
+        "Installing GitHub Copilot CLI (https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli), reviewed 2026-10-16, documents Windows, macOS and Linux availability. No executable was installed or launched."
+      ]
+    },
+    {
+      "id": "github-copilot-vscode",
+      "aliases": [],
+      "product_id": "github-copilot",
+      "variant": "vscode",
+      "scopes": [
+        {
+          "scope": "project",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "project"
+              },
+              "components": [
+                ".github",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+                "section": "Create a skill",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling GitHub Copilot vscode documentation; minimum host version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".github",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+                    "section": "Create a skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot vscode documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+                    "section": "Create a skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot vscode documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "project"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+                    "section": "Create a skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot vscode documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Explicit caller root only; reader order follows source presentation, not an inferred cross-directory duplicate precedence."
+          ]
+        },
+        {
+          "scope": "user",
+          "status": "documented",
+          "platforms": [
+            "linux",
+            "macos",
+            "windows"
+          ],
+          "preferred_write": {
+            "path": {
+              "base": {
+                "kind": "home"
+              },
+              "components": [
+                ".copilot",
+                "skills"
+              ]
+            },
+            "evidence": {
+              "documentation": "reviewed",
+              "source": {
+                "url": "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+                "section": "Create a skill",
+                "accessed": "2026-10-16",
+                "applicability": "Rolling GitHub Copilot vscode documentation; minimum host version and actual discovery untested"
+              },
+              "resolver_tests": [
+                "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+              ],
+              "discovery_tests": [],
+              "limitations": [
+                "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+              ]
+            }
+          },
+          "discovery": [
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".copilot",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+                    "section": "Create a skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot vscode documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".claude",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+                    "section": "Create a skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot vscode documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            },
+            {
+              "location": {
+                "path": {
+                  "base": {
+                    "kind": "home"
+                  },
+                  "components": [
+                    ".agents",
+                    "skills"
+                  ]
+                },
+                "evidence": {
+                  "documentation": "reviewed",
+                  "source": {
+                    "url": "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+                    "section": "Create a skill",
+                    "accessed": "2026-10-16",
+                    "applicability": "Rolling GitHub Copilot vscode documentation; minimum host version and actual discovery untested"
+                  },
+                  "resolver_tests": [
+                    "expanded_targets::copilot_variants_keep_independent_readers_and_context",
+                    "expanded_targets::copilot_coincident_writes_preserve_both_variant_attributions"
+                  ],
+                  "discovery_tests": [],
+                  "limitations": [
+                    "Native lexical resolution and isolated copy tests do not establish host discovery, activation, enablement or duplicate precedence."
+                  ]
+                }
+              },
+              "traversal": "exact"
+            }
+          ],
+          "limitations": [
+            "Explicit caller root only; reader order follows source presentation, not an inferred cross-directory duplicate precedence."
+          ]
+        }
+      ],
+      "limitations": [
+        "Preferred writes choose documented .github project and .copilot personal locations; compatibility readers do not replace native writes or guarantee exclusive visibility.",
+        "No additional reserved local name, relocation override or minimum host version is established by the reviewed sections. Host configuration and activation remain host-managed.",
+        "CLI, VS Code, desktop app, cloud agent, extension-provided and experimental third-party harness variants are separate; only this explicitly named local variant is modeled.",
+        "Parent-repository discovery requires chat.useCustomizationsInParentRepositories; exact descriptors do not scan or enable it. Duplicate .github names across workspace roots prefer the primary root; the caller must select a project root explicitly.",
+        "chat.agentSkillsLocations is deprecated and not read by Copilot harness sessions; no such override is implemented. Experimental Codex integration does not alter the Codex CLI adapter.",
+        "VS Code Requirements, Platforms (https://code.visualstudio.com/docs/supporting/requirements), reviewed 2026-10-16, lists desktop Windows/macOS/Linux and excludes Windows Server. Native Server CI is library-copy evidence, not VS Code host validation."
+      ]
     }
   ]
 }

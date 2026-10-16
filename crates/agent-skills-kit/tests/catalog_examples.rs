@@ -15,6 +15,8 @@ fn bundled_candidates_are_deterministic_and_do_not_claim_tested_installation() {
             "codex",
             "cursor-ide",
             "gemini-cli",
+            "github-copilot-cli",
+            "github-copilot-vscode",
             "opencode"
         ]
     );
