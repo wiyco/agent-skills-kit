@@ -1,5 +1,6 @@
 //! Thin terminal consumer of the reusable library. Skill data is never executed.
 mod args;
+mod planning;
 use agent_skills_kit::{
     catalog::Catalog,
     receipt::NativePath,
@@ -19,15 +20,18 @@ Usage:
   agent-skills-kit targets list [--json]
   agent-skills-kit targets show <id> [--json]
   agent-skills-kit validate <source> [--json]
+  agent-skills-kit plan <source> --target <id>... --scope <user|project> [context] [--json]
   agent-skills-kit --help
   agent-skills-kit --version
 
 Read-only commands never prompt or execute skill content.
 Use -- before a positional path beginning with a dash.
 Selecting a host means placement, not exclusive visibility to that host.
-Planning and installation commands are still under development.
+Context: --user-home <path> for user scope; --project-root <path> for project scope.
+No HOME or host overrides are inferred. Installation is still under development.
 ";
 struct Output {
+    exit_code: u8,
     command: &'static str,
     data: Value,
     human: String,
@@ -69,14 +73,26 @@ fn json_line(value: Value) -> String {
         } else { character.to_string() }
     }).collect()
 }
+fn absolute(path: std::path::PathBuf) -> Result<std::path::PathBuf, Failure> {
+    if path.is_absolute() {
+        Ok(path)
+    } else {
+        Ok(std::env::current_dir()
+            .map_err(Failure::operation)?
+            .join(path))
+    }
+}
 fn execute(command: Command) -> Result<Output, Failure> {
     match command {
+        Command::Plan(options) => planning::execute(options),
         Command::Help => Ok(Output {
+            exit_code: 0,
             command: "help",
             data: json!({"usage": HELP}),
             human: HELP.into(),
         }),
         Command::Version => Ok(Output {
+            exit_code: 0,
             command: "version",
             data: json!({"version": env!("CARGO_PKG_VERSION")}),
             human: format!("agent-skills-kit {}\n", env!("CARGO_PKG_VERSION")),
@@ -89,6 +105,7 @@ fn execute(command: Command) -> Result<Output, Failure> {
                 .collect::<String>();
             human.push_str("Placement does not imply exclusive visibility; inspect target discovery locations.\n");
             Ok(Output {
+                exit_code: 0,
                 command: "targets.list",
                 data: json!(catalog.document()),
                 human,
@@ -105,19 +122,14 @@ fn execute(command: Command) -> Result<Output, Failure> {
                 serde_json::to_string_pretty(&data).map_err(Failure::operation)?
             );
             Ok(Output {
+                exit_code: 0,
                 command: "targets.show",
                 data,
                 human,
             })
         }
         Command::Validate(path) => {
-            let path = if path.is_absolute() {
-                path
-            } else {
-                std::env::current_dir()
-                    .map_err(Failure::operation)?
-                    .join(path)
-            };
+            let path = absolute(path)?;
             let skill =
                 inventory_skill(&path, InventoryLimits::default()).map_err(Failure::operation)?;
             let data = json!({
@@ -134,6 +146,7 @@ fn execute(command: Command) -> Result<Output, Failure> {
                 skill.inventory().total_bytes()
             );
             Ok(Output {
+                exit_code: 0,
                 command: "validate",
                 data,
                 human,
@@ -151,13 +164,13 @@ fn run(args: &[OsString], stdout: &mut impl Write, stderr: &mut impl Write) -> i
                     stdout,
                     "{}",
                     json_line(
-                        json!({"schema_version": 1, "command": output.command, "status": "ok", "data": output.data})
+                        json!({"schema_version": 1, "command": output.command, "status": if output.exit_code == 0 { "ok" } else { "blocked" }, "data": output.data})
                     )
                 )?;
             } else {
                 write!(stdout, "{}", terminal_text(&output.human))?;
             }
-            Ok(0)
+            Ok(output.exit_code)
         }
         Err(error) => {
             if json {
