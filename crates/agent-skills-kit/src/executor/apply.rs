@@ -139,6 +139,14 @@ impl std::error::Error for ApplyError {}
 /// Windows fails preflight before writes; no path-based move fallback exists.
 pub fn apply_plan(plan: &InstallPlan, options: ApplyOptions) -> InstallReport {
     let mut report = initial_report(plan);
+    // Read-only verification is a separate capability from native copy execution.
+    if !cfg!(any(target_os = "linux", target_os = "macos")) {
+        report.preflight_error = Some(VerificationError {
+            path: None,
+            kind: super::VerificationErrorKind::UnsupportedPlatform,
+        });
+        return report;
+    }
     if let Err(error) = verify_plan(plan, options.verification) {
         report.preflight_error = Some(error);
         return report;

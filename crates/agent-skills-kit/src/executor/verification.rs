@@ -90,16 +90,16 @@ impl Error for VerificationError {}
 /// This neither freezes content nor creates a reusable authorization token.
 /// Execution must check relevant preconditions immediately around its own native
 /// operations. This API itself never stages, commits, cleans up or overwrites.
-/// Windows returns unsupported before any filesystem access.
+/// Eligible Windows NTFS plans use the same bounded verification policy.
 pub fn verify_plan(
     plan: &InstallPlan,
     limits: VerificationLimits,
 ) -> Result<VerificationReport, VerificationError> {
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(any(target_os = "linux", target_os = "macos", windows))]
     {
         native::verify(plan, limits)
     }
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
     {
         let _ = (plan, limits);
         Err(VerificationError {
@@ -109,6 +109,6 @@ pub fn verify_plan(
     }
 }
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
-#[path = "verification_unix.rs"]
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
+#[path = "verification_native.rs"]
 mod native;
