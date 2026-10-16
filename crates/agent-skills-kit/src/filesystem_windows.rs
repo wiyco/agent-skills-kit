@@ -247,7 +247,8 @@ pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::
     if source.volume != stamp(parent)?.volume {
         return Err(unsupported("cross-volume commit"));
     }
-    let bytes = (offset_of!(FileName) + wide.len() * 2).max(size_of::<FILE_RENAME_INFORMATION>());
+    let bytes = (offset_of!(FILE_RENAME_INFORMATION, FileName) + wide.len() * 2)
+        .max(size_of::<FILE_RENAME_INFORMATION>());
     // u64 storage supplies SDK alignment on the validated 64-bit Windows targets.
     let mut storage = vec![0u64; bytes.div_ceil(size_of::<u64>())];
     // SAFETY: zeroed aligned storage is large enough for the SDK header + name.
