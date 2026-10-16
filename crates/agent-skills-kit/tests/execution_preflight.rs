@@ -1,12 +1,16 @@
-#![cfg(any(target_os = "linux", target_os = "macos"))]
+#![cfg(any(target_os = "linux", target_os = "macos", windows))]
 
 use agent_skills_kit::{catalog::*, executor::*, planner::*, resolver::*, validation::*};
 use std::{
     fs,
-    os::unix::fs::{MetadataExt, PermissionsExt, symlink},
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
+
+#[cfg(unix)]
+use std::os::unix::fs::{MetadataExt, PermissionsExt, symlink};
+#[cfg(windows)]
+use std::os::windows::fs::MetadataExt;
 
 struct Fixture {
     root: PathBuf,
@@ -83,16 +87,24 @@ fn tree(root: &Path) -> Vec<(PathBuf, Vec<u8>, u32)> {
         let bytes = if metadata.is_file() {
             fs::read(path).unwrap()
         } else if metadata.file_type().is_symlink() {
-            use std::os::unix::ffi::OsStrExt;
-            fs::read_link(path).unwrap().as_os_str().as_bytes().to_vec()
+            fs::read_link(path)
+                .unwrap()
+                .as_os_str()
+                .as_encoded_bytes()
+                .to_vec()
         } else {
             Vec::new()
         };
-        output.push((
-            path.strip_prefix(root).unwrap().to_owned(),
-            bytes,
-            metadata.mode(),
-        ));
+        output.push((path.strip_prefix(root).unwrap().to_owned(), bytes, {
+            #[cfg(unix)]
+            {
+                metadata.mode()
+            }
+            #[cfg(windows)]
+            {
+                metadata.file_attributes()
+            }
+        }));
         if metadata.is_dir() {
             for entry in fs::read_dir(path).unwrap() {
                 walk(root, &entry.unwrap().path(), output);
@@ -126,6 +138,7 @@ fn successful_preflight_is_read_only_for_create_and_unchanged() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn modified_and_replaced_sources_are_never_adopted() {
     for scenario in ["manifest", "resource", "mode", "replace", "link", "missing"] {
@@ -165,6 +178,7 @@ fn modified_and_replaced_sources_are_never_adopted() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn newly_created_destination_is_not_an_approved_absence() {
     for scenario in ["file", "directory", "link"] {
@@ -187,6 +201,7 @@ fn newly_created_destination_is_not_an_approved_absence() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn substituted_parent_is_not_followed() {
     let fixture = Fixture::new();
@@ -203,6 +218,7 @@ fn substituted_parent_is_not_followed() {
     assert_eq!(tree(&fixture.root), before);
 }
 
+#[cfg(unix)]
 #[test]
 fn unchanged_payloads_require_the_original_full_snapshot() {
     for scenario in ["bytes", "replacement", "mode", "extra"] {
@@ -276,6 +292,7 @@ fn explicit_limits_and_inapplicable_plans_fail_without_writes() {
     assert_eq!(tree(&fixture.root), before);
 }
 
+#[cfg(unix)]
 #[test]
 fn native_copy_creates_exact_payload_and_repeat_is_unchanged() {
     let fixture = Fixture::new();
@@ -375,6 +392,7 @@ fn native_copy_preserves_non_utf8_resource_identity() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn native_batch_keeps_every_attribution_and_shares_only_owned_parents() {
     let fixture = Fixture::new();
@@ -431,6 +449,7 @@ fn native_batch_keeps_every_attribution_and_shares_only_owned_parents() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn project_copy_uses_only_the_explicit_project_and_native_core_placements() {
     let mut fixture = Fixture::new();
@@ -468,6 +487,7 @@ fn project_copy_uses_only_the_explicit_project_and_native_core_placements() {
     assert_eq!(tree(&fixture.source), source_before);
 }
 
+#[cfg(unix)]
 #[test]
 fn apply_preflight_never_overwrites_new_or_modified_content() {
     let fixture = Fixture::new();
@@ -562,4 +582,105 @@ fn default_acl_parent_is_refused_without_modifying_its_acl() {
         rustix::fs::fgetxattr(&descriptor, "system.posix_acl_default", &mut current[..]).unwrap();
     assert_eq!(&current[..length], acl);
     assert_eq!(tree(&fixture.root), before);
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_changed_sources_and_unchanged_payloads_fail_reverification() {
+    for existing in [false, true] {
+        for scenario in ["bytes", "replacement", "readonly", "extra", "link"] {
+            let fixture = Fixture::new();
+            if existing {
+                fixture.existing();
+            }
+            let plan = fixture.plan();
+            let base = if existing {
+                fixture.destination()
+            } else {
+                fixture.source.clone()
+            };
+            let path = base.join("resource");
+            let original_permissions = fs::metadata(&path).unwrap().permissions();
+            match scenario {
+                "bytes" => fs::write(&path, b"modified resource").unwrap(),
+                "replacement" => {
+                    fs::rename(&path, fixture.root.join("saved")).unwrap();
+                    fs::write(&path, b"original resource").unwrap();
+                }
+                "readonly" => {
+                    let mut changed = original_permissions.clone();
+                    changed.set_readonly(true);
+                    fs::set_permissions(&path, changed).unwrap();
+                }
+                "extra" => fs::write(base.join("extra"), b"manual addition").unwrap(),
+                "link" => {
+                    fs::remove_file(&path).unwrap();
+                    std::os::windows::fs::symlink_file(base.join("SKILL.md"), &path)
+                        .expect("required Windows file reparse fixture privilege");
+                }
+                _ => unreachable!(),
+            }
+            let before = tree(&fixture.root);
+            let result = verify_plan(&plan, VerificationLimits::default());
+            assert_eq!(before, tree(&fixture.root));
+            if scenario == "readonly" {
+                fs::set_permissions(&path, original_permissions).unwrap();
+            }
+            let error = result.unwrap_err();
+            assert!(
+                matches!(
+                    error.kind,
+                    VerificationErrorKind::SourceChanged
+                        | VerificationErrorKind::SourceInspection(_)
+                        | VerificationErrorKind::DestinationChanged
+                        | VerificationErrorKind::DestinationInspection(_)
+                ),
+                "{existing}/{scenario}: {error:?}"
+            );
+        }
+    }
+}
+#[cfg(windows)]
+#[test]
+fn windows_competing_entries_invalidate_absence_without_touching_winners() {
+    for scenario in ["file", "directory", "reparse"] {
+        let fixture = Fixture::new();
+        fs::create_dir_all(fixture.destination().parent().unwrap()).unwrap();
+        let plan = fixture.plan();
+        match scenario {
+            "file" => fs::write(fixture.destination(), b"winner").unwrap(),
+            "directory" => fs::create_dir(fixture.destination()).unwrap(),
+            "reparse" => std::os::windows::fs::symlink_dir(&fixture.source, fixture.destination())
+                .expect("required Windows directory reparse fixture privilege"),
+            _ => unreachable!(),
+        }
+        let before = tree(&fixture.root);
+        assert!(matches!(
+            verify_plan(&plan, VerificationLimits::default())
+                .unwrap_err()
+                .kind,
+            VerificationErrorKind::DestinationChanged | VerificationErrorKind::Namespace(_)
+        ));
+        assert_eq!(before, tree(&fixture.root));
+    }
+}
+#[cfg(windows)]
+#[test]
+fn windows_read_only_verification_does_not_enable_copy_execution() {
+    let fixture = Fixture::new();
+    let plan = fixture.plan();
+    assert!(verify_plan(&plan, VerificationLimits::default()).is_ok());
+    let before = tree(&fixture.root);
+    let report = apply_plan(&plan, ApplyOptions::default());
+    assert_eq!(
+        report.preflight_error.unwrap().kind,
+        VerificationErrorKind::UnsupportedPlatform
+    );
+    assert!(
+        report
+            .outcomes
+            .iter()
+            .all(|outcome| matches!(outcome.status, OutcomeStatus::NotAttempted))
+    );
+    assert_eq!(before, tree(&fixture.root));
 }
