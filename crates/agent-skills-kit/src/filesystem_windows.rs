@@ -231,9 +231,26 @@ pub(crate) fn open_root(path: &Path) -> io::Result<File> {
     Ok(file)
 }
 
+#[derive(Debug)]
+pub(crate) struct UnconfirmedCreation(pub(crate) io::Error);
+impl std::fmt::Display for UnconfirmedCreation {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "created entry could not be identified: {}",
+            self.0
+        )
+    }
+}
+impl std::error::Error for UnconfirmedCreation {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.0)
+    }
+}
+
 /// Single-component lookup/create relative to a retained parent; no path fallback.
 pub(crate) fn child(parent: &File, name: &OsStr, kind: Kind, create: bool) -> io::Result<File> {
-    child_impl(parent, name, kind, create, ptr::null_mut(), false)
+    child_impl(parent, name, kind, create, ptr::null_mut(), 0, false)
 }
 
 #[cfg(test)]
@@ -243,7 +260,7 @@ pub(crate) fn create_with_security(
     kind: Kind,
     descriptor: &security::creation::Descriptor,
 ) -> io::Result<File> {
-    child_impl(parent, name, kind, true, descriptor.as_ptr(), false)
+    child_impl(parent, name, kind, true, descriptor.as_ptr(), 0, false)
 }
 
 /// Reopen an owned post-commit entry for permission finalization. Descendant
@@ -251,7 +268,56 @@ pub(crate) fn create_with_security(
 /// every entry is still private, verify identity, and hold them through updates.
 #[cfg(test)]
 pub(crate) fn open_permissions(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
-    child_impl(parent, name, kind, false, ptr::null_mut(), true)
+    child_impl(parent, name, kind, false, ptr::null_mut(), WRITE_DAC, false)
+}
+
+#[cfg(test)]
+pub(crate) fn open_binding(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
+    child_impl(parent, name, kind, false, ptr::null_mut(), 0, true)
+}
+#[cfg(test)]
+pub(crate) fn open_cleanup(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
+    child_impl(
+        parent,
+        name,
+        kind,
+        false,
+        ptr::null_mut(),
+        DELETE | FILE_WRITE_ATTRIBUTES,
+        false,
+    )
+}
+#[cfg(test)]
+pub(crate) fn set_readonly(file: &File, readonly: bool) -> io::Result<()> {
+    let current = stamp(file)?;
+    let attributes = if readonly {
+        current.attributes | FILE_ATTRIBUTE_READONLY
+    } else {
+        current.attributes & !FILE_ATTRIBUTE_READONLY
+    };
+    let basic = FILE_BASIC_INFO {
+        FileAttributes: if attributes == 0 {
+            FILE_ATTRIBUTE_NORMAL
+        } else {
+            attributes
+        },
+        ..Default::default()
+    };
+    // SAFETY: exact SDK basic-info layout/class, live owned file with write-attribute
+    // access. Zero timestamps preserve current values; no source attributes copied.
+    if unsafe {
+        SetFileInformationByHandle(
+            file.as_raw_handle(),
+            FileBasicInfo,
+            (&basic as *const FILE_BASIC_INFO).cast(),
+            size_of::<FILE_BASIC_INFO>() as u32,
+        )
+    } == 0
+    {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
 }
 
 fn child_impl(
@@ -260,7 +326,8 @@ fn child_impl(
     kind: Kind,
     create: bool,
     descriptor: windows_sys::Win32::Security::PSECURITY_DESCRIPTOR,
-    permissions: bool,
+    extra_access: u32,
+    share_delete: bool,
 ) -> io::Result<File> {
     if stamp(parent)?.kind != Kind::Directory {
         return Err(invalid("directory parent required"));
@@ -283,10 +350,9 @@ fn child_impl(
     let mut handle = ptr::null_mut();
     let mut status = Default::default();
     let access = FILE_GENERIC_READ
+        | extra_access
         | if create {
             FILE_GENERIC_WRITE | DELETE | if descriptor.is_null() { 0 } else { WRITE_DAC }
-        } else if permissions {
-            WRITE_DAC
         } else {
             0
         };
@@ -308,7 +374,7 @@ fn child_impl(
             &mut status,
             ptr::null(),
             FILE_ATTRIBUTE_NORMAL,
-            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | if share_delete { FILE_SHARE_DELETE } else { 0 },
             if create { FILE_CREATE } else { FILE_OPEN },
             options,
             ptr::null(),
@@ -326,8 +392,19 @@ fn child_impl(
     }
     // SAFETY: successful NtCreateFile transferred one owned handle, closed by File.
     let file = unsafe { File::from_raw_handle(handle) };
-    if stamp(&file)?.kind != kind {
-        return Err(unsupported("opened type differs"));
+    let checked = stamp(&file).and_then(|observed| {
+        if observed.kind == kind {
+            Ok(())
+        } else {
+            Err(unsupported("opened type differs"))
+        }
+    });
+    if let Err(error) = checked {
+        return Err(if create {
+            io::Error::new(error.kind(), UnconfirmedCreation(error))
+        } else {
+            error
+        });
     }
     Ok(file)
 }

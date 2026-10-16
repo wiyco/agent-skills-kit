@@ -64,6 +64,18 @@ impl DestinationSnapshot {
         unix::existing_bindings_are_current(self)
     }
 
+    #[cfg(all(windows, test))]
+    pub(crate) fn retained_anchor(
+        &self,
+    ) -> (&Arc<crate::filesystem_windows::reader::Handle>, &EntryStamp) {
+        let anchor = self.anchors.last().expect("observations retain a root");
+        (&anchor.handle, &anchor.stamp)
+    }
+    #[cfg(all(windows, test))]
+    pub(crate) fn existing_bindings_are_current(&self) -> Result<bool, NamespaceError> {
+        windows::existing_bindings_are_current(self)
+    }
+
     /// Requested root joined with the caller's relative components.
     pub fn requested_path(&self) -> &Path {
         &self.requested
