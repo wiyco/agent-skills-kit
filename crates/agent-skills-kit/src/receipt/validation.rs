@@ -34,7 +34,7 @@ impl Default for ReceiptLimits {
     }
 }
 impl ReceiptLimits {
-    fn validate(self) -> Result<(), ReceiptError> {
+    pub(super) fn validate(self) -> Result<(), ReceiptError> {
         if (1..=16 * 1024 * 1024).contains(&self.max_document_bytes)
             && (1..=65536).contains(&self.max_entries)
             && (1..=32768).contains(&self.max_path_units)

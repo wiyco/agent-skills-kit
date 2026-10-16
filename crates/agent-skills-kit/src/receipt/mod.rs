@@ -1,6 +1,7 @@
 //! Versioned observational receipts. Parsing never grants filesystem authority.
 
 mod path;
+mod record;
 mod schema;
 mod validation;
 

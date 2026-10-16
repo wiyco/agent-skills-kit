@@ -138,7 +138,31 @@ impl std::error::Error for ApplyError {}
 /// Unknown ownership prevents cleanup rather than authorizing deletion by prefix.
 /// Windows fails preflight before writes; no path-based move fallback exists.
 pub fn apply_plan(plan: &InstallPlan, options: ApplyOptions) -> InstallReport {
-    let mut report = InstallReport {
+    let mut report = initial_report(plan);
+    if let Err(error) = verify_plan(plan, options.verification) {
+        report.preflight_error = Some(error);
+        return report;
+    }
+    let bytes = plan
+        .intended_writes()
+        .iter()
+        .try_fold(0u64, |total, write| total.checked_add(write.bytes));
+    if !(1..=1024 * 1024 * 1024).contains(&options.max_copy_bytes)
+        || bytes.is_none_or(|bytes| bytes > options.max_copy_bytes)
+    {
+        report.preflight_error = Some(VerificationError {
+            path: None,
+            kind: super::VerificationErrorKind::Limit("copy bytes"),
+        });
+        return report;
+    }
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    native::apply(plan, options, &mut report);
+    report
+}
+
+fn initial_report(plan: &InstallPlan) -> InstallReport {
+    InstallReport {
         preflight_error: None,
         outcomes: plan
             .destinations()
@@ -160,27 +184,7 @@ pub fn apply_plan(plan: &InstallPlan, options: ApplyOptions) -> InstallReport {
             })
             .collect(),
         cleanup_errors: Vec::new(),
-    };
-    if let Err(error) = verify_plan(plan, options.verification) {
-        report.preflight_error = Some(error);
-        return report;
     }
-    let bytes = plan
-        .intended_writes()
-        .iter()
-        .try_fold(0u64, |total, write| total.checked_add(write.bytes));
-    if !(1..=1024 * 1024 * 1024).contains(&options.max_copy_bytes)
-        || bytes.is_none_or(|bytes| bytes > options.max_copy_bytes)
-    {
-        report.preflight_error = Some(VerificationError {
-            path: None,
-            kind: super::VerificationErrorKind::Limit("copy bytes"),
-        });
-        return report;
-    }
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
-    native::apply(plan, options, &mut report);
-    report
 }
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
