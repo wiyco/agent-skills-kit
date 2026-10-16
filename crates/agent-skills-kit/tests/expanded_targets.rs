@@ -1985,3 +1985,286 @@ fn kiro_cli_ignored_root_plan_is_rejected_without_writes() {
         assert_eq!(fs::read(source.join("SKILL.md")).unwrap(), manifest);
     }
 }
+
+#[test]
+fn antigravity_variant_scopes_and_reader_boundaries() {
+    let catalog = Catalog::bundled().unwrap();
+    let mut context = context();
+    context.application_workspace =
+        Some(std::env::temp_dir().join("ask-antigravity workspace 日本語"));
+    for variable in [
+        "ANTIGRAVITY_HOME",
+        "GEMINI_CLI_HOME",
+        "XDG_CONFIG_HOME",
+        "KIRO_HOME",
+    ] {
+        context
+            .overrides
+            .insert(variable.into(), "invalid and ignored".into());
+    }
+    for (id, local_scope, base, root, user_directory) in [
+        (
+            "antigravity-app",
+            Scope::ApplicationWorkspace,
+            ContextBase::ApplicationWorkspace,
+            context.application_workspace.clone().unwrap(),
+            "config",
+        ),
+        (
+            "antigravity-cli",
+            Scope::Project,
+            ContextBase::Project,
+            context.project_root.clone().unwrap(),
+            "antigravity-cli",
+        ),
+        (
+            "antigravity-ide",
+            Scope::ApplicationWorkspace,
+            ContextBase::ApplicationWorkspace,
+            context.application_workspace.clone().unwrap(),
+            "config",
+        ),
+    ] {
+        let definition = catalog.get(id).unwrap();
+        assert_eq!(definition.product_id, "antigravity");
+        assert_eq!(definition.variant, id.strip_prefix("antigravity-").unwrap());
+        assert!(definition.aliases.is_empty());
+        for (scope, path, origin) in [
+            (local_scope, root.join(".agents/skills"), base),
+            (
+                Scope::User,
+                context
+                    .user_home
+                    .as_ref()
+                    .unwrap()
+                    .join(".gemini")
+                    .join(user_directory)
+                    .join("skills"),
+                ContextBase::Home,
+            ),
+        ] {
+            let result = resolve(&catalog, id, scope, &context).unwrap();
+            assert_eq!(result.preferred_write.path, path);
+            assert_eq!(result.preferred_write.origin, PathOrigin::Context(origin));
+            assert_eq!(result.discovery[0].location, result.preferred_write);
+            let legacy = if scope != Scope::User {
+                Some(root.join(".agent/skills"))
+            } else if id == "antigravity-ide" {
+                Some(
+                    context
+                        .user_home
+                        .as_ref()
+                        .unwrap()
+                        .join(".gemini/antigravity/skills"),
+                )
+            } else {
+                None
+            };
+            assert_eq!(result.discovery.len(), 1 + usize::from(legacy.is_some()));
+            if let Some(legacy) = legacy {
+                assert_eq!(result.discovery[1].location.path, legacy);
+            }
+            for reader in &result.discovery {
+                assert_eq!(reader.traversal, DiscoveryTraversal::Exact);
+                assert_eq!(
+                    reader.location.evidence.source.as_ref().unwrap().url,
+                    "https://antigravity.google/docs/skills"
+                );
+                assert!(reader.location.evidence.discovery_tests.is_empty());
+                assert!(!reader.location.evidence.resolver_tests.is_empty());
+            }
+            assert!(
+                result
+                    .warnings
+                    .contains(&ResolutionWarning::HostDiscoveryUntested)
+            );
+            assert!(
+                result
+                    .warnings
+                    .contains(&ResolutionWarning::PlacementNotExclusive)
+            );
+            assert!(
+                !result
+                    .warnings
+                    .contains(&ResolutionWarning::ResolverEvidenceAbsent)
+            );
+        }
+        let other_scope = if local_scope == Scope::Project {
+            Scope::ApplicationWorkspace
+        } else {
+            Scope::Project
+        };
+        assert!(matches!(
+            resolve(&catalog, id, other_scope, &context),
+            Err(ResolveError::UnsupportedScope { .. })
+        ));
+        let mut missing = context.clone();
+        if local_scope == Scope::Project {
+            missing.project_root = None;
+        } else {
+            missing.application_workspace = None;
+        }
+        assert!(
+            matches!(resolve(&catalog, id, local_scope, &missing), Err(ResolveError::MissingContext(found)) if found == base)
+        );
+        missing.user_home = None;
+        assert!(matches!(
+            resolve(&catalog, id, Scope::User, &missing),
+            Err(ResolveError::MissingContext(ContextBase::Home))
+        ));
+        let mut invalid = context.clone();
+        if local_scope == Scope::Project {
+            invalid.project_root = Some("relative".into());
+        } else {
+            invalid.application_workspace = Some("relative".into());
+        }
+        assert!(
+            matches!(resolve(&catalog, id, local_scope, &invalid), Err(ResolveError::InvalidContext { base: found, issue: PathIssue::Relative }) if found == base)
+        );
+    }
+    for id in [
+        "antigravity",
+        "agy",
+        "antigravity-vscode",
+        "antigravity-sdk",
+        "antigravity-cloud",
+        "antigravity-zed",
+    ] {
+        assert!(catalog.get(id).is_none());
+    }
+}
+
+#[test]
+fn antigravity_native_copy_scopes_and_attributions() {
+    for (scope, targets, expected_destinations) in [
+        (Scope::Project, vec!["antigravity-cli", "codex"], 1),
+        (
+            Scope::ApplicationWorkspace,
+            vec!["antigravity-app", "antigravity-ide"],
+            1,
+        ),
+        (
+            Scope::User,
+            vec![
+                "antigravity-app",
+                "antigravity-cli",
+                "antigravity-ide",
+                "codex",
+            ],
+            3,
+        ),
+    ] {
+        let fixture = Fixture::new();
+        let source = fixture.0.join("source/sample");
+        fs::create_dir_all(source.join("empty")).unwrap();
+        fs::write(source.join("SKILL.md"), b"---\nname: sample\ndescription: Original inert Antigravity fixture\n---\nData only.\n").unwrap();
+        fs::write(source.join("resource café.txt"), b"original inert bytes").unwrap();
+        let mut context = InstallContext::new(native_platform().unwrap());
+        context.user_home = Some(fixture.0.join("home 日本語"));
+        context.project_root = Some(fixture.0.join("project space"));
+        context.application_workspace = Some(fixture.0.join("application workspace"));
+        for root in [
+            &context.user_home,
+            &context.project_root,
+            &context.application_workspace,
+        ] {
+            fs::create_dir(root.as_ref().unwrap()).unwrap();
+        }
+        let legacy = match scope {
+            Scope::Project => context
+                .project_root
+                .as_ref()
+                .unwrap()
+                .join(".agent/skills/sample"),
+            Scope::ApplicationWorkspace => context
+                .application_workspace
+                .as_ref()
+                .unwrap()
+                .join(".agent/skills/sample"),
+            Scope::User => context
+                .user_home
+                .as_ref()
+                .unwrap()
+                .join(".gemini/antigravity/skills/sample"),
+            _ => unreachable!(),
+        };
+        fs::create_dir_all(&legacy).unwrap();
+        fs::write(legacy.join("sentinel"), b"legacy must not change").unwrap();
+        let sources = [inventory_skill(&source, InventoryLimits::default()).unwrap()];
+        let catalog = Catalog::bundled().unwrap();
+        let mut selected = targets.clone();
+        selected.push(targets[0]);
+        let preview = || {
+            plan_install(
+                &catalog,
+                InstallRequest {
+                    skills: &sources,
+                    target_ids: &selected,
+                    scope,
+                    context: &context,
+                    limits: PlanLimits::default(),
+                },
+            )
+            .unwrap()
+        };
+        let plan = preview();
+        assert!(plan.is_applicable(), "{plan:?}");
+        assert_eq!(plan.targets().len(), targets.len());
+        assert_eq!(plan.destinations().len(), expected_destinations);
+        let mut attributions = plan
+            .destinations()
+            .iter()
+            .flat_map(|destination| {
+                destination.attributions().iter().map(|attribution| {
+                    assert_eq!(attribution.source_index, 0);
+                    plan.targets()[attribution.target_index].id()
+                })
+            })
+            .collect::<Vec<_>>();
+        attributions.sort();
+        assert_eq!(attributions, targets);
+        for destination in plan.destinations() {
+            assert!(!destination.path().unwrap().exists());
+        }
+        let report = apply_plan(&plan, ApplyOptions::default());
+        assert!(report.is_successful(), "{report:?}");
+        assert!(
+            report
+                .outcomes
+                .iter()
+                .all(|row| row.status == OutcomeStatus::Created)
+        );
+        for destination in plan.destinations() {
+            let path = destination.path().unwrap();
+            for name in ["SKILL.md", "resource café.txt"] {
+                assert_eq!(
+                    fs::read(path.join(name)).unwrap(),
+                    fs::read(source.join(name)).unwrap()
+                );
+            }
+            assert!(path.join("empty").is_dir());
+        }
+        let repeated = apply_plan(&preview(), ApplyOptions::default());
+        assert!(repeated.is_successful(), "{repeated:?}");
+        assert!(
+            repeated
+                .outcomes
+                .iter()
+                .all(|row| row.status == OutcomeStatus::Unchanged)
+        );
+        let edited = plan.destinations()[0]
+            .path()
+            .unwrap()
+            .join("resource café.txt");
+        fs::write(&edited, b"preserve manual edit").unwrap();
+        let conflict = preview();
+        assert!(!conflict.is_applicable());
+        assert!(!apply_plan(&conflict, ApplyOptions::default()).is_successful());
+        assert_eq!(fs::read(&edited).unwrap(), b"preserve manual edit");
+        assert_eq!(
+            fs::read(legacy.join("sentinel")).unwrap(),
+            b"legacy must not change"
+        );
+        assert!(!legacy.join("SKILL.md").exists());
+    }
+}
