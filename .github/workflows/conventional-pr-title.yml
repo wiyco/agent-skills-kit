@@ -19,9 +19,27 @@ jobs:
         run: |
           node <<'NODE'
           const title = process.env.PR_TITLE || '';
-          const conventional = /^(?:feat|fix|docs|test|refactor|chore|ci|build|perf|style|revert)(?:\([a-z][a-z0-9-]*\))?!?: .+$/;
-          if (title.length > 100 || !conventional.test(title) || title.endsWith('.')) {
-            console.error('PR title must be a Conventional Commit subject (max 100 chars, no trailing period).');
+          const conventional = /^(?:feat|fix|docs|test|refactor|chore|ci|build|perf|style|revert)(?:\([a-z][a-z0-9-]*\))?!?: \S[^\r\n]*$/;
+          const valid = value => value.length <= 100 && conventional.test(value) &&
+            value === value.trim() && !value.endsWith('.') && !/\bWIP\b/i.test(value);
+          const cases = [
+            ['feat(resolver): resolve documented project paths', true],
+            ['feat(api)!: change plan encoding', true],
+            ['fix: preserve existing content', true],
+            ['WIP: bootstrap', false],
+            ['feat: WIP implementation', false],
+            ['feat: ', false],
+            ['feat:  spaces', false],
+            ['feat: trailing ', false],
+            ['feat: trailing.', false],
+            ['feat: newline\n', false],
+            ['feat: ' + 'x'.repeat(95), false],
+          ];
+          for (const [value, expected] of cases) {
+            if (valid(value) !== expected) throw new Error('Title validator regression');
+          }
+          if (!valid(title)) {
+            console.error('PR title must be a Conventional Commit subject (max 100 chars, no WIP or trailing period).');
             console.error('Example: feat(resolver): resolve documented project paths');
             process.exit(1);
           }
