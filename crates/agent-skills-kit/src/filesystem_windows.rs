@@ -298,7 +298,8 @@ fn child_impl(
             FILE_NON_DIRECTORY_FILE
         };
     // SAFETY: SDK structs/pointers are live for this synchronous call. The name
-    // contains exactly one validated component. No ACL/EA/payload is supplied.
+    // contains one validated component. The descriptor is null or a live SDK
+    // self-relative allocation borrowed for this call. No EA/payload is supplied.
     let result = unsafe {
         NtCreateFile(
             &mut handle,
