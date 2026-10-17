@@ -795,3 +795,51 @@ fn actual_process_kill_preserves_documented_original_full_or_partial_ntfs_payloa
         f.sentinel();
     }
 }
+
+#[test]
+fn changed_private_descriptor_refuses_restoration_and_marks_enclosure_uncertain() {
+    use native::test_support::{fixture_dacl, set_fixture_dacl};
+    struct Restore(PathBuf, String);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            set_fixture_dacl(&self.0, &self.1);
+        }
+    }
+    for boundary in [Phase::AfterDetach, Phase::BeforeUnlink] {
+        let f = Fixture::new();
+        let plan = f.plan();
+        let sid = creation::Token::effective().unwrap().user_sid().unwrap();
+        let mut restoration = None;
+        let report = run(&plan, &mut |phase, path| {
+            if phase == boundary && restoration.is_none() {
+                let enclosure = if phase == Phase::AfterDetach {
+                    path.parent().unwrap().to_owned()
+                } else {
+                    // The fixture owns the entire temporary namespace; this is
+                    // test-only mutation, not production prefix recovery.
+                    fs::read_dir(f.source.parent().unwrap())?
+                        .map(|e| e.unwrap().path())
+                        .find(|p| p.file_name().unwrap() != "sample")
+                        .unwrap()
+                };
+                restoration = Some(Restore(enclosure.clone(), fixture_dacl(&enclosure)));
+                set_fixture_dacl(&enclosure, &format!("D:P(D;;0x4;;;WD)(A;;FA;;;{sid})"));
+            }
+            Ok(())
+        });
+        assert!(restoration.is_some());
+        assert!(!report.is_successful());
+        assert_eq!(removed(&report), 0, "{report:?}");
+        assert!(!report.permanent_removal_attempted);
+        assert!(!report.restored_before_removal);
+        assert!(report.stage_location_uncertain, "{report:?}");
+        assert!(!report.cleanup_failures.is_empty());
+        let enclosure = &restoration.as_ref().unwrap().0;
+        assert_eq!(
+            fs::read(enclosure.join("payload/resources/a.txt")).unwrap(),
+            b"original A"
+        );
+        drop(restoration);
+        f.sentinel();
+    }
+}
