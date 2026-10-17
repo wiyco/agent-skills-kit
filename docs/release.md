@@ -34,3 +34,7 @@ Source visibility can precede completion of M3/M4, provided unfinished capabilit
 The maintainer explicitly approves each of: repository visibility change, Project visibility change (optional), crates.io publication, and GitHub binary release. Do not couple these into a background workflow. The Project can stay private when the code is made public, subject to the intended information-sharing policy.
 
 ASK-026 records approval or outstanding blockers. Post-MVP features and every catalog candidate need not be complete, but the shipped capability matrix must be accurate.
+
+## Experimental CLI alpha preparation
+
+The separately authorized CLI-only `0.1.0-alpha.1` preparation is tracked by #114 and [its candidate/export checklist](verification/cli-alpha.md). Keep the embedded library unpublished, verify actual packaged list/copy/permanent-delete flows on all three native ABIs and use a fresh manual build. The alpha scope does not silently resolve confidential reporting, alternate/appeal contacts or independent-review gates above; record the maintainer's resolution for the concrete candidate before public artifact export/release. Full supported publication and crates.io remain separate decisions under ASK-026.

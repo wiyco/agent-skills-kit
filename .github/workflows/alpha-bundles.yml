@@ -1,0 +1,68 @@
+name: Experimental alpha bundles
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: Full reviewed main commit SHA with passing required CI
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alpha-bundles-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  bundle:
+    name: alpha (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    env:
+      CANDIDATE: ${{ inputs.candidate }}
+      WORKFLOW_SHA: ${{ github.sha }}
+      WORKFLOW_REF: ${{ github.ref }}
+      CARGO_HOME: ${{ runner.temp }}/alpha-cargo
+    steps:
+      - name: Require exact reviewed main revision
+        run: |
+          python - <<'PY'
+          import os, re
+          candidate = os.environ['CANDIDATE']
+          if (not re.fullmatch('[0-9a-f]{40}', candidate)
+                  or candidate != os.environ['WORKFLOW_SHA']
+                  or os.environ['WORKFLOW_REF'] != 'refs/heads/main'):
+              raise SystemExit('Dispatch only the exact reviewed current main commit; branch/PR export is refused.')
+          PY
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.candidate }}
+          persist-credentials: false
+      - name: Read existing development pin
+        run: python -c 'import tomllib; print("DEV_TOOLCHAIN=" + tomllib.load(open("rust-toolchain.toml", "rb"))["toolchain"]["channel"])' >> "$GITHUB_ENV"
+      - name: Install official pinned CI toolchain
+        run: rustup toolchain install "$DEV_TOOLCHAIN" --profile minimal
+      - name: Fetch locked dependencies without build-cache promotion
+        run: cargo fetch --locked
+      - name: Build fresh native bundle and test actual unpacked CLI
+        run: python -B .github/scripts/rehearse-binary.py --export-alpha "$RUNNER_TEMP/alpha-export"
+      - name: Upload only verified bundle, checksum and evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alpha-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
+          path: ${{ runner.temp }}/alpha-export/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+          overwrite: false
+          include-hidden-files: false

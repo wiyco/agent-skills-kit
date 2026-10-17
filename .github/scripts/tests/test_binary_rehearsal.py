@@ -82,6 +82,65 @@ class BinaryRehearsalTests(unittest.TestCase):
             binary.extract_verified(artifact, binary.digest(artifact), "zip", "fixture", root)
             self.assertEqual((root / "fixture/README.txt").read_bytes(), b"original inert fixture")
 
+class AlphaExportTests(unittest.TestCase):
+    def evidence(self, artifact, version="0.1.0-alpha.1"):
+        return {"version": version, "artifact_sha256": binary.digest(artifact),
+                "target": "aarch64-apple-darwin", "candidate": "1" * 40}
+
+    def test_export_rejects_stable_versions_corruption_checkout_paths_and_existing_outputs(self):
+        with tempfile.TemporaryDirectory(prefix="ask-alpha-export-test-") as temporary:
+            root = Path(temporary)
+            artifact = root / "original.tar.gz"
+            artifact.write_bytes(b"original inert artifact fixture")
+            for version in ("0.1.0", "0.1.0-beta.1", "0.1.0-alpha.0", "0.1.0-alpha.1/path"):
+                with self.assertRaisesRegex(ValueError, "alpha"):
+                    binary.export_alpha(artifact, self.evidence(artifact, version), root / "stable-output")
+            output = root / "export"
+            evidence = self.evidence(artifact)
+            artifact.write_bytes(b"corrupted fixture")
+            with self.assertRaisesRegex(ValueError, "changed"):
+                binary.export_alpha(artifact, evidence, output)
+            self.assertFalse(output.exists())
+            evidence = self.evidence(artifact)
+            with self.assertRaisesRegex(ValueError, "outside"):
+                binary.export_alpha(artifact, evidence, binary.ROOT / "never-create-alpha-test")
+            output.mkdir()
+            sentinel = output / "sentinel"
+            sentinel.write_bytes(b"preserve existing data")
+            with self.assertRaises(FileExistsError):
+                binary.export_alpha(artifact, evidence, output)
+            self.assertEqual(sentinel.read_bytes(), b"preserve existing data")
+
+    def test_verified_export_keeps_exact_archive_checksum_and_candidate_evidence(self):
+        import json
+        with tempfile.TemporaryDirectory(prefix="ask-alpha-export-test-") as temporary:
+            root = Path(temporary)
+            artifact = root / "fixture.tar.gz"
+            artifact.write_bytes(b"original inert verified archive")
+            output = root / "new-output"
+            evidence = self.evidence(artifact)
+            binary.export_alpha(artifact, evidence, output)
+            self.assertEqual((output / artifact.name).read_bytes(), artifact.read_bytes())
+            self.assertEqual((output / (artifact.name + ".sha256")).read_text(),
+                             evidence["artifact_sha256"] + "  " + artifact.name + "\n")
+            record = json.loads((output / "build-evidence-aarch64-apple-darwin.json").read_text())
+            self.assertEqual(record, evidence)
+            self.assertEqual(len(list(output.iterdir())), 3)
+
+
+class BinaryPrivacyTests(unittest.TestCase):
+    def test_known_absolute_prefixes_are_rejected_in_native_and_encoded_forms(self):
+        with tempfile.TemporaryDirectory(prefix="ask-binary-privacy-") as temporary:
+            binary_path = Path(temporary) / "inert-binary"
+            for text, encoding in (("/home/original-user/.rustup/toolchain", "utf-8"),
+                                   ("C:\\Users\\Original-User\\.rustup", "utf-16le"),
+                                   ("C:/Users/Original-User/.rustup", "utf-8")):
+                binary_path.write_bytes(b"inert" + text.encode(encoding))
+                with self.assertRaisesRegex(ValueError, "absolute"):
+                    binary.reject_build_prefixes(binary_path, ["/home/original-user", "C:\\Users\\Original-User"])
+            binary_path.write_bytes(b"inert /ask-rehearsal/source /rustc/official-source")
+            binary.reject_build_prefixes(binary_path, ["/home/original-user", "C:\\Users\\Original-User"])
+
 
 if __name__ == "__main__":
     unittest.main()

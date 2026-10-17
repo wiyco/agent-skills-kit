@@ -1,5 +1,6 @@
 """Build/check a native candidate in owned state; no hosting or public installer."""
 
+import argparse
 import gzip
 import hashlib
 import importlib.util
@@ -139,7 +140,116 @@ def extract_verified(artifact, expected_sha256, archive_kind, prefix, destinatio
         raise ValueError("unreviewed archive format")
 
 
-def rehearse():
+def manager_smoke(executable, root, environment):
+    """Run the actual unpacked binary against original, owned inert skill data."""
+    home = root / "manager-smoke" / "home"
+    source = home / ".agents/skills/sample"
+    source.mkdir(parents=True)
+    metadata = b"---\nname: sample\ndescription: Original inert packaged CLI fixture.\n---\nNever execute.\n"
+    (source / "SKILL.md").write_bytes(metadata)
+    resource = source / "original.txt"
+    resource.write_bytes(b"original inert resource")
+    sentinel = home / "unrelated-sentinel"
+    sentinel.write_bytes(b"unrelated original data")
+    results = []
+
+    def command(scenario, *args, expected=0):
+        result = subprocess.run([str(executable), *map(str, args), "--json"],
+                                cwd=home, env=environment, capture_output=True,
+                                text=True, encoding="utf-8", timeout=30)
+        if result.returncode != expected or result.stderr:
+            raise ValueError(f"packaged manager {scenario} failed: {result.returncode}: {result.stdout}: {result.stderr}")
+        value = json.loads(result.stdout)
+        if value["schema_version"] != 1:
+            raise ValueError("unexpected packaged CLI envelope")
+        results.append({"scenario": scenario, "exit": result.returncode, "status": value["status"]})
+        return value["data"] if "data" in value else value
+
+    def selection(agent):
+        return ["--from", agent, "--scope", "user", "--user-home", home]
+
+    listed = command("list-existing", "skills", "list", *selection("codex"))
+    location = next(row["number"] for row in listed["locations"] if row["preferred_write"])
+    copy = ["skills", "copy", "sample", "--location", location, "--target", "claude-code", *selection("codex")]
+    command("copy-approval-required", *copy, expected=3)
+    command("copy-dry-run", *copy, "--dry-run")
+    destination = home / ".claude/skills/sample"
+    if destination.exists():
+        raise ValueError("unapproved packaged copy wrote data")
+    command("copy-approved", *copy, "--yes")
+    command("copy-unchanged", *copy, "--yes")
+    if (destination / "SKILL.md").read_bytes() != metadata or (destination / "original.txt").read_bytes() != resource.read_bytes():
+        raise ValueError("packaged copy changed original bytes")
+    delete = ["skills", "delete", "sample", "--location", location, *selection("codex")]
+    preview = command("delete-preview", *delete, expected=3)
+    if (preview["apply_attempted"] or len(preview["entries"]) != 2 or not preview["known_readers"]
+            or not preview["unresolved_readers"] or preview["exhaustive_host_discovery"]):
+        raise ValueError("packaged deletion preview omitted contents/impact")
+    command("delete-dry-run", *delete, "--dry-run")
+    command("delete-generic-yes-refused", *delete, "--yes", expected=2)
+    command("delete-wrong-confirmation", *delete, "--confirm-delete", "wrong", expected=1)
+    resource.write_bytes(b"edited since preview")
+    command("delete-stale-confirmation", *delete, "--confirm-delete", preview["confirmation_token"], expected=1)
+    if not (source / "SKILL.md").is_file() or resource.read_bytes() != b"edited since preview":
+        raise ValueError("stale packaged deletion modified the source")
+    preview = command("delete-fresh-preview", *delete, expected=3)
+    report = command("delete-approved", *delete, "--confirm-delete", preview["confirmation_token"])["report"]
+    if not report["successful"] or not all(row["state"] == "removed" for row in report["outcomes"]):
+        raise ValueError("packaged deletion did not confirm all removals")
+    if source.exists() or list(source.parent.iterdir()):
+        raise ValueError("packaged deletion retained a payload/enclosure")
+    if (destination / "original.txt").read_bytes() != b"original inert resource":
+        raise ValueError("deleting shared source changed the separate copy")
+    command("list-after-removal", "skills", "list", *selection("codex"))
+    if sentinel.read_bytes() != b"unrelated original data":
+        raise ValueError("packaged manager changed unrelated data")
+    return results
+
+
+def reject_build_prefixes(binary, prefixes):
+    """Bounded privacy regression check, not an independent secrets audit."""
+    data = binary.read_bytes().lower()
+    for prefix in prefixes:
+        for text in {str(prefix), str(prefix).replace("\\", "/"), str(prefix).replace("/", "\\")}:
+            for encoding in ("utf-8", "utf-16le"):
+                if text.encode(encoding).lower() in data:
+                    raise ValueError("known absolute home/build/cache prefix remains in the native binary")
+
+
+def process_native_binary(binary, target, environment):
+    if target == "aarch64-apple-darwin":
+        # Use the already-required Apple SDK, not an inferred rust-objcopy path
+        # or newly installed tool. Remove debug/STABS archive paths only.
+        sdk_strip = subprocess.run(["/usr/bin/xcrun", "--find", "strip"], env=environment,
+                                   check=True, capture_output=True, text=True, timeout=10).stdout.strip()
+        subprocess.run([sdk_strip, "-S", str(binary)], env=environment, check=True,
+                       capture_output=True, text=True, timeout=30)
+        sdk = subprocess.run(["/usr/bin/xcrun", "--show-sdk-version"], env=environment,
+                             check=True, capture_output=True, text=True, timeout=10).stdout.strip()
+        return {"operation": "Apple SDK strip -S (debug/STABS only)", "sdk_version": sdk}
+    if target == "x86_64-pc-windows-msvc":
+        return {"operation": "MSVC link /PDBALTPATH:agent-skills-kit.pdb; no PDB distributed"}
+    return {"operation": "unstripped; compiler source/build/cache prefix remapping"}
+
+
+def export_alpha(artifact, evidence, output):
+    """Export only a verified experimental bundle to a new caller-owned directory."""
+    if not re.fullmatch(r"0\.1\.0-alpha\.[1-9][0-9]*", evidence["version"]):
+        raise ValueError("export requires an explicitly experimental alpha version")
+    if digest(artifact) != evidence["artifact_sha256"]:
+        raise ValueError("archive changed before export")
+    output = Path(output).resolve()
+    if output == ROOT or ROOT in output.parents:
+        raise ValueError("export must be outside the source checkout")
+    output.mkdir(mode=0o700)
+    shutil.copyfile(artifact, output / artifact.name)
+    (output / (artifact.name + ".sha256")).write_text(evidence["artifact_sha256"] + "  " + artifact.name + "\n", encoding="ascii")
+    (output / ("build-evidence-" + evidence["target"] + ".json")).write_text(json.dumps(evidence, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    if digest(output / artifact.name) != evidence["artifact_sha256"]:
+        raise ValueError("exported archive checksum mismatch")
+
+
+def rehearse(alpha_output=None):
     pin = tomllib.loads((ROOT / "rust-toolchain.toml").read_text(encoding="utf-8"))["toolchain"]["channel"]
     environment = dict(os.environ, RUSTUP_TOOLCHAIN=pin, GIT_CONFIG_GLOBAL=os.devnull,
                        GIT_CONFIG_NOSYSTEM="1", GIT_TERMINAL_PROMPT="0")
@@ -170,8 +280,8 @@ def rehearse():
         if workspace["publish"] is not False:
             raise ValueError("development publish=false gate must remain in place")
         environment["CARGO_TARGET_DIR"] = str(root / "build")
-        # Rehearse an unstripped executable; optional host strip utilities are
-        # outside this pinned compiler recipe and signing remains a release gate.
+        # Disable Cargo optional strip-tool inference; reviewed native processing
+        # below removes debug path leakage before hashing/packaging/smoke tests.
         environment["CARGO_PROFILE_RELEASE_STRIP"] = "none"
         cargo_home = Path(environment.get("CARGO_HOME", str(Path.home() / ".cargo"))).resolve()
         environment["CARGO_ENCODED_RUSTFLAGS"] = "\x1f".join([
@@ -180,6 +290,9 @@ def rehearse():
         rustc = subprocess.run([compiler, "-Vv"], cwd=snapshot, env=environment,
                                check=True, capture_output=True, text=True, encoding="utf-8").stdout.strip()
         target, settings = native_target(rustc, json.loads((snapshot / ".github/binary-rehearsal.json").read_text(encoding="utf-8")))
+
+        if target == "x86_64-pc-windows-msvc":
+            environment["CARGO_ENCODED_RUSTFLAGS"] += "\x1f-Clink-arg=/PDBALTPATH:agent-skills-kit.pdb"
 
         def cargo(*args, capture=False):
             return subprocess.run([cargo_tool, *args], cwd=snapshot, env=environment,
@@ -195,18 +308,29 @@ def rehearse():
         binary = root / "build" / target / "release" / settings["executable"]
         if binary.is_symlink() or not binary.is_file():
             raise ValueError("build output is not a regular native executable")
-        shutil.copyfile(binary, bundle / settings["executable"])
+        bundled_binary = bundle / settings["executable"]
+        shutil.copyfile(binary, bundled_binary)
+        processing = process_native_binary(bundled_binary, target, environment)
+        reject_build_prefixes(bundled_binary, [root, cargo_home, Path.home()])
         for name in ("LICENSE-MIT", "LICENSE-APACHE"):
             shutil.copyfile(snapshot / name, bundle / name)
         components = notice_inventory(metadata, tomllib.loads((snapshot / "Cargo.lock").read_text(encoding="utf-8")), snapshot, bundle)
-        inventory = {"schema_version": 1, "rehearsal_only": True, "candidate": revision, "target": target,
+        inventory = {"schema_version": 1, "rehearsal_only": alpha_output is None,
+                     "channel": "rehearsal" if alpha_output is None else "experimental-alpha", "candidate": revision, "target": target,
                      "version": workspace["version"], "rustc": rustc, "components": components,
-                     "binary_sha256": digest(binary), "os": platform.system(), "os_release": platform.release(),
+                     "binary_sha256": digest(bundled_binary), "binary_processing": processing,
+                     "known_absolute_prefix_scan": "no matches; bounded home/build/cache UTF-8/UTF-16 check", "os": platform.system(), "os_release": platform.release(),
                      "os_version": platform.version(), "libc": list(platform.libc_ver())}
         (bundle / "component-inventory.json").write_text(json.dumps(inventory, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-        (bundle / "README.txt").write_text("WIP rehearsal only; not a published release or supported installation.\n"
-            "No installer, updater, signing, notarization, SBOM certification or provenance attestation is provided.\n"
-            "Keep notices with the binary. See component-inventory.json and the repository release gates.\n", encoding="utf-8")
+        bundle_readme = ("WIP rehearsal only; not a published release or supported installation.\n" if alpha_output is None else
+                         "Experimental CLI alpha; not ready for production or real skill stores. The embedded Rust library is unpublished.\n")
+        bundle_readme += ("Permanent deletion has no undo. Preview all contents/shared readers, stop skill writers and explicitly confirm.\n"
+            "No installer, updater, signing, notarization, certified SBOM or provenance attestation is provided.\n"
+            "Confidential security/conduct and independent appeal routes remain unavailable; do not disclose sensitive details publicly.\n"
+            "No supported-version response commitment or public contribution intake is offered.\n"
+            "Use only owned temporary fixtures. Keep notices with the binary. See component-inventory.json.\n"
+            "Source and current limitations: https://github.com/wiyco/agent-skills-kit\n")
+        (bundle / "README.txt").write_text(bundle_readme, encoding="utf-8")
         files = sorted(path for path in bundle.rglob("*") if path.is_file())
         artifact = root / (prefix + "." + settings["archive"])
         if settings["archive"] == "tar.gz":
@@ -252,12 +376,23 @@ def rehearse():
                 or "targets list" not in help_result.stdout or help_result.stderr
                 or digest(executable) != inventory["binary_sha256"]):
             raise ValueError("installed binary smoke or identity check failed")
-        return {"candidate": revision, "target": target, "toolchain": rustc, "rehearsal_only": True,
+        scenarios = manager_smoke(executable, root, environment)
+        evidence = {"candidate": revision, "target": target, "toolchain": rustc,
+                "version": workspace["version"], "rehearsal_only": alpha_output is None,
+                "channel": "rehearsal" if alpha_output is None else "experimental-alpha",
                 "artifact": artifact.name, "artifact_sha256": checksum, "artifact_bytes": artifact.stat().st_size,
-                "binary_sha256": inventory["binary_sha256"], "components": len(components), "files": len(files),
+                "binary_sha256": inventory["binary_sha256"], "binary_processing": processing,
+                "known_absolute_prefix_scan": inventory["known_absolute_prefix_scan"], "components": len(components), "files": len(files),
                 "os": inventory["os"], "os_release": inventory["os_release"], "os_version": inventory["os_version"],
-                "libc": inventory["libc"], "result": "optimized tests, archive/checksums/notices and isolated help/version passed"}
+                "libc": inventory["libc"], "manager_smoke": scenarios,
+                "result": "optimized tests, archive/checksums/notices, isolated help/version and actual packaged list/copy/delete passed"}
+        if alpha_output is not None:
+            export_alpha(artifact, evidence, alpha_output)
+        return evidence
 
 
 if __name__ == "__main__":
-    print(json.dumps(rehearse(), sort_keys=True))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--export-alpha", type=Path, help="export a verified alpha to a new external directory; never publishes")
+    options = parser.parse_args()
+    print(json.dumps(rehearse(options.export_alpha), sort_keys=True))

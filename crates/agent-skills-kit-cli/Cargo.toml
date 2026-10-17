@@ -13,5 +13,5 @@ path = "src/main.rs"
 doc = false
 
 [dependencies]
-agent-skills-kit = { version = "0.1.0", path = "../agent-skills-kit" }
+agent-skills-kit = { version = "0.1.0-alpha.1", path = "../agent-skills-kit" }
 serde_json = "1.0.154"
