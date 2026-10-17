@@ -206,6 +206,32 @@ def manager_smoke(executable, root, environment):
     return results
 
 
+def reject_build_prefixes(binary, prefixes):
+    """Bounded privacy regression check, not an independent secrets audit."""
+    data = binary.read_bytes().lower()
+    for prefix in prefixes:
+        for text in {str(prefix), str(prefix).replace("\\", "/"), str(prefix).replace("/", "\\")}:
+            for encoding in ("utf-8", "utf-16le"):
+                if text.encode(encoding).lower() in data:
+                    raise ValueError("known absolute home/build/cache prefix remains in the native binary")
+
+
+def process_native_binary(binary, target, environment):
+    if target == "aarch64-apple-darwin":
+        # Use the already-required Apple SDK, not an inferred rust-objcopy path
+        # or newly installed tool. Remove debug/STABS archive paths only.
+        sdk_strip = subprocess.run(["/usr/bin/xcrun", "--find", "strip"], env=environment,
+                                   check=True, capture_output=True, text=True, timeout=10).stdout.strip()
+        subprocess.run([sdk_strip, "-S", str(binary)], env=environment, check=True,
+                       capture_output=True, text=True, timeout=30)
+        sdk = subprocess.run(["/usr/bin/xcrun", "--show-sdk-version"], env=environment,
+                             check=True, capture_output=True, text=True, timeout=10).stdout.strip()
+        return {"operation": "Apple SDK strip -S (debug/STABS only)", "sdk_version": sdk}
+    if target == "x86_64-pc-windows-msvc":
+        return {"operation": "MSVC link /PDBALTPATH:agent-skills-kit.pdb; no PDB distributed"}
+    return {"operation": "unstripped; compiler source/build/cache prefix remapping"}
+
+
 def export_alpha(artifact, evidence, output):
     """Export only a verified experimental bundle to a new caller-owned directory."""
     if not re.fullmatch(r"0\.1\.0-alpha\.[1-9][0-9]*", evidence["version"]):
@@ -254,8 +280,8 @@ def rehearse(alpha_output=None):
         if workspace["publish"] is not False:
             raise ValueError("development publish=false gate must remain in place")
         environment["CARGO_TARGET_DIR"] = str(root / "build")
-        # Rehearse an unstripped executable; optional host strip utilities are
-        # outside this pinned compiler recipe and signing remains a release gate.
+        # Disable Cargo optional strip-tool inference; reviewed native processing
+        # below removes debug path leakage before hashing/packaging/smoke tests.
         environment["CARGO_PROFILE_RELEASE_STRIP"] = "none"
         cargo_home = Path(environment.get("CARGO_HOME", str(Path.home() / ".cargo"))).resolve()
         environment["CARGO_ENCODED_RUSTFLAGS"] = "\x1f".join([
@@ -264,6 +290,9 @@ def rehearse(alpha_output=None):
         rustc = subprocess.run([compiler, "-Vv"], cwd=snapshot, env=environment,
                                check=True, capture_output=True, text=True, encoding="utf-8").stdout.strip()
         target, settings = native_target(rustc, json.loads((snapshot / ".github/binary-rehearsal.json").read_text(encoding="utf-8")))
+
+        if target == "x86_64-pc-windows-msvc":
+            environment["CARGO_ENCODED_RUSTFLAGS"] += "\x1f-Clink-arg=/PDBALTPATH:agent-skills-kit.pdb"
 
         def cargo(*args, capture=False):
             return subprocess.run([cargo_tool, *args], cwd=snapshot, env=environment,
@@ -279,14 +308,18 @@ def rehearse(alpha_output=None):
         binary = root / "build" / target / "release" / settings["executable"]
         if binary.is_symlink() or not binary.is_file():
             raise ValueError("build output is not a regular native executable")
-        shutil.copyfile(binary, bundle / settings["executable"])
+        bundled_binary = bundle / settings["executable"]
+        shutil.copyfile(binary, bundled_binary)
+        processing = process_native_binary(bundled_binary, target, environment)
+        reject_build_prefixes(bundled_binary, [root, cargo_home, Path.home()])
         for name in ("LICENSE-MIT", "LICENSE-APACHE"):
             shutil.copyfile(snapshot / name, bundle / name)
         components = notice_inventory(metadata, tomllib.loads((snapshot / "Cargo.lock").read_text(encoding="utf-8")), snapshot, bundle)
         inventory = {"schema_version": 1, "rehearsal_only": alpha_output is None,
                      "channel": "rehearsal" if alpha_output is None else "experimental-alpha", "candidate": revision, "target": target,
                      "version": workspace["version"], "rustc": rustc, "components": components,
-                     "binary_sha256": digest(binary), "os": platform.system(), "os_release": platform.release(),
+                     "binary_sha256": digest(bundled_binary), "binary_processing": processing,
+                     "known_absolute_prefix_scan": "no matches; bounded home/build/cache UTF-8/UTF-16 check", "os": platform.system(), "os_release": platform.release(),
                      "os_version": platform.version(), "libc": list(platform.libc_ver())}
         (bundle / "component-inventory.json").write_text(json.dumps(inventory, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         bundle_readme = ("WIP rehearsal only; not a published release or supported installation.\n" if alpha_output is None else
@@ -348,7 +381,8 @@ def rehearse(alpha_output=None):
                 "version": workspace["version"], "rehearsal_only": alpha_output is None,
                 "channel": "rehearsal" if alpha_output is None else "experimental-alpha",
                 "artifact": artifact.name, "artifact_sha256": checksum, "artifact_bytes": artifact.stat().st_size,
-                "binary_sha256": inventory["binary_sha256"], "components": len(components), "files": len(files),
+                "binary_sha256": inventory["binary_sha256"], "binary_processing": processing,
+                "known_absolute_prefix_scan": inventory["known_absolute_prefix_scan"], "components": len(components), "files": len(files),
                 "os": inventory["os"], "os_release": inventory["os_release"], "os_version": inventory["os_version"],
                 "libc": inventory["libc"], "manager_smoke": scenarios,
                 "result": "optimized tests, archive/checksums/notices, isolated help/version and actual packaged list/copy/delete passed"}

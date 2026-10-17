@@ -128,5 +128,19 @@ class AlphaExportTests(unittest.TestCase):
             self.assertEqual(len(list(output.iterdir())), 3)
 
 
+class BinaryPrivacyTests(unittest.TestCase):
+    def test_known_absolute_prefixes_are_rejected_in_native_and_encoded_forms(self):
+        with tempfile.TemporaryDirectory(prefix="ask-binary-privacy-") as temporary:
+            binary_path = Path(temporary) / "inert-binary"
+            for text, encoding in (("/home/original-user/.rustup/toolchain", "utf-8"),
+                                   ("C:\\Users\\Original-User\\.rustup", "utf-16le"),
+                                   ("C:/Users/Original-User/.rustup", "utf-8")):
+                binary_path.write_bytes(b"inert" + text.encode(encoding))
+                with self.assertRaisesRegex(ValueError, "absolute"):
+                    binary.reject_build_prefixes(binary_path, ["/home/original-user", "C:\\Users\\Original-User"])
+            binary_path.write_bytes(b"inert /ask-rehearsal/source /rustc/official-source")
+            binary.reject_build_prefixes(binary_path, ["/home/original-user", "C:\\Users\\Original-User"])
+
+
 if __name__ == "__main__":
     unittest.main()
