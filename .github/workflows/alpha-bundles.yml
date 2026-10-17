@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       candidate:
-        description: Full reviewed main commit SHA with passing required CI
+        description: Full reviewed commit SHA (main required for artifact export)
         required: true
         type: string
       export_artifacts:
@@ -37,16 +37,18 @@ jobs:
       CANDIDATE: ${{ inputs.candidate }}
       WORKFLOW_SHA: ${{ github.sha }}
       WORKFLOW_REF: ${{ github.ref }}
+      EXPORT_ARTIFACTS: ${{ inputs.export_artifacts }}
     steps:
-      - name: Require exact reviewed main revision
+      - name: Require exact revision and main-only public export
         run: |
           python - <<'PY'
           import os, re
           candidate = os.environ['CANDIDATE']
           if (not re.fullmatch('[0-9a-f]{40}', candidate)
                   or candidate != os.environ['WORKFLOW_SHA']
-                  or os.environ['WORKFLOW_REF'] != 'refs/heads/main'):
-              raise SystemExit('Dispatch only the exact reviewed current main commit; branch/PR export is refused.')
+                  or (os.environ['EXPORT_ARTIFACTS'] == 'true'
+                      and os.environ['WORKFLOW_REF'] != 'refs/heads/main')):
+              raise SystemExit('Dispatch the exact reviewed revision; public artifact export requires main.')
           PY
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
