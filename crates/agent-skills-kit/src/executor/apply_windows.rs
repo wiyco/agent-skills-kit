@@ -482,7 +482,7 @@ fn cleanup_payload(
         let path = label.join(&record.relative);
         native::set_readonly(&file, false)
             .map_err(|observed| io_error(&path, "restore owned cleanup attribute", observed))?;
-        native::delete_owned(
+        native::dispose_verified(
             file.try_clone()
                 .map_err(|observed| io_error(&path, "retain cleanup capability", observed))?,
         )
@@ -619,7 +619,7 @@ fn install(
                 )
             })
             .and_then(|file| {
-                native::delete_owned(file)
+                native::dispose_verified(file)
                     .map_err(|observed| io_error(&stage.path, "remove empty owned stage", observed))
             }) {
             Ok(()) => (),

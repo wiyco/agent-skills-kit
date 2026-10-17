@@ -1,7 +1,7 @@
 //! Permanent-removal previews, operation-specific approval and native application.
 //!
-//! Unix application is implemented separately from read-only planning; Windows
-//! application remains disabled pending its native implementation/evidence.
+//! Unix and Windows application remain separately gated by native evidence.
+//! Read-only preview/approval never substitutes for apply-time revalidation.
 //! Receipt data is never authority.
 //! See ADR 0009 for the caller-controlled namespace and stopped-writer contract.
 

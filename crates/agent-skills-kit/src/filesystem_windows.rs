@@ -250,7 +250,15 @@ impl std::error::Error for UnconfirmedCreation {
 
 /// Single-component lookup/create relative to a retained parent; no path fallback.
 pub(crate) fn child(parent: &File, name: &OsStr, kind: Kind, create: bool) -> io::Result<File> {
-    child_impl(parent, name, kind, create, ptr::null_mut(), 0, false)
+    child_impl(
+        parent,
+        name,
+        kind,
+        create,
+        ptr::null_mut(),
+        0,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+    )
 }
 
 pub(crate) fn create_with_security(
@@ -259,18 +267,42 @@ pub(crate) fn create_with_security(
     kind: Kind,
     descriptor: &security::creation::Descriptor,
 ) -> io::Result<File> {
-    child_impl(parent, name, kind, true, descriptor.as_ptr(), 0, false)
+    child_impl(
+        parent,
+        name,
+        kind,
+        true,
+        descriptor.as_ptr(),
+        0,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+    )
 }
 
 /// Reopen an owned post-commit entry for permission finalization. Descendant
 /// copy handles must be closed before directory rename; reacquire these while
 /// every entry is still private, verify identity, and hold them through updates.
 pub(crate) fn open_permissions(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
-    child_impl(parent, name, kind, false, ptr::null_mut(), WRITE_DAC, false)
+    child_impl(
+        parent,
+        name,
+        kind,
+        false,
+        ptr::null_mut(),
+        WRITE_DAC,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+    )
 }
 
 pub(crate) fn open_binding(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
-    child_impl(parent, name, kind, false, ptr::null_mut(), 0, true)
+    child_impl(
+        parent,
+        name,
+        kind,
+        false,
+        ptr::null_mut(),
+        0,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+    )
 }
 pub(crate) fn open_cleanup(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
     child_impl(
@@ -280,9 +312,24 @@ pub(crate) fn open_cleanup(parent: &File, name: &OsStr, kind: Kind) -> io::Resul
         false,
         ptr::null_mut(),
         DELETE | FILE_WRITE_ATTRIBUTES,
-        false,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
     )
 }
+/// Open one selected existing object for removal without attribute-write rights.
+/// Deny new write/delete opens; conflicting existing handles cause native refusal.
+/// This is not ownership or authorization: the removal engine verifies its plan.
+pub(crate) fn open_removal(parent: &File, name: &OsStr, kind: Kind) -> io::Result<File> {
+    child_impl(
+        parent,
+        name,
+        kind,
+        false,
+        ptr::null_mut(),
+        DELETE,
+        FILE_SHARE_READ,
+    )
+}
+
 pub(crate) fn set_readonly(file: &File, readonly: bool) -> io::Result<()> {
     let current = stamp(file)?;
     let attributes = if readonly {
@@ -322,7 +369,7 @@ fn child_impl(
     create: bool,
     descriptor: windows_sys::Win32::Security::PSECURITY_DESCRIPTOR,
     extra_access: u32,
-    share_delete: bool,
+    share_access: u32,
 ) -> io::Result<File> {
     if stamp(parent)?.kind != Kind::Directory {
         return Err(invalid("directory parent required"));
@@ -369,7 +416,7 @@ fn child_impl(
             &mut status,
             ptr::null(),
             FILE_ATTRIBUTE_NORMAL,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | if share_delete { FILE_SHARE_DELETE } else { 0 },
+            share_access,
             if create { FILE_CREATE } else { FILE_OPEN },
             options,
             ptr::null(),
@@ -446,8 +493,10 @@ pub(crate) fn rename_exclusive(file: &File, parent: &File, name: &OsStr) -> io::
     Ok(())
 }
 
-/// Delete only the retained, operation-owned object; directories must be empty.
-pub(crate) fn delete_owned(file: File) -> io::Result<()> {
+/// Consume a retained DELETE-capable object after the caller proves owned-cleanup
+/// or explicit current-plan removal authority. This primitive grants neither.
+/// Directories must be empty; no pathname delete or permission repair is performed.
+pub(crate) fn dispose_verified(file: File) -> io::Result<()> {
     let _ = stamp(&file)?;
     let disposition = FILE_DISPOSITION_INFO { DeleteFile: true };
     // SAFETY: exact SDK struct/class; live owned handle. No pathname lookup.
@@ -510,3 +559,7 @@ pub(crate) fn entry_stamp(file: &File) -> io::Result<crate::validation::EntrySta
     reader::unnamed_stream_only(file)?;
     stamp(file).map(snapshot)
 }
+
+#[cfg(test)]
+#[path = "filesystem_windows_test_support.rs"]
+pub(crate) mod test_support;
