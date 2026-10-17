@@ -170,6 +170,9 @@ def rehearse():
         if workspace["publish"] is not False:
             raise ValueError("development publish=false gate must remain in place")
         environment["CARGO_TARGET_DIR"] = str(root / "build")
+        # Rehearse an unstripped executable; optional host strip utilities are
+        # outside this pinned compiler recipe and signing remains a release gate.
+        environment["CARGO_PROFILE_RELEASE_STRIP"] = "none"
         cargo_home = Path(environment.get("CARGO_HOME", str(Path.home() / ".cargo"))).resolve()
         environment["CARGO_ENCODED_RUSTFLAGS"] = "\x1f".join([
             "--remap-path-prefix=" + str(root) + "=/ask-rehearsal",

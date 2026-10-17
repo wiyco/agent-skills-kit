@@ -50,6 +50,8 @@ jobs:
         run: python -B .github/scripts/rehearse-library.py --toolchain "$DEV_TOOLCHAIN"
         env:
           RUSTDOCFLAGS: -D warnings -D missing-docs
+      - name: Rehearse the native CLI binary without publishing
+        run: python -B .github/scripts/rehearse-binary.py
       - name: Lint Windows-specific unsafe boundaries
         if: runner.os == 'Windows'
         run: |

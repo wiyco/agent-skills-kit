@@ -26,7 +26,7 @@ Source visibility can precede completion of M3/M4, provided unfinished capabilit
 ## Before CLI binary distribution
 
 - Review tested OS/architecture/ABI targets, checksums, provenance expectations, and installation instructions.
-- Test --help and --version on the declared native platforms.
+- Test --help and --version on the declared native platforms using the [unpublished native binary rehearsal](verification/binary-rehearsal.md).
 - Keep upload/publish jobs approval-gated; no public release URL exists until an actual release succeeds.
 
 ## Separate approvals
