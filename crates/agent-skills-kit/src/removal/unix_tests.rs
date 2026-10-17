@@ -656,8 +656,8 @@ fn two_verified_removals_race_for_one_root_without_double_deletion_or_stage_loss
     let (a, b) = std::thread::scope(|scope| {
         let a = scope.spawn(move || {
             run(&first, &mut |phase, _| {
-                if phase == Phase::BeforeDetach {
-                    ready_tx.send(()).map_err(io::Error::other)?;
+                if matches!(phase, Phase::AfterPreflight | Phase::BeforeDetach) {
+                    ready_tx.send((0usize, phase)).map_err(io::Error::other)?;
                     wait_first
                         .recv_timeout(Duration::from_secs(10))
                         .map_err(io::Error::other)?;
@@ -667,8 +667,10 @@ fn two_verified_removals_race_for_one_root_without_double_deletion_or_stage_loss
         });
         let b = scope.spawn(move || {
             run(&second, &mut |phase, _| {
-                if phase == Phase::BeforeDetach {
-                    other_ready.send(()).map_err(io::Error::other)?;
+                if matches!(phase, Phase::AfterPreflight | Phase::BeforeDetach) {
+                    other_ready
+                        .send((1usize, phase))
+                        .map_err(io::Error::other)?;
                     wait_second
                         .recv_timeout(Duration::from_secs(10))
                         .map_err(io::Error::other)?;
@@ -676,11 +678,44 @@ fn two_verified_removals_race_for_one_root_without_double_deletion_or_stage_loss
                 Ok(())
             })
         });
-        ready_rx.recv_timeout(Duration::from_secs(10)).unwrap();
-        ready_rx.recv_timeout(Duration::from_secs(10)).unwrap();
-        go_first.send(()).unwrap();
-        go_second.send(()).unwrap();
-        (a.join().unwrap(), b.join().unwrap())
+        // Finish both read-only preflights before either operation changes the
+        // shared container. Otherwise one can correctly refuse a transient
+        // namespace observation and never reach the intended detach race.
+        let preparation = (|| -> std::result::Result<(), String> {
+            let receive = || {
+                ready_rx
+                    .recv_timeout(Duration::from_secs(10))
+                    .map_err(|e| e.to_string())
+            };
+            let mut preflights = [receive()?, receive()?];
+            preflights.sort_by_key(|entry| entry.0);
+            if preflights != [(0, Phase::AfterPreflight), (1, Phase::AfterPreflight)] {
+                return Err(format!("unexpected preflight signals: {preflights:?}"));
+            }
+            // Serialize only preparation. Hold the first verified detachment
+            // while the second enclosure and its final inspection are prepared.
+            go_first.send(()).map_err(|e| e.to_string())?;
+            let first = receive()?;
+            if first != (0, Phase::BeforeDetach) {
+                return Err(format!("unexpected first detach: {first:?}"));
+            }
+            go_second.send(()).map_err(|e| e.to_string())?;
+            let second = receive()?;
+            if second != (1, Phase::BeforeDetach) {
+                return Err(format!("unexpected second detach: {second:?}"));
+            }
+            Ok(())
+        })();
+        // Always release and join before asserting, so a failed boundary reports
+        // the actual native outcomes instead of hiding them behind a timeout.
+        let _ = go_first.send(());
+        let _ = go_second.send(());
+        let reports = (a.join().unwrap(), b.join().unwrap());
+        assert!(
+            preparation.is_ok(),
+            "preparation: {preparation:?}; reports: {reports:?}"
+        );
+        reports
     });
     assert_eq!(
         usize::from(a.is_successful()) + usize::from(b.is_successful()),
