@@ -18,6 +18,25 @@ use crate::{
 #[cfg(any(target_os = "linux", target_os = "macos", windows))]
 mod native;
 
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
+pub(crate) fn inspect_selected(
+    snapshot: &DestinationSnapshot,
+    name: &std::ffi::OsStr,
+    limits: InventoryLimits,
+) -> Result<Box<ValidatedSkill>, DiscoveryError> {
+    native::inspect_skill(snapshot, name, limits)
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos", windows))]
+pub(crate) fn observe_rule(
+    rule: ResolvedPath,
+    context: &InstallContext,
+) -> Result<DestinationSnapshot, DiscoveryError> {
+    let resolved = location(rule, false, context)?;
+    crate::planner::observe_destination(&resolved.anchor, &resolved.relative)
+        .map_err(DiscoveryError::Namespace)
+}
+
 /// Whole-listing limits, in addition to each existing inventory budget.
 #[derive(Clone, Copy, Debug)]
 pub struct DiscoveryLimits {

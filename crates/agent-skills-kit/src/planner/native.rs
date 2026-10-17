@@ -1,6 +1,6 @@
 //! Platform I/O for the shared planner; policy remains in build.rs.
 use std::{ffi::OsString, io, path::Path, sync::Arc};
-pub(super) type Identity = (u64, [u8; 16]);
+pub(crate) type Identity = (u64, [u8; 16]);
 pub(crate) type Names = Box<dyn Iterator<Item = io::Result<OsString>>>;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(crate) type Directory = std::fs::File;
@@ -8,12 +8,12 @@ pub(crate) type Directory = std::fs::File;
 pub(crate) type Directory = crate::filesystem_windows::reader::Handle;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-pub(super) fn identity(file: &Directory) -> io::Result<Identity> {
+pub(crate) fn identity(file: &Directory) -> io::Result<Identity> {
     file.metadata()
         .map(|metadata| crate::filesystem::stamp(&metadata).file_identity())
 }
 #[cfg(windows)]
-pub(super) fn identity(file: &Directory) -> io::Result<Identity> {
+pub(crate) fn identity(file: &Directory) -> io::Result<Identity> {
     crate::filesystem_windows::stamp(file).map(|stamp| (stamp.volume, stamp.identity))
 }
 #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -42,7 +42,7 @@ pub(crate) fn names(directory: &Directory, max: usize) -> io::Result<Names> {
     ))
 }
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-pub(super) fn parent(directory: &Arc<Directory>) -> io::Result<Arc<Directory>> {
+pub(crate) fn parent(directory: &Arc<Directory>) -> io::Result<Arc<Directory>> {
     use rustix::fs::{Mode, OFlags};
     Ok(Arc::new(std::fs::File::from(rustix::fs::openat(
         directory,
@@ -52,7 +52,7 @@ pub(super) fn parent(directory: &Arc<Directory>) -> io::Result<Arc<Directory>> {
     )?)))
 }
 #[cfg(windows)]
-pub(super) fn parent(directory: &Arc<Directory>) -> io::Result<Arc<Directory>> {
+pub(crate) fn parent(directory: &Arc<Directory>) -> io::Result<Arc<Directory>> {
     use std::{
         ffi::OsString,
         os::windows::{ffi::OsStringExt, io::AsRawHandle},
