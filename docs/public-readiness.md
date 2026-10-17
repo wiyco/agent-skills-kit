@@ -4,6 +4,10 @@ Preparation tracked in [#93](https://github.com/wiyco/agent-skills-kit/issues/93
 
 **WIP — not ready for use.** Public source is a development preview, not a supported/published library or CLI. Do not use it with real skill stores. No crates, installers, public binaries or releases are authorized. Public contribution intake and reporting arrangements remain deferred until a separately reviewed collaboration/release phase.
 
+## Post-transition status (2026-10-17 UTC)
+
+The maintainer has made the repository public; Project #10 remains private. Source-preview preparation #94 is merged, required native CI has resumed and M0–M3 plus ASK-023/024/025 are complete. The historical runner-start blocker and one-time #94 exception below describe the earlier transition, not a current merge exemption. Seven strict required checks and admin enforcement remain enabled. The [ASK-026 technical checkpoint](verification/release-readiness.md) refreshes privacy/settings/CI evidence and records remaining independent-review/reporting/publication decisions. No crate/binary release or public contribution intake is approved.
+
 ## Scope and reviewed evidence
 
 Audit performed 2026-10-16 UTC / 2026-10-17 JST. Source base: `b24944c98ee467385984090a7959388ab05e755c`; open Crush PR #92 head `1c39ebafcefcf550d56f7ba5dc83fe7ed8c4cebe` was included without merging it. The preparation PR's QA comment identifies its own final SHA and local verification. These results do not prove later revisions.
