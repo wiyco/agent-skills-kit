@@ -67,6 +67,8 @@ pub enum RemovalError {
     InvalidSelection,
     /// Source location does not belong to the selected catalog target/context.
     ContextMismatch,
+    /// The payload equals/contains an explicit context or resolved host container.
+    ProtectedRoot(PathBuf),
     /// Selection/root/contents changed after discovery.
     Changed,
     /// Native namespace or complete inventory inspection failed.

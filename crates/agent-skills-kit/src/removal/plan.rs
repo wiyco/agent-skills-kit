@@ -85,6 +85,7 @@ pub(super) fn build(
         token: String::new(),
         limits,
     };
+    protect_context_roots(&request.context, &plan)?;
     impact(catalog, &request.context, &mut plan)?;
     if !plan.namespace_is_current()? {
         return Err(RemovalError::Changed);
@@ -133,6 +134,9 @@ fn impact(
                 }
                 observed += 1;
                 let label = rule.path.clone();
+                if ancestors_unexpanded {
+                    plan.unresolved.push(UnresolvedRemovalReader { target_id:target.id.clone(), scope, path:Some(label.clone()), reason:"Documented ancestor search remains unexpanded; impact beyond this selected root is unknown.".into() });
+                }
                 let snapshot = match observe_rule(rule, context) {
                     Ok(snapshot) => snapshot,
                     Err(error) => {
@@ -145,6 +149,7 @@ fn impact(
                         continue;
                     }
                 };
+                protect_snapshot(&snapshot, &label, plan.root_stamp.file_identity())?;
                 if snapshot.presence() != DestinationPresence::ExistingDirectory {
                     continue;
                 }
@@ -155,9 +160,6 @@ fn impact(
                     return Err(RemovalError::Changed);
                 }
                 if identity(&snapshot) != wanted {
-                    if ancestors_unexpanded {
-                        plan.unresolved.push(UnresolvedRemovalReader { target_id:target.id.clone(), scope, path:Some(label), reason:"Documented ancestor search remains unexpanded; impact beyond this selected root is unknown.".into() });
-                    }
                     continue;
                 }
                 if target.id == plan.target_id && scope == plan.scope {
@@ -293,4 +295,56 @@ fn fingerprint(catalog: &Catalog, plan: &RemovalPlan) -> Result<String, RemovalE
         )?;
     }
     Ok(out.hash.finalize().to_hex().to_string())
+}
+
+// Reject physical containment, including caller-controlled ancestor aliases and
+// missing configured roots whose closest retained prefix is inside the payload.
+fn protect_snapshot(
+    snapshot: &DestinationSnapshot,
+    label: &Path,
+    payload: (u64, [u8; 16]),
+) -> Result<(), RemovalError> {
+    use crate::planner::native;
+    let map_error = |error: std::io::Error| {
+        RemovalError::Discovery(DiscoveryError::Namespace(crate::planner::NamespaceError {
+            path: label.to_owned(),
+            kind: crate::planner::NamespaceErrorKind::Io {
+                operation: "inspect protected-root ancestry",
+                kind: error.kind(),
+                raw_os_error: error.raw_os_error(),
+            },
+        }))
+    };
+    let mut current = std::sync::Arc::clone(snapshot.retained_anchor().0);
+    let mut seen = std::collections::BTreeSet::new();
+    for _ in 0..128 {
+        let identity = native::identity(&current).map_err(map_error)?;
+        if identity == payload {
+            return Err(RemovalError::ProtectedRoot(label.to_owned()));
+        }
+        if !seen.insert(identity) {
+            return Err(RemovalError::Changed);
+        }
+        let parent = native::parent(&current).map_err(map_error)?;
+        if native::identity(&parent).map_err(map_error)? == identity {
+            return Ok(());
+        }
+        current = parent;
+    }
+    Err(RemovalError::Limit("protected-root ancestor depth"))
+}
+fn protect_context_roots(context: &InstallContext, plan: &RemovalPlan) -> Result<(), RemovalError> {
+    for root in [
+        &context.user_home,
+        &context.project_root,
+        &context.application_workspace,
+    ]
+    .into_iter()
+    .flatten()
+    {
+        let snapshot = crate::planner::observe_destination(root, Path::new(""))
+            .map_err(|error| RemovalError::Discovery(DiscoveryError::Namespace(error)))?;
+        protect_snapshot(&snapshot, root, plan.root_stamp.file_identity())?;
+    }
+    Ok(())
 }
