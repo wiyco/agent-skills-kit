@@ -1,6 +1,5 @@
 use super::*;
-#[path = "../tests/common/fixture.rs"]
-mod fixture;
+use crate::test_fixture as fixture;
 use agent_skills_kit::{
     catalog::Scope,
     resolver::{InstallContext, native_platform, resolve},

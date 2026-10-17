@@ -2,7 +2,11 @@
 mod args;
 mod installation;
 mod interactive;
+mod manager;
 mod planning;
+#[cfg(test)]
+#[path = "../tests/common/fixture.rs"]
+mod test_fixture;
 use agent_skills_kit::{
     catalog::Catalog,
     receipt::NativePath,
@@ -25,6 +29,9 @@ Usage:
   agent-skills-kit plan <source> --target <id>... --scope <user|project> [context] [--json]
   agent-skills-kit install <source> --target <id>... --scope <user|project> [context] [--yes] [--dry-run] [--json]
   agent-skills-kit interactive [--json]
+  agent-skills-kit manage [--json]
+  agent-skills-kit skills list --from <id> --scope <user|project> [context] [--json]
+  agent-skills-kit skills copy <name> --from <id> --location <number> --target <id>... --scope <user|project> [context] [--yes] [--dry-run] [--json]
   agent-skills-kit --help
   agent-skills-kit --version
 
@@ -91,9 +98,10 @@ fn absolute(path: std::path::PathBuf) -> Result<std::path::PathBuf, Failure> {
 }
 fn execute(command: Command) -> Result<Output, Failure> {
     match command {
-        Command::Interactive => Err(Failure::usage(
+        Command::Interactive | Command::Manage => Err(Failure::usage(
             "interactive requires terminal input and prompts",
         )),
+        Command::Skills { selection, copy } => manager::execute(selection, copy),
         Command::Plan(options) => planning::execute(options),
         Command::Install { plan, yes, dry_run } => installation::execute(plan, yes, dry_run),
         Command::Help => Ok(Output {
@@ -168,11 +176,15 @@ fn execute(command: Command) -> Result<Output, Failure> {
 fn run(args: &[OsString], stdout: &mut impl Write, stderr: &mut impl Write) -> io::Result<u8> {
     let json = args::json_requested(args);
     let result = args::parse(args).map_err(Failure::usage).and_then(|command| {
-        if matches!(&command, Command::Interactive) {
+        if matches!(&command, Command::Interactive | Command::Manage) {
             if !io::stdin().is_terminal() || !io::stderr().is_terminal() {
                 return Err(Failure::usage("interactive requires terminal stdin and stderr; use explicit non-interactive commands with --yes or --dry-run"));
             }
-            interactive::execute(&mut io::stdin().lock(), stderr)
+            if matches!(&command, Command::Manage) {
+                manager::interactive(&mut io::stdin().lock(), stderr)
+            } else {
+                interactive::execute(&mut io::stdin().lock(), stderr)
+            }
         } else {
             execute(command)
         }
@@ -184,7 +196,7 @@ fn run(args: &[OsString], stdout: &mut impl Write, stderr: &mut impl Write) -> i
                     stdout,
                     "{}",
                     json_line(
-                        json!({"schema_version": 1, "command": output.command, "status": match output.exit_code { 0 => "ok", 3 if output.command == "interactive" => "cancelled", 3 => "approval_required", 4 => "failed", _ => "blocked" }, "data": output.data})
+                        json!({"schema_version": 1, "command": output.command, "status": match output.exit_code { 0 => "ok", 3 if matches!(output.command, "interactive" | "manage") => "cancelled", 3 => "approval_required", 4 => "failed", _ => "blocked" }, "data": output.data})
                     )
                 )?;
             } else {

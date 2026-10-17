@@ -601,6 +601,15 @@ fn reject_overlaps(
         let anchor = snapshot.anchors.last().expect("retained root");
         let parents = ancestors(&anchor.handle, &anchor.path)?;
         for (index, source) in sources.iter().enumerate() {
+            // An already validated identical payload at the exact source root
+            // has no intended writes. Nested/containing destinations still fail.
+            if snapshot.missing.is_empty()
+                && anchor_id(anchor) == source_id(source)
+                && destination.action == PlannedAction::Unchanged
+                && destination.source_index() == index
+            {
+                continue;
+            }
             if parents.contains(&source_id(source))
                 || (snapshot.missing.is_empty()
                     && source_ancestors[index].contains(&anchor_id(anchor)))
