@@ -434,7 +434,7 @@ fn source_named_streams_after_approval_cannot_be_adopted_for_removal() {
     f.sentinel();
 }
 #[test]
-fn a_shared_read_lease_never_turns_pending_deletion_into_false_complete_success() {
+fn a_preexisting_child_read_lease_refuses_detachment_without_removing_data() {
     let f = Fixture::new();
     let plan = f.plan();
     let lease = fs::OpenOptions::new()
@@ -443,6 +443,49 @@ fn a_shared_read_lease_never_turns_pending_deletion_into_false_complete_success(
         .open(f.source.join("resources/a.txt"))
         .unwrap();
     let report = apply_removal(approved(plan));
+    assert!(!report.is_successful(), "{report:?}");
+    assert!(!report.permanent_removal_attempted, "{report:?}");
+    assert_eq!(removed(&report), 0);
+    let failure = report.failure.as_ref().expect("native refusal");
+    assert_eq!(failure.operation, "native held-object no-replace detach");
+    assert!(
+        matches!(
+            failure.kind,
+            RemovalFailureKind::Io {
+                kind: io::ErrorKind::PermissionDenied,
+                raw_os_error: Some(5)
+            }
+        ),
+        "{report:?}"
+    );
+    assert!(report.retained_stage.is_none(), "{report:?}");
+    assert_eq!(
+        fs::read(f.source.join("resources/a.txt")).unwrap(),
+        b"original A"
+    );
+    drop(lease);
+    f.sentinel();
+}
+#[test]
+fn a_shared_read_lease_never_turns_pending_deletion_into_false_complete_success() {
+    let f = Fixture::new();
+    let plan = f.plan();
+    let mut lease = None;
+    let report = run(&plan, &mut |phase, path| {
+        if phase == Phase::AfterDetach {
+            lease = Some(
+                fs::OpenOptions::new()
+                    .read(true)
+                    .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+                    .open(path.join("resources/a.txt"))?,
+            );
+        }
+        Ok(())
+    });
+    assert!(
+        lease.is_some(),
+        "lease must be acquired after successful detachment: {report:?}"
+    );
     if report.is_successful() {
         assert_eq!(
             fs::symlink_metadata(&f.source).unwrap_err().kind(),
