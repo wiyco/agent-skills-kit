@@ -272,6 +272,8 @@ fn changed_payload_or_reader_impact_invalidates_previous_delete_confirmation() {
     }
 }
 
+// Windows-only readonly clearing restores only the owned fixture after assertions.
+#[cfg_attr(windows, allow(clippy::permissions_set_readonly_false))]
 #[test]
 fn actual_native_partial_delete_keeps_complete_cli_outcomes_and_retained_diagnostics() {
     let (_fixture, home) = setup();
