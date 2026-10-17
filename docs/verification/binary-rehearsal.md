@@ -43,3 +43,7 @@ The existing three native jobs run the same helper under read-only workflow perm
 The PR's separate QA Evidence comment records the exact final SHA, actual native CI runs, local environment, checksums and limitations. An earlier checkpoint is not evidence for a later candidate. Native smoke execution does not test downloaded-file quarantine, Gatekeeper, SmartScreen, signing/notarization, power-loss durability, all filesystems, oldest OS runtimes or installation on an end-user machine without development tools. No universal static-linking claim is made.
 
 Before distribution, the maintainer must approve the exact version/commit, runtime baselines, notice/license review, signing and provenance decisions, the publication destination and its protected approval workflow. Obtain clean final-release builds rather than promoting PR caches. [Release gates](../release.md) and ASK-026 remain authoritative; this rehearsal authorizes none of those actions.
+
+## CLI alpha follow-up
+
+The rehearsal now also invokes the actual unpacked CLI for original owned-fixture list/copy/delete positive and negative scenarios; help/version alone is insufficient. Default CI still exports/uploads nothing. The separately manual, exact-main alpha export and unresolved human publication gates are described in [CLI alpha preparation](cli-alpha.md); no cache or PR artifact is promoted automatically.
