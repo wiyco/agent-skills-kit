@@ -4,9 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       candidate:
-        description: Full reviewed main commit SHA with passing required CI
+        description: Full reviewed commit SHA (main required for artifact export)
         required: true
         type: string
+      export_artifacts:
+        description: Upload public-repository Actions artifacts only after recorded maintainer gate resolution
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -32,17 +37,18 @@ jobs:
       CANDIDATE: ${{ inputs.candidate }}
       WORKFLOW_SHA: ${{ github.sha }}
       WORKFLOW_REF: ${{ github.ref }}
-      CARGO_HOME: ${{ runner.temp }}/alpha-cargo
+      EXPORT_ARTIFACTS: ${{ inputs.export_artifacts }}
     steps:
-      - name: Require exact reviewed main revision
+      - name: Require exact revision and main-only public export
         run: |
           python - <<'PY'
           import os, re
           candidate = os.environ['CANDIDATE']
           if (not re.fullmatch('[0-9a-f]{40}', candidate)
                   or candidate != os.environ['WORKFLOW_SHA']
-                  or os.environ['WORKFLOW_REF'] != 'refs/heads/main'):
-              raise SystemExit('Dispatch only the exact reviewed current main commit; branch/PR export is refused.')
+                  or (os.environ['EXPORT_ARTIFACTS'] == 'true'
+                      and os.environ['WORKFLOW_REF'] != 'refs/heads/main')):
+              raise SystemExit('Dispatch the exact reviewed revision; public artifact export requires main.')
           PY
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -53,10 +59,15 @@ jobs:
       - name: Install official pinned CI toolchain
         run: rustup toolchain install "$DEV_TOOLCHAIN" --profile minimal
       - name: Fetch locked dependencies without build-cache promotion
+        env:
+          CARGO_HOME: ${{ runner.temp }}/alpha-cargo
         run: cargo fetch --locked
       - name: Build fresh native bundle and test actual unpacked CLI
+        env:
+          CARGO_HOME: ${{ runner.temp }}/alpha-cargo
         run: python -B .github/scripts/rehearse-binary.py --export-alpha "$RUNNER_TEMP/alpha-export"
       - name: Upload only verified bundle, checksum and evidence
+        if: inputs.export_artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: alpha-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
