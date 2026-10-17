@@ -4,6 +4,9 @@ use std::io;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 #[path = "unix.rs"]
 mod unix;
+#[cfg(windows)]
+#[path = "windows.rs"]
+mod windows;
 
 /// Structured native removal failure; partial outcomes are retained separately.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -141,8 +144,8 @@ fn initial(plan: &RemovalPlan) -> RemovalReport {
 /// The caller must present the complete preview, control context/container/ancestor
 /// namespaces and stop skill writers. No undo, arbitrary mutable-tree snapshot,
 /// secure erasure or automatic recovery is promised. Every native backend must
-/// pass ADR 0009's evidence gates. Windows application is not yet enabled in this
-/// Unix implementation layer; it returns an explicit unsupported failure.
+/// pass ADR 0009's evidence gates. Eligible Windows NTFS application uses held
+/// DELETE-capable objects and confirms namespace removal after closing handles.
 /// Never infer ownership from receipts/prefixes or use copy approval for removal.
 pub fn apply_removal(approved: ApprovedRemoval) -> RemovalReport {
     let plan = approved.plan;
@@ -158,7 +161,9 @@ pub fn apply_removal(approved: ApprovedRemoval) -> RemovalReport {
     }
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     unix::apply(&plan, &mut report);
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    #[cfg(windows)]
+    windows::apply(&plan, &mut report);
+    #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
     {
         report.failure = Some(RemovalFailure {
             path: plan.path.clone(),

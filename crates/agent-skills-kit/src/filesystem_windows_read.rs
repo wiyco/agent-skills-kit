@@ -86,6 +86,9 @@ impl Handle {
             scan: std::sync::Mutex::new(()),
         }
     }
+    pub(crate) fn into_file(self) -> File {
+        self.file
+    }
     pub(crate) fn entries(&self, max: usize) -> io::Result<Vec<DirectoryEntry>> {
         let _guard = self
             .scan
