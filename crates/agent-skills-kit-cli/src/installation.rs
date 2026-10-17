@@ -7,7 +7,7 @@ use agent_skills_kit::{
 use serde_json::{Value, json};
 use std::path::Path;
 
-fn path(path: &Path) -> Value {
+pub(crate) fn path(path: &Path) -> Value {
     match NativePath::from_native(path) {
         Ok(native) => json!(native),
         // Never discard committed outcomes because a diagnostic path cannot be encoded.

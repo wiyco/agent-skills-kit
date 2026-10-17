@@ -175,3 +175,99 @@ fn sharing_denied_skill_remains_an_explicit_unselectable_cli_row() {
     assert!(!home.join(".claude").exists());
     drop(guard);
 }
+
+fn delete_arguments(home: &std::path::Path) -> Vec<OsString> {
+    let mut args: Vec<OsString> = [
+        "skills",
+        "delete",
+        "sample",
+        "--location",
+        "1",
+        "--from",
+        "codex",
+        "--scope",
+        "user",
+        "--user-home",
+    ]
+    .map(OsString::from)
+    .into();
+    args.push(home.into());
+    args.push("--json".into());
+    args
+}
+#[test]
+fn permanent_delete_requires_exact_current_fingerprint_and_preserves_other_copies() {
+    let (_fixture, home) = setup();
+    let mut copy = arguments(&home, true);
+    copy.push("--yes".into());
+    assert!(cli(copy).status.success());
+    let args = delete_arguments(&home);
+    let preview = cli(&args);
+    assert_eq!(preview.status.code(), Some(3), "{preview:?}");
+    let data = json(&preview)["data"].clone();
+    assert_eq!(data["apply_attempted"], false);
+    assert_eq!(data["entries"].as_array().unwrap().len(), 2);
+    assert!(
+        data["known_readers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["target_id"] == "codex")
+    );
+    assert!(!data["unresolved_readers"].as_array().unwrap().is_empty());
+    let token = data["confirmation_token"].as_str().unwrap();
+    let mut dry = args.clone();
+    dry.push("--dry-run".into());
+    assert!(cli(dry).status.success());
+    for extra in [
+        vec!["--yes"],
+        vec!["--target", "claude-code"],
+        vec!["--confirm-delete", "wrong"],
+        vec!["--dry-run", "--confirm-delete", token],
+    ] {
+        let mut refused = args.clone();
+        refused.extend(extra.into_iter().map(OsString::from));
+        assert!(!cli(refused).status.success());
+        assert!(home.join(".agents/skills/sample/SKILL.md").is_file());
+    }
+    let mut approved = args.clone();
+    approved.extend(["--confirm-delete", token].map(OsString::from));
+    let output = cli(approved);
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(json(&output)["data"]["report"]["successful"], true);
+    assert!(!home.join(".agents/skills/sample").exists());
+    assert_eq!(
+        fs::read(home.join(".claude/skills/sample/resource.ps1")).unwrap(),
+        b"inert resource; never executed"
+    );
+}
+#[test]
+fn changed_payload_or_reader_impact_invalidates_previous_delete_confirmation() {
+    for change_readers in [false, true] {
+        let (_fixture, home) = setup();
+        let args = delete_arguments(&home);
+        let preview = json(&cli(&args));
+        let token = preview["data"]["confirmation_token"].as_str().unwrap();
+        if change_readers {
+            // An uninspectable configured container changes unresolved-reader evidence.
+            fs::create_dir_all(home.join(".claude")).unwrap();
+            fs::write(home.join(".claude/skills"), b"not a directory").unwrap();
+        } else {
+            fs::write(
+                home.join(".agents/skills/sample/resource.ps1"),
+                b"edited after preview",
+            )
+            .unwrap();
+        }
+        let mut approved = args;
+        approved.extend(["--confirm-delete", token].map(OsString::from));
+        let output = cli(approved);
+        assert!(!output.status.success(), "{output:?}");
+        assert!(home.join(".agents/skills/sample/SKILL.md").is_file());
+        assert!(
+            fs::read_dir(home.join(".agents/skills"))
+                .unwrap()
+                .all(|e| e.unwrap().file_name() == "sample")
+        );
+    }
+}

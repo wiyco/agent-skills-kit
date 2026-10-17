@@ -136,24 +136,38 @@ pub(crate) fn plan(
 }
 pub(crate) fn execute(
     options: SelectionArgs,
-    copy: Option<(std::ffi::OsString, Vec<String>, bool, bool)>,
+    action: crate::args::SkillAction,
 ) -> Result<Output, Failure> {
     let listing = discover(&options)?;
-    if let Some((name, targets, yes, dry_run)) = copy {
-        let selected = select(
-            &listing,
-            options
-                .location
-                .ok_or_else(|| Failure::usage("copy requires a location"))?,
-            &name,
-        )?;
-        let plan = plan(&options, selected, &targets)?;
-        let mut output = installation::execute_plan(plan, yes, dry_run)?;
-        output.command = "skills.copy";
-        output.data["source_agent"] = json!(listing.target_id);
-        Ok(output)
-    } else {
-        render(&listing)
+    match action {
+        crate::args::SkillAction::Copy {
+            name,
+            targets,
+            yes,
+            dry_run,
+        } => {
+            let selected = select(
+                &listing,
+                options
+                    .location
+                    .ok_or_else(|| Failure::usage("copy requires a location"))?,
+                &name,
+            )?;
+            let plan = plan(&options, selected, &targets)?;
+            let mut output = installation::execute_plan(plan, yes, dry_run)?;
+            output.command = "skills.copy";
+            output.data["source_agent"] = json!(listing.target_id);
+            Ok(output)
+        }
+        crate::args::SkillAction::Delete {
+            name,
+            confirmation,
+            dry_run,
+        } => {
+            let plan = crate::removal::plan(&options, listing, name)?;
+            crate::removal::execute(plan, confirmation.as_deref(), dry_run)
+        }
+        crate::args::SkillAction::List => render(&listing),
     }
 }
 
@@ -227,15 +241,34 @@ pub(crate) fn interactive(
     let Some(name) = prompt(input, prompts, "Skill name from this location: ")? else {
         return Ok(cancelled());
     };
-    let selected = select(&listing, location, OsStr::new(&name))?;
-    let Some(operation) = prompt(input, prompts, "Operation (copy): ")? else {
+    let Some(operation) = prompt(input, prompts, "Operation (copy or delete): ")? else {
         return Ok(cancelled());
     };
-    if operation.trim() != "copy" {
-        return Err(Failure::usage(
-            "only copy is available; permanent deletion follows its separate safety implementation",
-        ));
+    if operation.trim() == "delete" {
+        options.location = Some(location);
+        let plan = crate::removal::plan(&options, listing, name.into())?;
+        write(prompts, &crate::removal::preview(&plan, false).human)?;
+        let phrase = format!("delete {}", plan.confirmation_token());
+        let Some(answer) = prompt(
+            input,
+            prompts,
+            &format!("Permanently delete this exact plan? Type {phrase}: "),
+        )?
+        else {
+            return Ok(cancelled());
+        };
+        if answer != phrase {
+            return Ok(cancelled());
+        }
+        let token = plan.confirmation_token().to_owned();
+        let mut output = crate::removal::execute(plan, Some(&token), false)?;
+        output.command = "manage";
+        return Ok(output);
     }
+    if operation.trim() != "copy" {
+        return Err(Failure::usage("select copy or delete"));
+    }
+    let selected = select(&listing, location, OsStr::new(&name))?;
     let Some(targets) = prompt(
         input,
         prompts,
@@ -350,5 +383,126 @@ mod tests {
         assert!(plan(&options, selected, &["claude-code".into()]).is_err());
         assert!(!home.join(".claude").exists());
         drop(listing);
+    }
+}
+
+#[cfg(test)]
+mod removal_tests {
+    use super::*;
+    use crate::test_fixture::Fixture;
+    use std::{fs, io::Cursor};
+    #[test]
+    fn interactive_delete_previews_shared_impact_then_requires_its_own_exact_phrase() {
+        for approve in [false, true] {
+            let fixture = Fixture::new();
+            fixture.source(OsStr::new("home/.agents/skills"));
+            let home = fs::canonicalize(&fixture.0).unwrap().join("home");
+            let options = SelectionArgs {
+                agent: "codex".into(),
+                scope: agent_skills_kit::catalog::Scope::User,
+                user_home: Some(home.clone()),
+                project_root: None,
+                location: Some(1),
+            };
+            let plan = crate::removal::plan(&options, discover(&options).unwrap(), "sample".into())
+                .unwrap();
+            let phrase = if approve {
+                format!("delete {}", plan.confirmation_token())
+            } else {
+                "yes".into()
+            };
+            drop(plan);
+            let answers = format!(
+                "codex\nuser\n{}\n1\nsample\ndelete\n{phrase}\n",
+                home.display()
+            );
+            let mut prompts = vec![];
+            let output = interactive(&mut Cursor::new(answers), &mut prompts).unwrap();
+            assert_eq!(output.exit_code, if approve { 0 } else { 3 }, "{output:?}");
+            assert_eq!(home.join(".agents/skills/sample").exists(), !approve);
+            let prompts = String::from_utf8(prompts).unwrap();
+            let confirm = prompts.find("Permanently delete this exact plan?").unwrap();
+            for before in [
+                "Remove root:",
+                "resource.ps1",
+                "Known shared readers:",
+                "Unresolved reader evidence",
+                "Stop skill writers",
+            ] {
+                assert!(prompts.find(before).unwrap() < confirm);
+            }
+        }
+    }
+    struct EditAtConfirmation {
+        input: Cursor<Vec<u8>>,
+        boundary: u64,
+        resource: std::path::PathBuf,
+        edited: bool,
+    }
+    impl std::io::Read for EditAtConfirmation {
+        fn read(&mut self, output: &mut [u8]) -> std::io::Result<usize> {
+            let bytes = std::io::BufRead::fill_buf(self)?;
+            let count = bytes.len().min(output.len());
+            output[..count].copy_from_slice(&bytes[..count]);
+            std::io::BufRead::consume(self, count);
+            Ok(count)
+        }
+    }
+    impl std::io::BufRead for EditAtConfirmation {
+        fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
+            if self.input.position() >= self.boundary && !self.edited {
+                fs::write(&self.resource, b"edited while preview was displayed")?;
+                self.edited = true;
+            }
+            std::io::BufRead::fill_buf(&mut self.input)
+        }
+        fn consume(&mut self, count: usize) {
+            std::io::BufRead::consume(&mut self.input, count);
+        }
+    }
+    #[test]
+    fn interactive_confirmation_never_rebuilds_a_stale_preview_or_accepts_partial_phrase() {
+        for edit in [false, true] {
+            let fixture = Fixture::new();
+            fixture.source(OsStr::new("home/.agents/skills"));
+            let home = fs::canonicalize(&fixture.0).unwrap().join("home");
+            let options = SelectionArgs {
+                agent: "codex".into(),
+                scope: agent_skills_kit::catalog::Scope::User,
+                user_home: Some(home.clone()),
+                project_root: None,
+                location: Some(1),
+            };
+            let plan = crate::removal::plan(&options, discover(&options).unwrap(), "sample".into())
+                .unwrap();
+            let prefix = format!("codex\nuser\n{}\n1\nsample\ndelete\n", home.display());
+            let answer = format!(
+                "delete {}{}",
+                plan.confirmation_token(),
+                if edit { "\n" } else { "" }
+            );
+            drop(plan);
+            let mut input = EditAtConfirmation {
+                input: Cursor::new((prefix.clone() + &answer).into_bytes()),
+                boundary: prefix.len() as u64,
+                resource: home.join(".agents/skills/sample/resource.ps1"),
+                edited: !edit,
+            };
+            let output = interactive(&mut input, &mut vec![]).unwrap();
+            assert_eq!(output.exit_code, if edit { 4 } else { 3 }, "{output:?}");
+            assert!(home.join(".agents/skills/sample/SKILL.md").is_file());
+            if edit {
+                assert_eq!(output.data["report"]["permanent_removal_attempted"], false);
+                assert_eq!(
+                    fs::read(input.resource).unwrap(),
+                    b"edited while preview was displayed"
+                );
+            }
+            assert!(
+                fs::read_dir(home.join(".agents/skills"))
+                    .unwrap()
+                    .all(|e| e.unwrap().file_name() == "sample")
+            );
+        }
     }
 }
