@@ -96,6 +96,8 @@ impl Fixture {
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
+        // Windows-only, fixture-owned attribute restoration for teardown.
+        #[allow(clippy::permissions_set_readonly_false)]
         fn restore(path: &Path) {
             let metadata = fs::symlink_metadata(path).unwrap();
             if metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {

@@ -18,7 +18,8 @@ use std::{
         atomic::{AtomicU64, Ordering},
     },
 };
-type Result<T> = std::result::Result<T, RemovalFailure>;
+// Keep native error propagation small without changing the public report API.
+type Result<T> = std::result::Result<T, Box<RemovalFailure>>;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Phase {
     BeforeRootOpen,
@@ -30,14 +31,14 @@ enum Phase {
     AfterUnlink,
     BeforeCleanup,
 }
-fn fail(path: &Path, operation: &'static str, kind: RemovalFailureKind) -> RemovalFailure {
-    RemovalFailure {
+fn fail(path: &Path, operation: &'static str, kind: RemovalFailureKind) -> Box<RemovalFailure> {
+    Box::new(RemovalFailure {
         path: path.to_owned(),
         operation,
         kind,
-    }
+    })
 }
-fn io_error(path: &Path, operation: &'static str, error: io::Error) -> RemovalFailure {
+fn io_error(path: &Path, operation: &'static str, error: io::Error) -> Box<RemovalFailure> {
     fail(
         path,
         operation,
@@ -47,7 +48,7 @@ fn io_error(path: &Path, operation: &'static str, error: io::Error) -> RemovalFa
         },
     )
 }
-fn changed(path: &Path) -> RemovalFailure {
+fn changed(path: &Path) -> Box<RemovalFailure> {
     fail(
         path,
         "verify selected Windows object/binding",
@@ -155,14 +156,14 @@ impl Stage {
         if let Err(error) = checked {
             report.stage_location_uncertain = true;
             report.unrecognized_scan_incomplete = true;
-            report.cleanup_failures.push(error);
+            report.cleanup_failures.push(*error);
             return;
         }
         let entries = match self.file.entries(plan.limits.inventory.max_entries) {
             Ok(entries) => entries,
             Err(error) => {
                 report.unrecognized_scan_incomplete = true;
-                report.cleanup_failures.push(io_error(
+                report.cleanup_failures.push(*io_error(
                     &self.path,
                     "bounded enclosure cleanup inspection",
                     error,
@@ -182,7 +183,7 @@ impl Stage {
                 bytes_left -= bytes;
                 report.unrecognized_entries.push(path);
             }
-            report.cleanup_failures.push(changed(&self.path));
+            report.cleanup_failures.push(*changed(&self.path));
             return;
         }
         let result = native::dispose_verified(self.file.into_file())
@@ -202,7 +203,7 @@ impl Stage {
                 report.stage_location_uncertain = false;
             }
             Err(error) => {
-                report.cleanup_failures.push(error);
+                report.cleanup_failures.push(*error);
                 report.stage_location_uncertain = true;
                 report.unrecognized_scan_incomplete = true;
             }
@@ -639,7 +640,7 @@ fn remove_entries(
                     RemovalEntryState::Unknown
                 };
             }
-            report.outcomes[index].failure = Some(error.clone());
+            report.outcomes[index].failure = Some((*error).clone());
             return Err(error);
         }
     }
@@ -678,7 +679,7 @@ fn remove_entries(
         if root.state != RemovalEntryState::Removed {
             root.state = RemovalEntryState::Unknown;
         }
-        root.failure = Some(error.clone());
+        root.failure = Some((**error).clone());
     }
     attempt
 }
@@ -731,18 +732,18 @@ fn apply_with_hook(
     let root = match prepared {
         Ok(root) => root,
         Err(error) => {
-            report.failure = Some(error);
+            report.failure = Some(*error);
             return;
         }
     };
     if let Err(error) = hook(Phase::BeforeStage, &plan.path, run) {
-        report.failure = Some(error);
+        report.failure = Some(*error);
         return;
     }
     let stage = match create_stage(plan, report) {
         Ok(stage) => stage,
         Err(error) => {
-            report.failure = Some(error);
+            report.failure = Some(*error);
             return;
         }
     };
@@ -757,7 +758,7 @@ fn apply_with_hook(
                 .map_err(|e| io_error(&plan.path, "native held-object no-replace detach", e))
         });
     if let Err(error) = detach {
-        report.failure = Some(error);
+        report.failure = Some(*error);
         drop(root);
         stage.cleanup(plan, report, run);
         return;
@@ -769,7 +770,7 @@ fn apply_with_hook(
     let mut graph = match prepared {
         Ok(graph) => graph,
         Err(error) => {
-            report.failure = Some(error);
+            report.failure = Some(*error);
             report.unrecognized_scan_incomplete = true;
             match restore(plan, &stage, &root, report) {
                 Ok(()) => {
@@ -777,7 +778,7 @@ fn apply_with_hook(
                     stage.cleanup(plan, report, run);
                 }
                 Err(error) => {
-                    report.cleanup_failures.push(error);
+                    report.cleanup_failures.push(*error);
                 }
             }
             return;
@@ -790,7 +791,7 @@ fn apply_with_hook(
             stage.cleanup(plan, report, run);
         }
         Err(error) => {
-            report.failure = Some(error);
+            report.failure = Some(*error);
             if !report.permanent_removal_attempted {
                 let root = graph.into_root();
                 match restore(plan, &stage, &root, report) {
@@ -798,7 +799,7 @@ fn apply_with_hook(
                         drop(root);
                         stage.cleanup(plan, report, run);
                     }
-                    Err(error) => report.cleanup_failures.push(error),
+                    Err(error) => report.cleanup_failures.push(*error),
                 }
             } else {
                 drop(graph);
