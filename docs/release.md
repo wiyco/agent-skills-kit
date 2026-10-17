@@ -1,6 +1,6 @@
 # Release and OSS publication gate
 
-This document is a checklist, not authorization to publish.
+This document is a checklist, not authorization to publish. The [candidate-specific technical checkpoint](verification/release-readiness.md) records completed implementation, measured CI/package/binary evidence and remaining human decisions.
 
 Source visibility can precede completion of M3/M4, provided unfinished capabilities and release gates remain explicit. [Source visibility readiness](public-readiness.md) records the separate preparation under #93. It does not complete ASK-026, authorize package/binary publication, or waive CI/merge safeguards.
 
