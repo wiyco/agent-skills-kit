@@ -355,6 +355,12 @@ fn native_directory_permission_denial_retains_partial_payload_without_chmod() {
         ),
         "{report:?}"
     );
+    assert!(
+        report
+            .outcomes
+            .iter()
+            .any(|row| row.state == RemovalEntryState::Remaining)
+    );
     let remaining = report.retained_stage.as_ref().unwrap().join("payload/zzz");
     assert_eq!(
         fs::metadata(&remaining).unwrap().permissions().mode() & 0o7777,
@@ -394,6 +400,7 @@ fn replacing_the_empty_stage_before_cleanup_never_deletes_the_replacement() {
         b"replacement sentinel"
     );
     assert!(moved.is_dir());
+    assert!(report.stage_location_uncertain);
     f.sentinel();
 }
 
@@ -665,5 +672,64 @@ fn two_verified_removals_race_for_one_root_without_double_deletion_or_stage_loss
     assert_eq!(removed(loser), 0);
     assert!(!f.source.exists());
     assert_eq!(fs::read_dir(f.source.parent().unwrap()).unwrap().count(), 0);
+    f.sentinel();
+}
+
+#[test]
+fn changed_protected_context_ancestry_is_rechecked_before_any_write() {
+    let f = Fixture::new();
+    let outside = f.root.join("protected-context");
+    fs::create_dir_all(outside.join("workspace")).unwrap();
+    fs::create_dir(f.source.join("resources/workspace")).unwrap();
+    let alias = f.root.join("context-parent-alias");
+    symlink(&outside, &alias).unwrap();
+    let mut context = InstallContext::new(native_platform().unwrap());
+    context.user_home = Some(f.home.clone());
+    context.application_workspace = Some(alias.join("workspace"));
+    let catalog = Catalog::bundled().unwrap();
+    let listing = list_skills(
+        &catalog,
+        "codex",
+        Scope::User,
+        &context,
+        DiscoveryLimits::default(),
+    )
+    .unwrap();
+    let location_index = listing
+        .locations
+        .iter()
+        .position(|row| row.preferred_write)
+        .unwrap();
+    let plan = plan_removal(
+        &catalog,
+        RemovalRequest {
+            listing,
+            location_index,
+            skill_name: "sample".into(),
+            context,
+            limits: RemovalLimits::default(),
+        },
+    )
+    .unwrap();
+    let approval = approved(plan);
+    fs::remove_file(&alias).unwrap();
+    symlink(f.source.join("resources"), &alias).unwrap();
+    let report = apply_removal(approval);
+    assert_eq!(removed(&report), 0);
+    assert!(report.retained_stage.is_none());
+    assert!(
+        matches!(
+            report.failure.as_ref().map(|failure| &failure.kind),
+            Some(RemovalFailureKind::Preflight(RemovalError::ProtectedRoot(
+                _
+            )))
+        ),
+        "{report:?}"
+    );
+    assert_eq!(
+        fs::read(f.source.join("resources/a.txt")).unwrap(),
+        b"original A"
+    );
+    assert_eq!(fs::read_dir(f.source.parent().unwrap()).unwrap().count(), 1);
     f.sentinel();
 }
