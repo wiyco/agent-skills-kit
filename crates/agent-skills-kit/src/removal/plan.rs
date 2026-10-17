@@ -84,9 +84,11 @@ pub(super) fn build(
         unresolved: vec![],
         token: String::new(),
         limits,
+        catalog: catalog.clone(),
+        context: request.context.clone(),
     };
     protect_context_roots(&request.context, &plan)?;
-    impact(catalog, &request.context, &mut plan)?;
+    (plan.readers, plan.unresolved) = impact(catalog, &request.context, &plan)?;
     if !plan.namespace_is_current()? {
         return Err(RemovalError::Changed);
     }
@@ -99,8 +101,10 @@ pub(super) fn build(
 fn impact(
     catalog: &Catalog,
     context: &InstallContext,
-    plan: &mut RemovalPlan,
-) -> Result<(), RemovalError> {
+    plan: &RemovalPlan,
+) -> Result<(Vec<RemovalReader>, Vec<UnresolvedRemovalReader>), RemovalError> {
+    let mut readers: Vec<RemovalReader> = vec![];
+    let mut unresolved: Vec<UnresolvedRemovalReader> = vec![];
     let wanted = identity(&plan.namespace);
     let mut source_matches = false;
     let mut observed = 0;
@@ -110,7 +114,7 @@ fn impact(
             let resolved = match resolve(catalog, &target.id, scope, context) {
                 Ok(resolved) => resolved,
                 Err(error) => {
-                    plan.unresolved.push(UnresolvedRemovalReader {
+                    unresolved.push(UnresolvedRemovalReader {
                         target_id: target.id.clone(),
                         scope,
                         path: None,
@@ -135,12 +139,12 @@ fn impact(
                 observed += 1;
                 let label = rule.path.clone();
                 if ancestors_unexpanded {
-                    plan.unresolved.push(UnresolvedRemovalReader { target_id:target.id.clone(), scope, path:Some(label.clone()), reason:"Documented ancestor search remains unexpanded; impact beyond this selected root is unknown.".into() });
+                    unresolved.push(UnresolvedRemovalReader { target_id:target.id.clone(), scope, path:Some(label.clone()), reason:"Documented ancestor search remains unexpanded; impact beyond this selected root is unknown.".into() });
                 }
                 let snapshot = match observe_rule(rule, context) {
                     Ok(snapshot) => snapshot,
                     Err(error) => {
-                        plan.unresolved.push(UnresolvedRemovalReader {
+                        unresolved.push(UnresolvedRemovalReader {
                             target_id: target.id.clone(),
                             scope,
                             path: Some(label),
@@ -165,15 +169,14 @@ fn impact(
                 if target.id == plan.target_id && scope == plan.scope {
                     source_matches = true;
                 }
-                if let Some(reader) = plan
-                    .readers
+                if let Some(reader) = readers
                     .iter_mut()
                     .find(|r| r.target_id == target.id && r.scope == scope && r.path == label)
                 {
                     reader.preferred_write |= preferred_write;
                     reader.ancestors_unexpanded |= ancestors_unexpanded;
                 } else {
-                    plan.readers.push(RemovalReader {
+                    readers.push(RemovalReader {
                         target_id: target.id.clone(),
                         scope,
                         path: label,
@@ -187,9 +190,8 @@ fn impact(
     if !source_matches {
         return Err(RemovalError::ContextMismatch);
     }
-    plan.readers
-        .sort_by(|a, b| (&a.target_id, a.scope, &a.path).cmp(&(&b.target_id, b.scope, &b.path)));
-    plan.unresolved.sort_by(|a, b| {
+    readers.sort_by(|a, b| (&a.target_id, a.scope, &a.path).cmp(&(&b.target_id, b.scope, &b.path)));
+    unresolved.sort_by(|a, b| {
         (&a.target_id, a.scope, &a.path, &a.reason).cmp(&(
             &b.target_id,
             b.scope,
@@ -197,8 +199,8 @@ fn impact(
             &b.reason,
         ))
     });
-    plan.unresolved.dedup();
-    Ok(())
+    unresolved.dedup();
+    Ok((readers, unresolved))
 }
 
 struct Fingerprint {
@@ -295,6 +297,28 @@ fn fingerprint(catalog: &Catalog, plan: &RemovalPlan) -> Result<String, RemovalE
         )?;
     }
     Ok(out.hash.finalize().to_hex().to_string())
+}
+
+/// Full read-only preflight shared by every apply backend.
+pub(super) fn verify(plan: &RemovalPlan) -> Result<(), RemovalError> {
+    if !plan.namespace_is_current()? {
+        return Err(RemovalError::Changed);
+    }
+    protect_context_roots(&plan.context, plan)?;
+    let (readers, unresolved) = impact(&plan.catalog, &plan.context, plan)?;
+    if readers != plan.readers || unresolved != plan.unresolved {
+        return Err(RemovalError::Changed);
+    }
+    let fresh = inspect_selected(&plan.namespace, &plan.name, plan.limits.inventory)
+        .map_err(RemovalError::Discovery)?;
+    if fresh.inventory().root_stamp() != &plan.root_stamp
+        || fresh.inventory().entries() != plan.entries
+        || fresh.metadata().source_bytes() != plan.metadata
+        || !plan.namespace_is_current()?
+    {
+        return Err(RemovalError::Changed);
+    }
+    Ok(())
 }
 
 // Reject physical containment, including caller-controlled ancestor aliases and

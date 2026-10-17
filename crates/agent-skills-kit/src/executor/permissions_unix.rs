@@ -3,7 +3,7 @@ use std::{fs::File, io};
 // Reject ACL-bearing creation parents and newly created objects. Mode bits do
 // not establish private staging when an inherited ACL can grant more access.
 #[cfg(target_os = "linux")]
-pub(super) fn no_acl(file: &File) -> io::Result<bool> {
+pub(crate) fn no_acl(file: &File) -> io::Result<bool> {
     for name in ["system.posix_acl_access", "system.posix_acl_default"] {
         let mut bytes = [0u8; 256];
         match rustix::fs::fgetxattr(file, name, &mut bytes[..]) {
@@ -17,7 +17,7 @@ pub(super) fn no_acl(file: &File) -> io::Result<bool> {
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn no_acl(file: &File) -> io::Result<bool> {
+pub(crate) fn no_acl(file: &File) -> io::Result<bool> {
     use std::{
         ffi::{c_int, c_void},
         os::fd::AsRawFd,
