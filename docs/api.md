@@ -53,3 +53,5 @@ Packaging metadata/license/readme completeness and an extracted-package build ar
 Primary Cargo documentation reviewed 2026-10-16 UTC: [workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html), workspace membership/inheritance and lockfiles; [publishing](https://doc.rust-lang.org/cargo/reference/publishing.html), package-content inspection and publication permanence. These inform the isolated consumer/package checks, not authorization to publish.
 
 The additive [existing-skill discovery API](discovery.md) provides bounded read-only tool/scope observations for the experimental manager. It grants no operation authority; copy uses the existing planner/executor and permanent removal has a separate contract.
+
+The additive [permanent-removal planning API](removal.md) provides an immutable complete preview and operation-specific approval wrapper. This foundation contains no destructive backend; receipts and discovery observations do not authorize deletion.

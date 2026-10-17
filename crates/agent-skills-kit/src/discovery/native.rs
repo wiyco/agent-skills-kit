@@ -49,7 +49,7 @@ fn child(parent: &Directory, name: &OsStr) -> io::Result<Directory> {
     Ok(crate::filesystem_windows::reader::Handle::new(file))
 }
 
-fn inspect_skill(
+pub(super) fn inspect_skill(
     snapshot: &DestinationSnapshot,
     name: &OsStr,
     limits: InventoryLimits,
