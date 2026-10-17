@@ -10,13 +10,13 @@ use std::{
 };
 
 const MAX_INPUT: usize = 32768;
-fn write(prompts: &mut impl Write, text: &str) -> Result<(), Failure> {
+pub(crate) fn write(prompts: &mut impl Write, text: &str) -> Result<(), Failure> {
     prompts
         .write_all(terminal_text(text).as_bytes())
         .map_err(Failure::operation)?;
     prompts.flush().map_err(Failure::operation)
 }
-fn prompt(
+pub(crate) fn prompt(
     input: &mut impl BufRead,
     prompts: &mut impl Write,
     message: &str,

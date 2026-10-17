@@ -80,3 +80,5 @@ No telemetry, network acquisition, credential handling, or model-provider access
 ## Non-goals for v0.1
 
 Remote Git/URL/archive acquisition, symbolic-link installation, automatic marketplace integration, cloud account import, destructive replace, managed updates/uninstall, and a universal guarantee that all AI products are supported.
+
+The experimental host-first manager reuses catalog/resolver/inventory APIs for bounded existing-skill discovery and the same install planner/executor for cross-agent copies. A validated exact source/destination identity with an already-proven `Unchanged` action is permitted as a no-write observation; containing/nested overlaps or intended writes to a source remain forbidden. This narrow exception supports shared-location/no-op selections without creating replacement authority. Discovery itself grants no ownership or deletion authority; see [discovery](discovery.md) and [CLI management](cli.md#experimental-host-first-management).

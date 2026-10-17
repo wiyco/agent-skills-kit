@@ -5,6 +5,11 @@ use std::{ffi::OsString, path::PathBuf};
 pub(crate) enum Command {
     Help,
     Interactive,
+    Manage,
+    Skills {
+        selection: SelectionArgs,
+        copy: Option<(OsString, Vec<String>, bool, bool)>,
+    },
     Version,
     Targets,
     Target(String),
@@ -29,6 +34,14 @@ pub(crate) struct PlanArgs {
     pub user_home: Option<PathBuf>,
     pub project_root: Option<PathBuf>,
 }
+#[derive(Debug)]
+pub(crate) struct SelectionArgs {
+    pub agent: String,
+    pub scope: Scope,
+    pub user_home: Option<PathBuf>,
+    pub project_root: Option<PathBuf>,
+    pub location: Option<usize>,
+}
 pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
     let mut positional = vec![];
     let mut literal = false;
@@ -39,6 +52,8 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
     let mut project_root = None;
     let mut yes = false;
     let mut dry_run = false;
+    let mut from = None;
+    let mut location = None;
     let mut index = 0;
     while index < args.len() {
         let arg = &args[index];
@@ -69,9 +84,16 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
                 return Err("--version must be used alone".into());
             }
             return Ok(Command::Version);
-        } else if ["--target", "--scope", "--user-home", "--project-root"]
-            .iter()
-            .any(|name| arg == name)
+        } else if [
+            "--target",
+            "--scope",
+            "--user-home",
+            "--project-root",
+            "--from",
+            "--location",
+        ]
+        .iter()
+        .any(|name| arg == name)
         {
             let value = args
                 .get(index)
@@ -83,7 +105,22 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
                 ));
             }
             index += 1;
-            if arg == "--target" {
+            if arg == "--from" {
+                if from.is_some() {
+                    return Err("--from may appear only once".into());
+                }
+                from = Some(value.to_str().ok_or("agent ID must be UTF-8")?.to_owned());
+            } else if arg == "--location" {
+                if location.is_some() {
+                    return Err("--location may appear only once".into());
+                }
+                let number = value
+                    .to_str()
+                    .and_then(|x| x.parse::<usize>().ok())
+                    .filter(|x| *x > 0)
+                    .ok_or("--location must be a positive displayed location number")?;
+                location = Some(number);
+            } else if arg == "--target" {
                 targets.push(value.to_str().ok_or("target ID must be UTF-8")?.to_owned());
             } else if arg == "--scope" {
                 if scope.is_some() {
@@ -110,6 +147,41 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
         } else {
             positional.push(arg);
         }
+    }
+    if positional
+        .first()
+        .is_some_and(|x| x.as_os_str() == "skills")
+    {
+        let is_list = positional.len() == 2 && positional[1].as_os_str() == "list";
+        let is_copy = positional.len() == 3 && positional[1].as_os_str() == "copy";
+        if !is_list && !is_copy {
+            return Err("expected skills list or skills copy <name>".into());
+        }
+        let scope = scope.ok_or("skills requires --scope user or project")?;
+        if (scope == Scope::User && user_home.is_none())
+            || (scope == Scope::Project && project_root.is_none())
+        {
+            return Err("supply the explicit root for the selected scope".into());
+        }
+        if is_list && (!targets.is_empty() || yes || dry_run || location.is_some()) {
+            return Err("copy options cannot be used with skills list".into());
+        }
+        if is_copy && (targets.is_empty() || location.is_none()) {
+            return Err("skills copy requires --location and at least one --target".into());
+        }
+        return Ok(Command::Skills {
+            selection: SelectionArgs {
+                agent: from.ok_or("skills requires --from <agent>")?,
+                scope,
+                user_home,
+                project_root,
+                location,
+            },
+            copy: is_copy.then(|| (positional[2].to_owned(), targets, yes, dry_run)),
+        });
+    }
+    if from.is_some() || location.is_some() {
+        return Err("--from and --location require skills list/copy".into());
     }
     if let [command, source] = positional.as_slice() {
         if command.as_os_str() == "plan" || command.as_os_str() == "install" {
@@ -150,6 +222,7 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
     match positional.as_slice() {
         [] => Ok(Command::Help),
         [command] if command.as_os_str() == "interactive" => Ok(Command::Interactive),
+        [command] if command.as_os_str() == "manage" => Ok(Command::Manage),
         [group, sub] if group.as_os_str() == "targets" && sub.as_os_str() == "list" => {
             Ok(Command::Targets)
         }
