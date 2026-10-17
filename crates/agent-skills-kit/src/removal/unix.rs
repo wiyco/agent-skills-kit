@@ -19,6 +19,7 @@ type Result<T> = std::result::Result<T, RemovalFailure>;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Phase {
     BeforeStage,
+    AfterPreflight,
     AfterStage,
     BeforeDetach,
     AfterDetach,
@@ -543,6 +544,10 @@ fn apply_with_hook(
         })
     });
     if let Err(error) = preparation {
+        report.failure = Some(error);
+        return;
+    }
+    if let Err(error) = hook(Phase::AfterPreflight, &plan.path, run) {
         report.failure = Some(error);
         return;
     }
