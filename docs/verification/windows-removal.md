@@ -1,6 +1,6 @@
 # Windows permanent-removal backend review
 
-Status: implementation under review for #113. Native results are pending for this revision; local macOS compilation/tests do not compile or validate the Windows backend. Do not advertise successful Windows deletion or publish alpha until final native CI and QA evidence are complete.
+Status: experimental implementation for #113. Final revision, native CI results and remaining limitations are recorded in the separate QA Evidence comment on PR #121. Local macOS compilation/tests do not compile or validate the Windows backend; merge and alpha require satisfactory final native evidence.
 
 ## Authority and primitive changes
 

@@ -778,6 +778,7 @@ fn apply_with_hook(
                     stage.cleanup(plan, report, run);
                 }
                 Err(error) => {
+                    report.stage_location_uncertain |= stage.current(plan).is_err();
                     report.cleanup_failures.push(*error);
                 }
             }
@@ -799,7 +800,10 @@ fn apply_with_hook(
                         drop(root);
                         stage.cleanup(plan, report, run);
                     }
-                    Err(error) => report.cleanup_failures.push(*error),
+                    Err(error) => {
+                        report.stage_location_uncertain |= stage.current(plan).is_err();
+                        report.cleanup_failures.push(*error);
+                    }
                 }
             } else {
                 drop(graph);
