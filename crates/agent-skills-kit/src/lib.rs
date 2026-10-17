@@ -20,6 +20,9 @@
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod filesystem;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[path = "executor/permissions_unix.rs"]
+mod permissions_unix;
 
 // Shared retained-handle primitives for Windows inventory, planning and execution.
 #[cfg(windows)]

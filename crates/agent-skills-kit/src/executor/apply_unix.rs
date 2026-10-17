@@ -21,8 +21,7 @@ use std::{
 
 #[path = "copy_unix.rs"]
 mod copy;
-#[path = "permissions_unix.rs"]
-mod permissions;
+use crate::permissions_unix as permissions;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Phase {

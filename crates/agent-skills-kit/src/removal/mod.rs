@@ -1,6 +1,8 @@
-//! Read-only permanent-removal previews and operation-specific approval.
+//! Permanent-removal previews, operation-specific approval and native application.
 //!
-//! This layer implements no destructive backend. Receipt data is never authority.
+//! Unix application is implemented separately from read-only planning; Windows
+//! application remains disabled pending its native implementation/evidence.
+//! Receipt data is never authority.
 //! See ADR 0009 for the caller-controlled namespace and stopped-writer contract.
 
 use crate::{
@@ -17,8 +19,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
+mod apply;
 #[cfg(any(target_os = "linux", target_os = "macos", windows))]
 mod plan;
+pub use apply::*;
 
 /// Bounds for the complete removal preview, not permission to remove extra data.
 #[derive(Clone, Copy, Debug)]
@@ -127,6 +131,8 @@ pub struct RemovalPlan {
     unresolved: Vec<UnresolvedRemovalReader>,
     token: String,
     limits: RemovalLimits,
+    catalog: Catalog,
+    context: InstallContext,
 }
 impl RemovalPlan {
     /// Canonical selected source target.
