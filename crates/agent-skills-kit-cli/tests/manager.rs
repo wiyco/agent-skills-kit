@@ -271,3 +271,71 @@ fn changed_payload_or_reader_impact_invalidates_previous_delete_confirmation() {
         );
     }
 }
+
+#[test]
+fn actual_native_partial_delete_keeps_complete_cli_outcomes_and_retained_diagnostics() {
+    let (_fixture, home) = setup();
+    let source = home.join(".agents/skills/sample");
+    fs::create_dir(source.join("aaa")).unwrap();
+    fs::write(source.join("aaa/first"), b"approved first removal").unwrap();
+    fs::create_dir(source.join("zzz")).unwrap();
+    fs::write(
+        source.join("zzz/refused"),
+        b"must remain after permission refusal",
+    )
+    .unwrap();
+    #[cfg(unix)]
+    let restricted = source.join("zzz");
+    #[cfg(windows)]
+    let restricted = source.join("zzz/refused");
+    let mut permissions = fs::metadata(&restricted).unwrap().permissions();
+    permissions.set_readonly(true);
+    fs::set_permissions(&restricted, permissions).unwrap();
+    let args = delete_arguments(&home);
+    let preview = json(&cli(&args));
+    let token = preview["data"]["confirmation_token"].as_str().unwrap();
+    let mut approved = args;
+    approved.extend(["--confirm-delete", token].map(OsString::from));
+    let output = cli(approved);
+    let result = json(&output);
+    // Restore only the fixture-owned entry for teardown, after recording the
+    // actual native result. A production diagnostic path grants no authority.
+    let stage = fs::read_dir(home.join(".agents/skills"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .find(|p| p.file_name().unwrap() != "sample")
+        .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let path = stage.join("payload/zzz");
+        assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o222, 0);
+        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    #[cfg(windows)]
+    {
+        let path = stage.join("payload/zzz/refused");
+        let mut permission = fs::metadata(&path).unwrap().permissions();
+        assert!(permission.readonly());
+        permission.set_readonly(false);
+        fs::set_permissions(path, permission).unwrap();
+    }
+    assert_eq!(output.status.code(), Some(4), "{output:?}");
+    let report = &result["data"]["report"];
+    assert_eq!(report["successful"], false);
+    assert_eq!(report["permanent_removal_attempted"], true);
+    assert!(report["retained_stage"].is_object());
+    let outcomes = report["outcomes"].as_array().unwrap();
+    assert_eq!(
+        outcomes.len(),
+        preview["data"]["entries"].as_array().unwrap().len() + 1
+    );
+    for state in ["removed", "remaining", "not_attempted"] {
+        assert!(outcomes.iter().any(|r| r["state"] == state), "{report}");
+    }
+    assert!(report["failure"].is_object());
+    assert_eq!(
+        fs::read(stage.join("payload/zzz/refused")).unwrap(),
+        b"must remain after permission refusal"
+    );
+}
