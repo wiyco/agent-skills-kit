@@ -210,9 +210,9 @@ fn handle_cleanup_removes_only_the_created_empty_object() {
     let owned = child(&parent, OsStr::new("owned"), Kind::Directory, true).unwrap();
     let payload = child(&owned, OsStr::new("resource"), Kind::File, true).unwrap();
     assert!(fs::rename(root.0.join("owned"), root.0.join("substitute")).is_err());
-    delete_owned(payload).unwrap();
+    dispose_verified(payload).unwrap();
     assert!(!root.0.join("owned/resource").exists());
-    delete_owned(owned).unwrap();
+    dispose_verified(owned).unwrap();
     assert!(!root.0.join("owned").exists());
     assert_eq!(fs::read(root.0.join("unrelated")).unwrap(), b"preserve");
 }
