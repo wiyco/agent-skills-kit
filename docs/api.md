@@ -51,3 +51,5 @@ Native unsafe code remains confined to reviewed filesystem/permission modules; t
 Packaging metadata/license/readme completeness and an extracted-package build are further ASK-024 release rehearsals; this inspection is not publication approval. `publish = false` remains in both project packages and the external example. No registry login, upload, release or visibility change occurs.
 
 Primary Cargo documentation reviewed 2026-10-16 UTC: [workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html), workspace membership/inheritance and lockfiles; [publishing](https://doc.rust-lang.org/cargo/reference/publishing.html), package-content inspection and publication permanence. These inform the isolated consumer/package checks, not authorization to publish.
+
+The additive [existing-skill discovery API](discovery.md) provides bounded read-only tool/scope observations for the experimental manager. It grants no operation authority; copy uses the existing planner/executor and permanent removal has a separate contract.

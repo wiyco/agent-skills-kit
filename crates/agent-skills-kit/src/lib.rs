@@ -26,6 +26,7 @@ mod filesystem;
 mod filesystem_windows;
 
 pub mod catalog;
+pub mod discovery;
 pub mod executor;
 pub mod planner;
 pub mod receipt;
