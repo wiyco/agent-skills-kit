@@ -1,11 +1,11 @@
 //! Platform I/O for the shared planner; policy remains in build.rs.
 use std::{ffi::OsString, io, path::Path, sync::Arc};
 pub(super) type Identity = (u64, [u8; 16]);
-pub(super) type Names = Box<dyn Iterator<Item = io::Result<OsString>>>;
+pub(crate) type Names = Box<dyn Iterator<Item = io::Result<OsString>>>;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-pub(super) type Directory = std::fs::File;
+pub(crate) type Directory = std::fs::File;
 #[cfg(windows)]
-pub(super) type Directory = crate::filesystem_windows::reader::Handle;
+pub(crate) type Directory = crate::filesystem_windows::reader::Handle;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 pub(super) fn identity(file: &Directory) -> io::Result<Identity> {
@@ -17,7 +17,7 @@ pub(super) fn identity(file: &Directory) -> io::Result<Identity> {
     crate::filesystem_windows::stamp(file).map(|stamp| (stamp.volume, stamp.identity))
 }
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-pub(super) fn names(directory: &Directory, _max: usize) -> io::Result<Names> {
+pub(crate) fn names(directory: &Directory, _max: usize) -> io::Result<Names> {
     use std::os::unix::ffi::OsStrExt;
     let reader = rustix::fs::Dir::read_from(directory)?;
     Ok(Box::new(reader.filter_map(|entry| match entry {
@@ -33,7 +33,7 @@ pub(super) fn names(directory: &Directory, _max: usize) -> io::Result<Names> {
     })))
 }
 #[cfg(windows)]
-pub(super) fn names(directory: &Directory, max: usize) -> io::Result<Names> {
+pub(crate) fn names(directory: &Directory, max: usize) -> io::Result<Names> {
     Ok(Box::new(
         directory
             .entries(max)?

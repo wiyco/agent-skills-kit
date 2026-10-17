@@ -18,8 +18,7 @@ use crate::{
     validation::{SourceEntryKind, inventory_retained, inventory_skill},
 };
 
-#[path = "native.rs"]
-mod native;
+use crate::planner::native;
 use native::{Directory, Identity};
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum DestinationKey {

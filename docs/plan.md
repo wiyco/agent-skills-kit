@@ -78,3 +78,16 @@ A separate Rust consumer installs a benign local fixture into temporary document
 ## Deferred decisions and explicit approvals
 
 Final crate/executable names, licensing, exact Rust pin, measured MSRV, filesystem backend, and release tooling must be verified and reviewed. Do not carry speculative version numbers or dependency claims into code. Public repository visibility, Project visibility, crates.io publication, and binary releases require separate maintainer approval.
+
+## Authorized experimental manager follow-up (2026-10-17)
+
+After the M0–M4 technical checkpoint, the maintainer authorized a host-first skills manager before the first CLI alpha: choose source agent/scope, list existing skills, select one, copy to other agents or permanently delete after contents/shared-reader preview and explicit confirmation. The library stays unpublished and compiled into the CLI. This is a specific expansion, not blanket authorization for links, remote acquisition, force replacement, updates or all M5 work.
+
+| Key / live issue | Focus | Depends on |
+| --- | --- | --- |
+| ASK-030 / [#111](https://github.com/wiyco/agent-skills-kit/issues/111) | Bounded read-only library discovery | M1 APIs/security |
+| ASK-031 / [#112](https://github.com/wiyco/agent-skills-kit/issues/112) | Host-first CLI listing and cross-agent copy | #111 |
+| ASK-032 / [#113](https://github.com/wiyco/agent-skills-kit/issues/113) | Separately reviewed native permanent removal and CLI integration | #111; existing threat/security/receipt layers |
+| ASK-033 / [#114](https://github.com/wiyco/agent-skills-kit/issues/114) | Tested CLI-only GitHub Pre-release, proposed v0.1.0-alpha.1 | #112, #113 |
+
+The dedicated Experimental CLI skills manager milestone and private Project track this work. #29 retains broader deferred lifecycle work without a competing deletion implementation. Library crates.io publication, stable binary releases and Homebrew/winget submissions remain separate future decisions. The experimental alpha must not be published before the requested manager list/copy/permanent-delete flow is implemented and natively verified. Version/release-policy updates occur in #114; no alpha exists yet.
