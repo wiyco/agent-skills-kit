@@ -89,3 +89,7 @@ Reviewed 2026-10-16. These are API documentation requirements and format evidenc
 | [Microsoft FILE_RENAME_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info) | Replacement flag and destination-parent handle; the structure alone does not establish safe ancestor traversal. |
 | [Microsoft CreateFileW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew) | Reparse-point and sharing semantics; reject relying only on a final-component flag. |
 | [Agent Skills specification](https://agentskills.io/specification) | Skill format, names, metadata and resources; valid format is not execution trust. |
+
+## Separately authorized permanent removal
+
+The original copy/cleanup contract grants no uninstall authority. The maintainer subsequently authorized the narrowly scoped permanent-deletion manager in #113, with contents/shared-reader preview and explicit operation-specific confirmation. [ADR 0009](adr/0009-permanent-removal.md) specifies its separate plan, authority, native detach/removal, restoration/partial reporting, caller writer-quiescence obligation and mandatory three-platform evidence. This contract document alone does not enable deletion or establish a tested backend. Update/replace, prefix/receipt-driven cleanup and broad lifecycle recovery remain deferred.
