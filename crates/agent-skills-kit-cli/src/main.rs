@@ -4,6 +4,7 @@ mod installation;
 mod interactive;
 mod manager;
 mod planning;
+mod removal;
 #[cfg(test)]
 #[path = "../tests/common/fixture.rs"]
 mod test_fixture;
@@ -32,6 +33,7 @@ Usage:
   agent-skills-kit manage [--json]
   agent-skills-kit skills list --from <id> --scope <user|project> [context] [--json]
   agent-skills-kit skills copy <name> --from <id> --location <number> --target <id>... --scope <user|project> [context] [--yes] [--dry-run] [--json]
+  agent-skills-kit skills delete <name> --from <id> --location <number> --scope <user|project> [context] [--confirm-delete <fingerprint> | --dry-run] [--json]
   agent-skills-kit --help
   agent-skills-kit --version
 
@@ -40,6 +42,8 @@ Use -- before a positional path beginning with a dash.
 Selecting a host means placement, not exclusive visibility to that host.
 Context: --user-home <path> for user scope; --project-root <path> for project scope.
 No HOME or host overrides are inferred. Install requires --yes; --dry-run never writes.
+Deletion is permanent with no undo; preview first, stop skill writers, then confirm its fingerprint.
+Generic --yes never approves deletion.
 Interactive selection requires terminal stdin/stderr and confirms its exact plan.
 ";
 #[derive(Debug)]
@@ -101,7 +105,7 @@ fn execute(command: Command) -> Result<Output, Failure> {
         Command::Interactive | Command::Manage => Err(Failure::usage(
             "interactive requires terminal input and prompts",
         )),
-        Command::Skills { selection, copy } => manager::execute(selection, copy),
+        Command::Skills { selection, action } => manager::execute(selection, action),
         Command::Plan(options) => planning::execute(options),
         Command::Install { plan, yes, dry_run } => installation::execute(plan, yes, dry_run),
         Command::Help => Ok(Output {

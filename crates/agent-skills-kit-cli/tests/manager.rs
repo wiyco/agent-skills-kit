@@ -175,3 +175,169 @@ fn sharing_denied_skill_remains_an_explicit_unselectable_cli_row() {
     assert!(!home.join(".claude").exists());
     drop(guard);
 }
+
+fn delete_arguments(home: &std::path::Path) -> Vec<OsString> {
+    let mut args: Vec<OsString> = [
+        "skills",
+        "delete",
+        "sample",
+        "--location",
+        "1",
+        "--from",
+        "codex",
+        "--scope",
+        "user",
+        "--user-home",
+    ]
+    .map(OsString::from)
+    .into();
+    args.push(home.into());
+    args.push("--json".into());
+    args
+}
+#[test]
+fn permanent_delete_requires_exact_current_fingerprint_and_preserves_other_copies() {
+    let (_fixture, home) = setup();
+    let mut copy = arguments(&home, true);
+    copy.push("--yes".into());
+    assert!(cli(copy).status.success());
+    let args = delete_arguments(&home);
+    let preview = cli(&args);
+    assert_eq!(preview.status.code(), Some(3), "{preview:?}");
+    let data = json(&preview)["data"].clone();
+    assert_eq!(data["apply_attempted"], false);
+    assert_eq!(data["entries"].as_array().unwrap().len(), 2);
+    assert!(
+        data["known_readers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["target_id"] == "codex")
+    );
+    assert!(!data["unresolved_readers"].as_array().unwrap().is_empty());
+    let token = data["confirmation_token"].as_str().unwrap();
+    let mut dry = args.clone();
+    dry.push("--dry-run".into());
+    assert!(cli(dry).status.success());
+    for extra in [
+        vec!["--yes"],
+        vec!["--target", "claude-code"],
+        vec!["--confirm-delete", "wrong"],
+        vec!["--dry-run", "--confirm-delete", token],
+    ] {
+        let mut refused = args.clone();
+        refused.extend(extra.into_iter().map(OsString::from));
+        assert!(!cli(refused).status.success());
+        assert!(home.join(".agents/skills/sample/SKILL.md").is_file());
+    }
+    let mut approved = args.clone();
+    approved.extend(["--confirm-delete", token].map(OsString::from));
+    let output = cli(approved);
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(json(&output)["data"]["report"]["successful"], true);
+    assert!(!home.join(".agents/skills/sample").exists());
+    assert_eq!(
+        fs::read(home.join(".claude/skills/sample/resource.ps1")).unwrap(),
+        b"inert resource; never executed"
+    );
+}
+#[test]
+fn changed_payload_or_reader_impact_invalidates_previous_delete_confirmation() {
+    for change_readers in [false, true] {
+        let (_fixture, home) = setup();
+        let args = delete_arguments(&home);
+        let preview = json(&cli(&args));
+        let token = preview["data"]["confirmation_token"].as_str().unwrap();
+        if change_readers {
+            // An uninspectable configured container changes unresolved-reader evidence.
+            fs::create_dir_all(home.join(".claude")).unwrap();
+            fs::write(home.join(".claude/skills"), b"not a directory").unwrap();
+        } else {
+            fs::write(
+                home.join(".agents/skills/sample/resource.ps1"),
+                b"edited after preview",
+            )
+            .unwrap();
+        }
+        let mut approved = args;
+        approved.extend(["--confirm-delete", token].map(OsString::from));
+        let output = cli(approved);
+        assert!(!output.status.success(), "{output:?}");
+        assert!(home.join(".agents/skills/sample/SKILL.md").is_file());
+        assert!(
+            fs::read_dir(home.join(".agents/skills"))
+                .unwrap()
+                .all(|e| e.unwrap().file_name() == "sample")
+        );
+    }
+}
+
+// Windows-only readonly clearing restores only the owned fixture after assertions.
+#[cfg_attr(windows, allow(clippy::permissions_set_readonly_false))]
+#[test]
+fn actual_native_partial_delete_keeps_complete_cli_outcomes_and_retained_diagnostics() {
+    let (_fixture, home) = setup();
+    let source = home.join(".agents/skills/sample");
+    fs::create_dir(source.join("aaa")).unwrap();
+    fs::write(source.join("aaa/first"), b"approved first removal").unwrap();
+    fs::create_dir(source.join("zzz")).unwrap();
+    fs::write(
+        source.join("zzz/refused"),
+        b"must remain after permission refusal",
+    )
+    .unwrap();
+    #[cfg(unix)]
+    let restricted = source.join("zzz");
+    #[cfg(windows)]
+    let restricted = source.join("zzz/refused");
+    let mut permissions = fs::metadata(&restricted).unwrap().permissions();
+    permissions.set_readonly(true);
+    fs::set_permissions(&restricted, permissions).unwrap();
+    let args = delete_arguments(&home);
+    let preview = json(&cli(&args));
+    let token = preview["data"]["confirmation_token"].as_str().unwrap();
+    let mut approved = args;
+    approved.extend(["--confirm-delete", token].map(OsString::from));
+    let output = cli(approved);
+    let result = json(&output);
+    // Restore only the fixture-owned entry for teardown, after recording the
+    // actual native result. A production diagnostic path grants no authority.
+    let stage = fs::read_dir(home.join(".agents/skills"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .find(|p| p.file_name().unwrap() != "sample")
+        .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let path = stage.join("payload/zzz");
+        assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o222, 0);
+        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    #[cfg(windows)]
+    {
+        let path = stage.join("payload/zzz/refused");
+        let mut permission = fs::metadata(&path).unwrap().permissions();
+        assert!(permission.readonly());
+        permission.set_readonly(false);
+        fs::set_permissions(path, permission).unwrap();
+    }
+    assert_eq!(output.status.code(), Some(4), "{output:?}");
+    let report = &result["data"]["report"];
+    assert_eq!(report["successful"], false);
+    assert_eq!(report["permanent_removal_attempted"], true);
+    assert!(report["retained_stage"].is_object());
+    let outcomes = report["outcomes"].as_array().unwrap();
+    assert_eq!(
+        outcomes.len(),
+        preview["data"]["entries"].as_array().unwrap().len() + 1
+    );
+    for state in ["removed", "remaining", "not_attempted"] {
+        assert!(outcomes.iter().any(|r| r["state"] == state), "{report}");
+    }
+    assert!(report["failure"].is_object());
+    assert_eq!(
+        fs::read(stage.join("payload/zzz/refused")).unwrap(),
+        b"must remain after permission refusal"
+    );
+}

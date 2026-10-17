@@ -8,7 +8,7 @@ pub(crate) enum Command {
     Manage,
     Skills {
         selection: SelectionArgs,
-        copy: Option<(OsString, Vec<String>, bool, bool)>,
+        action: SkillAction,
     },
     Version,
     Targets,
@@ -18,6 +18,21 @@ pub(crate) enum Command {
     Install {
         plan: PlanArgs,
         yes: bool,
+        dry_run: bool,
+    },
+}
+#[derive(Debug)]
+pub(crate) enum SkillAction {
+    List,
+    Copy {
+        name: OsString,
+        targets: Vec<String>,
+        yes: bool,
+        dry_run: bool,
+    },
+    Delete {
+        name: OsString,
+        confirmation: Option<String>,
         dry_run: bool,
     },
 }
@@ -54,6 +69,7 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
     let mut dry_run = false;
     let mut from = None;
     let mut location = None;
+    let mut confirmation = None;
     let mut index = 0;
     while index < args.len() {
         let arg = &args[index];
@@ -91,6 +107,7 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
             "--project-root",
             "--from",
             "--location",
+            "--confirm-delete",
         ]
         .iter()
         .any(|name| arg == name)
@@ -105,7 +122,17 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
                 ));
             }
             index += 1;
-            if arg == "--from" {
+            if arg == "--confirm-delete" {
+                if confirmation.is_some() {
+                    return Err("--confirm-delete may appear only once".into());
+                }
+                confirmation = Some(
+                    value
+                        .to_str()
+                        .ok_or("confirmation must be UTF-8")?
+                        .to_owned(),
+                );
+            } else if arg == "--from" {
                 if from.is_some() {
                     return Err("--from may appear only once".into());
                 }
@@ -154,8 +181,9 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
     {
         let is_list = positional.len() == 2 && positional[1].as_os_str() == "list";
         let is_copy = positional.len() == 3 && positional[1].as_os_str() == "copy";
-        if !is_list && !is_copy {
-            return Err("expected skills list or skills copy <name>".into());
+        let is_delete = positional.len() == 3 && positional[1].as_os_str() == "delete";
+        if !is_list && !is_copy && !is_delete {
+            return Err("expected skills list, skills copy <name>, or skills delete <name>".into());
         }
         let scope = scope.ok_or("skills requires --scope user or project")?;
         if (scope == Scope::User && user_home.is_none())
@@ -169,6 +197,15 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
         if is_copy && (targets.is_empty() || location.is_none()) {
             return Err("skills copy requires --location and at least one --target".into());
         }
+        if !is_delete && confirmation.is_some() {
+            return Err("--confirm-delete requires skills delete".into());
+        }
+        if is_delete && (yes || !targets.is_empty() || location.is_none()) {
+            return Err("skills delete requires --location and forbids --yes/--target".into());
+        }
+        if is_delete && dry_run && confirmation.is_some() {
+            return Err("--dry-run cannot be combined with --confirm-delete".into());
+        }
         return Ok(Command::Skills {
             selection: SelectionArgs {
                 agent: from.ok_or("skills requires --from <agent>")?,
@@ -177,8 +214,26 @@ pub(crate) fn parse(args: &[OsString]) -> Result<Command, String> {
                 project_root,
                 location,
             },
-            copy: is_copy.then(|| (positional[2].to_owned(), targets, yes, dry_run)),
+            action: if is_copy {
+                SkillAction::Copy {
+                    name: positional[2].to_owned(),
+                    targets,
+                    yes,
+                    dry_run,
+                }
+            } else if is_delete {
+                SkillAction::Delete {
+                    name: positional[2].to_owned(),
+                    confirmation,
+                    dry_run,
+                }
+            } else {
+                SkillAction::List
+            },
         });
+    }
+    if confirmation.is_some() {
+        return Err("--confirm-delete requires skills delete".into());
     }
     if from.is_some() || location.is_some() {
         return Err("--from and --location require skills list/copy".into());
