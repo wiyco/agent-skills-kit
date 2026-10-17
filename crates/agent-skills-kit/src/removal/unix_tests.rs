@@ -48,6 +48,9 @@ impl Fixture {
         Self { root, home, source }
     }
     fn plan(&self) -> RemovalPlan {
+        self.plan_with_limits(RemovalLimits::default())
+    }
+    fn plan_with_limits(&self, limits: RemovalLimits) -> RemovalPlan {
         let catalog = Catalog::bundled().unwrap();
         let mut context = InstallContext::new(native_platform().unwrap());
         context.user_home = Some(self.home.clone());
@@ -71,7 +74,7 @@ impl Fixture {
                 location_index,
                 skill_name: "sample".into(),
                 context,
-                limits: RemovalLimits::default(),
+                limits,
             },
         )
         .unwrap()
@@ -121,6 +124,7 @@ fn actual_permanent_removal_is_complete_without_touching_siblings_or_leaving_a_s
     let total = plan.entries().len() + 1;
     let report = apply_removal(approved(plan));
     assert!(report.is_successful(), "{report:?}");
+    assert!(report.permanent_removal_attempted);
     assert_eq!(removed(&report), total);
     assert!(!f.source.exists());
     assert_eq!(fs::read_dir(f.source.parent().unwrap()).unwrap().count(), 0);
@@ -267,6 +271,13 @@ fn an_unknown_private_payload_does_not_gain_restoration_or_cleanup_authority() {
         Ok(())
     });
     assert_eq!(removed(&report), 0);
+    assert!(!report.permanent_removal_attempted);
+    assert!(
+        report
+            .unrecognized_entries
+            .iter()
+            .any(|path| path.file_name() == Some(OsStr::new("payload")))
+    );
     assert!(!report.restored_before_removal);
     assert_eq!(
         fs::read(f.source.join("resources/a.txt")).unwrap(),
@@ -298,6 +309,14 @@ fn a_new_private_entry_before_unlink_stops_without_removing_unknown_data() {
         Ok(())
     });
     assert!(ran);
+    assert!(!report.permanent_removal_attempted);
+    assert!(
+        report
+            .unrecognized_entries
+            .iter()
+            .any(|path| path.file_name() == Some(OsStr::new("new-unapproved")))
+    );
+    assert!(!report.unrecognized_scan_incomplete);
     assert_eq!(removed(&report), 0);
     assert!(report.retained_stage.is_some());
     assert!(!report.is_successful());
@@ -731,5 +750,42 @@ fn changed_protected_context_ancestry_is_rechecked_before_any_write() {
         b"original A"
     );
     assert_eq!(fs::read_dir(f.source.parent().unwrap()).unwrap().count(), 1);
+    f.sentinel();
+}
+
+#[test]
+fn unknown_entry_diagnostics_stop_at_the_approved_count_budget_without_deleting_data() {
+    let f = Fixture::new();
+    let mut limits = RemovalLimits::default();
+    limits.inventory.max_entries = 5;
+    let plan = f.plan_with_limits(limits);
+    let mut injected = false;
+    let report = run(&plan, &mut |phase, path| {
+        if phase == Phase::BeforeUnlink && !injected {
+            injected = true;
+            for index in 0..6 {
+                fs::write(
+                    path.parent().unwrap().join(format!("unknown-{index}")),
+                    b"unapproved data",
+                )?;
+            }
+        }
+        Ok(())
+    });
+    assert_eq!(removed(&report), 0);
+    assert!(!report.permanent_removal_attempted);
+    assert!(report.unrecognized_scan_incomplete);
+    assert!(report.unrecognized_entries.len() <= 5);
+    let retained = report
+        .retained_stage
+        .as_ref()
+        .unwrap()
+        .join("payload/resources");
+    for index in 0..6 {
+        assert_eq!(
+            fs::read(retained.join(format!("unknown-{index}"))).unwrap(),
+            b"unapproved data"
+        );
+    }
     f.sentinel();
 }

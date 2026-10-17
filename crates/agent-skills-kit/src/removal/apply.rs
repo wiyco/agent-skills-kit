@@ -75,6 +75,13 @@ pub struct RemovalReport {
     pub outcomes: Vec<RemovalEntryOutcome>,
     /// First operation failure, without losing earlier removals.
     pub failure: Option<RemovalFailure>,
+    /// At least one native permanent-removal call was attempted, even if it failed.
+    pub permanent_removal_attempted: bool,
+    /// Bounded observed unapproved names/objects in the private enclosure.
+    /// Diagnostic labels are not authority or a claim that they remain current.
+    pub unrecognized_entries: Vec<PathBuf>,
+    /// A diagnostic scan encountered lost binding, I/O failure or its finite limit.
+    pub unrecognized_scan_incomplete: bool,
     /// Private enclosure retained for manual inspection, when its label is known.
     pub retained_stage: Option<PathBuf>,
     /// The recorded stage label could not be confirmed and may name unrelated data.
@@ -90,6 +97,8 @@ impl RemovalReport {
     /// True only for complete confirmed payload removal and successful stage cleanup.
     pub fn is_successful(&self) -> bool {
         !self.stage_location_uncertain
+            && !self.unrecognized_scan_incomplete
+            && self.unrecognized_entries.is_empty()
             && self.failure.is_none()
             && self.retained_stage.is_none()
             && self.cleanup_failures.is_empty()
@@ -118,6 +127,9 @@ fn initial(plan: &RemovalPlan) -> RemovalReport {
         original_path: plan.path.clone(),
         outcomes,
         failure: None,
+        permanent_removal_attempted: false,
+        unrecognized_entries: vec![],
+        unrecognized_scan_incomplete: false,
         retained_stage: None,
         stage_location_uncertain: false,
         restored_before_removal: false,

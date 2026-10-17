@@ -103,7 +103,7 @@ pub(crate) fn parent(directory: &Arc<Directory>) -> io::Result<Arc<Directory>> {
         crate::filesystem_windows::open_root(parent)?,
     )))
 }
-pub(super) fn path_bytes(path: &Path) -> usize {
+pub(crate) fn path_bytes(path: &Path) -> usize {
     #[cfg(windows)]
     {
         use std::os::windows::ffi::OsStrExt;

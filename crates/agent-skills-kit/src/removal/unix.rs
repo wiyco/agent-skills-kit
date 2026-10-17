@@ -139,6 +139,7 @@ impl Stage {
                 report.retained_stage = Some(self.path.clone());
                 report.stage_location_uncertain = true;
                 report.cleanup_failures.push(error);
+                diagnose_empty_stage(plan, self, report);
             }
         }
     }
@@ -465,6 +466,7 @@ fn remove_entries(
             } else {
                 AtFlags::empty()
             };
+            report.permanent_removal_attempted = true;
             rustix::fs::unlinkat(&dirs[parent].file, name, flags).map_err(|e| {
                 io_error(&label, "unlink approved entry inside private enclosure", e)
             })?;
@@ -498,6 +500,7 @@ fn remove_entries(
                 };
             }
             report.outcomes[index].failure = Some(error.clone());
+            diagnose_unrecognized(plan, stage, &dirs, report);
             return Err(error);
         }
     }
@@ -506,6 +509,7 @@ fn remove_entries(
         hook(Phase::BeforeUnlink, &label, run)?;
         stage.current(plan)?;
         directory_current(Path::new(""), &dirs, stage)?;
+        report.permanent_removal_attempted = true;
         rustix::fs::unlinkat(&stage.file, "payload", AtFlags::REMOVEDIR)
             .map_err(|e| io_error(&label, "remove verified empty selected root", e))?;
         report.outcomes.last_mut().expect("root outcome").state = RemovalEntryState::Removed;
@@ -517,6 +521,7 @@ fn remove_entries(
             root.state = RemovalEntryState::Unknown;
         }
         root.failure = Some(error.clone());
+        diagnose_unrecognized(plan, stage, &dirs, report);
     }
     attempt
 }
@@ -581,6 +586,7 @@ fn apply_with_hook(
         Ok(value) => value,
         Err(error) => {
             report.failure = Some(error);
+            report.unrecognized_scan_incomplete = true;
             if let Some(identity) = identity {
                 restore(plan, &stage, identity, report, run);
             } else {
@@ -628,6 +634,7 @@ fn apply_with_hook(
         Ok(dirs) => dirs,
         Err(error) => {
             report.failure = Some(error);
+            report.unrecognized_scan_incomplete = true;
             if let Some(identity) = identity {
                 restore(plan, &stage, identity, report, run);
             }
@@ -640,6 +647,12 @@ fn apply_with_hook(
             report.failure = Some(error);
             if stage.current(plan).is_err() {
                 report.stage_location_uncertain = true;
+            } else if report
+                .outcomes
+                .last()
+                .is_some_and(|root| root.state == RemovalEntryState::Removed)
+            {
+                diagnose_empty_stage(plan, &stage, report);
             }
         }
     }
@@ -648,3 +661,182 @@ fn apply_with_hook(
 #[cfg(test)]
 #[path = "unix_tests.rs"]
 mod tests;
+
+// Failure diagnostics only: enumerate retained, still-bound approved directories
+// without opening/following unknown children or granting cleanup authority.
+fn diagnose_unrecognized(
+    plan: &RemovalPlan,
+    stage: &Stage,
+    dirs: &BTreeMap<PathBuf, Directory>,
+    report: &mut RemovalReport,
+) {
+    use std::collections::{BTreeMap, BTreeSet};
+    if report
+        .outcomes
+        .last()
+        .is_some_and(|root| root.state == RemovalEntryState::Removed)
+    {
+        return;
+    }
+    if stage.current(plan).is_err() {
+        report.unrecognized_scan_incomplete = true;
+        return;
+    }
+    let mut expected: BTreeMap<PathBuf, BTreeMap<OsString, &SourceEntry>> = BTreeMap::new();
+    let mut removed_dirs = BTreeSet::new();
+    for (index, entry) in plan.entries.iter().enumerate() {
+        if report.outcomes[index].state == RemovalEntryState::Removed {
+            if entry.kind == SourceEntryKind::Directory {
+                removed_dirs.insert(entry.relative_path.clone());
+            }
+            continue;
+        }
+        expected
+            .entry(
+                entry
+                    .relative_path
+                    .parent()
+                    .expect("validated parent")
+                    .to_owned(),
+            )
+            .or_default()
+            .insert(
+                entry
+                    .relative_path
+                    .file_name()
+                    .expect("validated name")
+                    .to_owned(),
+                entry,
+            );
+    }
+    fn binding(relative: &Path, dirs: &BTreeMap<PathBuf, Directory>, stage: &Stage) -> Result<()> {
+        let node = &dirs[relative];
+        let label = stage.path.join("payload").join(relative);
+        if relative.as_os_str().is_empty() {
+            bound(&stage.file, OsStr::new("payload"), &node.expected, &label)
+        } else {
+            let parent = relative.parent().expect("validated parent");
+            binding(parent, dirs, stage)?;
+            bound(
+                &dirs[parent].file,
+                relative.file_name().expect("validated name"),
+                &node.expected,
+                &label,
+            )
+        }
+    }
+    let mut names_left = plan.limits.inventory.max_entries;
+    let mut bytes_left = (1024 * 1024usize).saturating_sub(
+        report
+            .unrecognized_entries
+            .iter()
+            .map(|p| crate::planner::native::path_bytes(p))
+            .sum(),
+    );
+    for (relative, node) in dirs {
+        if removed_dirs.contains(relative) {
+            continue;
+        }
+        if binding(relative, dirs, stage).is_err() {
+            report.unrecognized_scan_incomplete = true;
+            continue;
+        }
+        let names = match crate::planner::native::names(&node.file, names_left) {
+            Ok(names) => names,
+            Err(_) => {
+                report.unrecognized_scan_incomplete = true;
+                continue;
+            }
+        };
+        for observed in names.take(names_left.saturating_add(1)) {
+            if names_left == 0 {
+                report.unrecognized_scan_incomplete = true;
+                return;
+            }
+            names_left -= 1;
+            let name = match observed {
+                Ok(name) => name,
+                Err(_) => {
+                    report.unrecognized_scan_incomplete = true;
+                    continue;
+                }
+            };
+            let known = expected
+                .get(relative)
+                .and_then(|children| children.get(&name));
+            let unrecognized = match known {
+                None => true,
+                Some(entry) => {
+                    match rustix::fs::statat(&node.file, &name, AtFlags::SYMLINK_NOFOLLOW) {
+                        Ok(stat) => !crate::filesystem::identity_matches(&stat, &entry.stamp),
+                        Err(_) => {
+                            report.unrecognized_scan_incomplete = true;
+                            continue;
+                        }
+                    }
+                }
+            };
+            if unrecognized {
+                let path = stage.path.join("payload").join(relative).join(name);
+                let bytes = crate::planner::native::path_bytes(&path);
+                if bytes > bytes_left {
+                    report.unrecognized_scan_incomplete = true;
+                    return;
+                }
+                bytes_left -= bytes;
+                report.unrecognized_entries.push(path);
+            }
+        }
+    }
+    report.unrecognized_entries.sort();
+    report.unrecognized_entries.dedup();
+}
+
+// Cleanup only expected an empty enclosure; any observed child is retained data,
+// never cleanup authority. Lost binding prevents even this diagnostic scan.
+fn diagnose_empty_stage(plan: &RemovalPlan, stage: &Stage, report: &mut RemovalReport) {
+    if stage.current(plan).is_err() {
+        report.unrecognized_scan_incomplete = true;
+        report.stage_location_uncertain = true;
+        return;
+    }
+    report.stage_location_uncertain = false;
+    let mut bytes_left = (1024 * 1024usize).saturating_sub(
+        report
+            .unrecognized_entries
+            .iter()
+            .map(|p| crate::planner::native::path_bytes(p))
+            .sum(),
+    );
+    let limit = plan.limits.inventory.max_entries;
+    let names = match crate::planner::native::names(&stage.file, limit) {
+        Ok(names) => names,
+        Err(_) => {
+            report.unrecognized_scan_incomplete = true;
+            return;
+        }
+    };
+    for (index, observed) in names.take(limit + 1).enumerate() {
+        if index == limit {
+            report.unrecognized_scan_incomplete = true;
+            break;
+        }
+        let name = match observed {
+            Ok(name) => name,
+            Err(_) => {
+                report.unrecognized_scan_incomplete = true;
+                continue;
+            }
+        };
+        let path = stage.path.join(name);
+        let bytes = crate::planner::native::path_bytes(&path);
+        if bytes > bytes_left {
+            report.unrecognized_scan_incomplete = true;
+            break;
+        }
+        bytes_left -= bytes;
+        report.unrecognized_entries.push(path);
+    }
+    report.unrecognized_entries.sort();
+    report.unrecognized_entries.dedup();
+}
